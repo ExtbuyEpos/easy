@@ -6,7 +6,7 @@ import { Reports } from './components/Reports';
 import { Login } from './components/Login';
 import { StockCheck } from './components/StockCheck';
 import { Settings } from './components/Settings';
-import { AppView, Product, Sale, CartItem, User } from './types';
+import { AppView, Product, Sale, CartItem, User, StoreSettings } from './types';
 import { INITIAL_PRODUCTS, INITIAL_USERS } from './constants';
 
 const App: React.FC = () => {
@@ -15,12 +15,21 @@ const App: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>({
+    name: 'easyPOS',
+    address: 'Retail Management System',
+    phone: '',
+    footerMessage: 'Thank you for your business!',
+    receiptSize: '80mm'
+  });
 
   // Initialize Data (Simulate Database)
   useEffect(() => {
     const savedProducts = localStorage.getItem('easyPOS_products');
     const savedSales = localStorage.getItem('easyPOS_sales');
     const savedUsers = localStorage.getItem('easyPOS_users');
+    const savedSettings = localStorage.getItem('easyPOS_storeSettings');
 
     if (savedProducts) {
       setProducts(JSON.parse(savedProducts));
@@ -36,6 +45,11 @@ const App: React.FC = () => {
       setUsers(JSON.parse(savedUsers));
     } else {
       setUsers(INITIAL_USERS);
+    }
+
+    if (savedSettings) {
+      const parsed = JSON.parse(savedSettings);
+      setStoreSettings({ ...parsed, receiptSize: parsed.receiptSize || '80mm' });
     }
   }, []);
 
@@ -59,6 +73,11 @@ const App: React.FC = () => {
 
   const handleUpdateProduct = (updatedProduct: Product) => {
     setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+  };
+
+  const handleBulkUpdateProduct = (updatedProducts: Product[]) => {
+    const updatesMap = new Map(updatedProducts.map(p => [p.id, p]));
+    setProducts(products.map(p => updatesMap.has(p.id) ? updatesMap.get(p.id)! : p));
   };
 
   const handleDeleteProduct = (id: string) => {
@@ -102,6 +121,12 @@ const App: React.FC = () => {
     setUsers(users.filter(u => u.id !== id));
   };
 
+  // Settings Actions
+  const handleUpdateStoreSettings = (settings: StoreSettings) => {
+    setStoreSettings(settings);
+    localStorage.setItem('easyPOS_storeSettings', JSON.stringify(settings));
+  };
+
   if (!user) {
     return <Login onLogin={setUser} users={users} />;
   }
@@ -117,7 +142,11 @@ const App: React.FC = () => {
       
       <main className="flex-1 overflow-hidden relative">
         {currentView === AppView.POS && (
-          <POS products={products} onCheckout={handleCheckout} />
+          <POS 
+            products={products} 
+            onCheckout={handleCheckout} 
+            storeSettings={storeSettings}
+          />
         )}
         
         {currentView === AppView.INVENTORY && (
@@ -125,6 +154,7 @@ const App: React.FC = () => {
             products={products} 
             onAddProduct={handleAddProduct}
             onUpdateProduct={handleUpdateProduct}
+            onBulkUpdateProduct={handleBulkUpdateProduct}
             onDeleteProduct={handleDeleteProduct}
           />
         )}
@@ -143,9 +173,13 @@ const App: React.FC = () => {
         {currentView === AppView.SETTINGS && user.role === 'ADMIN' && (
           <Settings 
              users={users} 
+             products={products}
+             sales={sales}
              onAddUser={handleAddUser} 
              onDeleteUser={handleDeleteUser}
              currentUser={user}
+             storeSettings={storeSettings}
+             onUpdateStoreSettings={handleUpdateStoreSettings}
           />
         )}
       </main>

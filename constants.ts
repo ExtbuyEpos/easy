@@ -11,7 +11,8 @@ export const INITIAL_PRODUCTS: Product[] = [
     sellPrice: 18.50, 
     stock: 45, 
     category: 'Beverage',
-    image: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?auto=format&fit=crop&q=80&w=200'
+    image: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?auto=format&fit=crop&q=80&w=200',
+    tags: ['Organic', 'Best Seller']
   },
   { 
     id: '2', 
@@ -21,7 +22,8 @@ export const INITIAL_PRODUCTS: Product[] = [
     sellPrice: 14.00, 
     stock: 20, 
     category: 'Beverage',
-    image: 'https://images.unsplash.com/photo-1582793988951-9aed5509eb97?auto=format&fit=crop&q=80&w=200'
+    image: 'https://images.unsplash.com/photo-1582793988951-9aed5509eb97?auto=format&fit=crop&q=80&w=200',
+    tags: ['Imported', 'Sugar-Free']
   },
   { 
     id: '3', 
@@ -31,7 +33,8 @@ export const INITIAL_PRODUCTS: Product[] = [
     sellPrice: 8.99, 
     stock: 12, 
     category: 'Merchandise',
-    image: 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?auto=format&fit=crop&q=80&w=200'
+    image: 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?auto=format&fit=crop&q=80&w=200',
+    tags: ['Fragile']
   },
   { 
     id: '4', 
@@ -41,7 +44,8 @@ export const INITIAL_PRODUCTS: Product[] = [
     sellPrice: 4.50, 
     stock: 100, 
     category: 'Dairy',
-    image: 'https://images.unsplash.com/photo-1603569283847-aa295f0d016a?auto=format&fit=crop&q=80&w=200'
+    image: 'https://images.unsplash.com/photo-1603569283847-aa295f0d016a?auto=format&fit=crop&q=80&w=200',
+    tags: ['Vegan', 'Gluten-Free']
   },
   { 
     id: '5', 
@@ -51,7 +55,8 @@ export const INITIAL_PRODUCTS: Product[] = [
     sellPrice: 3.50, 
     stock: 8, 
     category: 'Bakery',
-    image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&q=80&w=200'
+    image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&q=80&w=200',
+    tags: ['Fresh']
   },
 ];
 

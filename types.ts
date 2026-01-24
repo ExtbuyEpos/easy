@@ -18,6 +18,7 @@ export interface Product {
   stock: number;
   category: string;
   image?: string;
+  tags?: string[];
 }
 
 export interface CartItem extends Product {
@@ -45,4 +46,13 @@ export interface DashboardStats {
   transactionCount: number;
   lowStockCount: number;
   profit: number;
+}
+
+export interface StoreSettings {
+  name: string;
+  address: string;
+  phone: string;
+  logo?: string; // Base64 string
+  footerMessage?: string;
+  receiptSize?: '58mm' | '80mm';
 }

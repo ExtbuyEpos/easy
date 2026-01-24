@@ -1,24 +1,32 @@
 import React, { useState, useRef } from 'react';
 import { Product } from '../types';
-import { Plus, Search, Trash2, Edit2, Save, X, Image as ImageIcon, RefreshCw, Upload } from 'lucide-react';
+import { Plus, Search, Trash2, Edit2, Save, X, Image as ImageIcon, RefreshCw, Upload, Tag, Layers, CheckSquare } from 'lucide-react';
 import { CURRENCY } from '../constants';
 
 interface InventoryProps {
   products: Product[];
   onAddProduct: (p: Product) => void;
   onUpdateProduct: (p: Product) => void;
+  onBulkUpdateProduct: (products: Product[]) => void;
   onDeleteProduct: (id: string) => void;
 }
 
-export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, onUpdateProduct, onDeleteProduct }) => {
+export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, onUpdateProduct, onBulkUpdateProduct, onDeleteProduct }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Bulk Edit State
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [bulkAction, setBulkAction] = useState<'SET' | 'ADD' | 'REMOVE'>('SET');
+  const [bulkValue, setBulkValue] = useState<number>(0);
+
   const [formData, setFormData] = useState<Partial<Product>>({
-    name: '', sku: '', costPrice: 0, sellPrice: 0, stock: 0, category: '', image: ''
+    name: '', sku: '', costPrice: 0, sellPrice: 0, stock: 0, category: '', image: '', tags: []
   });
+  const [tagInput, setTagInput] = useState('');
 
   // Extract unique categories for suggestions
   const categories = Array.from(new Set(products.map(p => p.category))).sort();
@@ -26,13 +34,53 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     p.sku.includes(searchTerm) ||
-    p.category.toLowerCase().includes(searchTerm.toLowerCase())
+    p.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.tags && p.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
   );
 
+  // Selection Handlers
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      const allIds = new Set(filteredProducts.map(p => p.id));
+      setSelectedIds(allIds);
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleSelectOne = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleBulkSave = () => {
+    const productsToUpdate = products.filter(p => selectedIds.has(p.id));
+    const updatedProducts = productsToUpdate.map(p => {
+      let newStock = p.stock;
+      if (bulkAction === 'SET') newStock = bulkValue;
+      if (bulkAction === 'ADD') newStock = p.stock + bulkValue;
+      if (bulkAction === 'REMOVE') newStock = Math.max(0, p.stock - bulkValue);
+      
+      return { ...p, stock: newStock };
+    });
+
+    onBulkUpdateProduct(updatedProducts);
+    setIsBulkModalOpen(false);
+    setSelectedIds(new Set());
+    setBulkValue(0);
+  };
+
+  // Regular Edit Handlers
   const handleOpenModal = (product?: Product) => {
     if (product) {
       setEditingProduct(product);
       setFormData(product);
+      setTagInput(product.tags ? product.tags.join(', ') : '');
     } else {
       setEditingProduct(null);
       setFormData({ 
@@ -42,14 +90,15 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
         sellPrice: 0, 
         stock: 0, 
         category: '',
-        image: ''
+        image: '',
+        tags: []
       });
+      setTagInput('');
     }
     setIsModalOpen(true);
   };
 
   const generateBarcode = () => {
-    // Generate a random 13-digit number (EAN-13 style simulation)
     const timestamp = Date.now().toString().slice(-6);
     const random = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
     const barcode = `880${timestamp}${random}`.slice(0, 13);
@@ -73,13 +122,17 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
       return;
     }
     
-    // Auto-generate SKU if empty
     let finalSku = formData.sku;
     if (!finalSku) {
        const timestamp = Date.now().toString().slice(-6);
        const random = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
        finalSku = `880${timestamp}${random}`.slice(0, 13);
     }
+
+    const finalTags = tagInput
+      .split(',')
+      .map(t => t.trim())
+      .filter(t => t.length > 0);
 
     const productData = {
       id: editingProduct ? editingProduct.id : Date.now().toString(),
@@ -89,7 +142,8 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
       sellPrice: Number(formData.sellPrice),
       stock: Number(formData.stock),
       category: formData.category || 'General',
-      image: formData.image
+      image: formData.image,
+      tags: finalTags
     } as Product;
 
     if (editingProduct) {
@@ -107,12 +161,22 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
           <h2 className="text-2xl font-bold text-slate-800">Inventory Management</h2>
           <p className="text-slate-500">Manage stock levels, pricing, images, and barcodes.</p>
         </div>
-        <button
-          onClick={() => handleOpenModal()}
-          className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm transition-all"
-        >
-          <Plus size={20} /> Add Product
-        </button>
+        <div className="flex gap-3">
+          {selectedIds.size > 0 && (
+            <button
+              onClick={() => setIsBulkModalOpen(true)}
+              className="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm transition-all animate-fade-in"
+            >
+              <Layers size={18} /> Bulk Edit Stock ({selectedIds.size})
+            </button>
+          )}
+          <button
+            onClick={() => handleOpenModal()}
+            className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm transition-all"
+          >
+            <Plus size={20} /> Add Product
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex-1 flex flex-col overflow-hidden">
@@ -121,7 +185,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
             <input
               type="text"
-              placeholder="Search by Name, SKU, or Category..."
+              placeholder="Search by Name, SKU, Category or Tags..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -133,6 +197,19 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-slate-600 font-semibold sticky top-0 z-10">
               <tr>
+                <th className="p-4 border-b w-10">
+                  <input 
+                    type="checkbox" 
+                    className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                    checked={filteredProducts.length > 0 && selectedIds.size === filteredProducts.length}
+                    ref={input => {
+                      if (input) {
+                        input.indeterminate = selectedIds.size > 0 && selectedIds.size < filteredProducts.length;
+                      }
+                    }}
+                    onChange={handleSelectAll}
+                  />
+                </th>
                 <th className="p-4 border-b w-16">Image</th>
                 <th className="p-4 border-b">SKU / Barcode</th>
                 <th className="p-4 border-b">Product Name</th>
@@ -145,9 +222,17 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredProducts.map(product => {
-                const margin = product.sellPrice > 0 ? ((product.sellPrice - product.costPrice) / product.sellPrice * 100).toFixed(1) : '0';
+                const isSelected = selectedIds.has(product.id);
                 return (
-                  <tr key={product.id} className="hover:bg-slate-50 transition-colors">
+                  <tr key={product.id} className={`hover:bg-slate-50 transition-colors ${isSelected ? 'bg-slate-50' : ''}`}>
+                    <td className="p-4">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                        checked={isSelected}
+                        onChange={() => handleSelectOne(product.id)}
+                      />
+                    </td>
                     <td className="p-4">
                       <div className="w-10 h-10 rounded-lg bg-slate-100 overflow-hidden flex items-center justify-center border border-slate-200">
                         {product.image ? (
@@ -158,7 +243,18 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
                       </div>
                     </td>
                     <td className="p-4 font-mono text-slate-500 text-xs">{product.sku}</td>
-                    <td className="p-4 font-medium text-slate-900">{product.name}</td>
+                    <td className="p-4">
+                      <div className="font-medium text-slate-900">{product.name}</div>
+                      {product.tags && product.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {product.tags.map((tag, i) => (
+                            <span key={i} className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded border border-indigo-100 font-medium">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
                     <td className="p-4 text-slate-600">
                       <span className="px-2 py-1 bg-slate-100 rounded-full text-xs">{product.category}</span>
                     </td>
@@ -188,7 +284,64 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
         </div>
       </div>
 
-      {/* Add/Edit Modal */}
+      {/* Bulk Edit Modal */}
+      {isBulkModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
+             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+               <div>
+                  <h3 className="text-xl font-bold text-slate-800">Bulk Stock Update</h3>
+                  <p className="text-xs text-slate-500">Updating {selectedIds.size} products</p>
+               </div>
+               <button onClick={() => setIsBulkModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
+             </div>
+             
+             <div className="p-6 space-y-4">
+                <div className="space-y-2">
+                   <label className="text-sm font-semibold text-slate-600">Action</label>
+                   <div className="grid grid-cols-3 gap-2">
+                      <button 
+                        onClick={() => setBulkAction('SET')}
+                        className={`py-2 text-sm font-bold rounded-lg border ${bulkAction === 'SET' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200'}`}
+                      >
+                        Set To
+                      </button>
+                      <button 
+                         onClick={() => setBulkAction('ADD')}
+                        className={`py-2 text-sm font-bold rounded-lg border ${bulkAction === 'ADD' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-slate-600 border-slate-200'}`}
+                      >
+                        Add (+)
+                      </button>
+                      <button 
+                         onClick={() => setBulkAction('REMOVE')}
+                        className={`py-2 text-sm font-bold rounded-lg border ${bulkAction === 'REMOVE' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-600 border-slate-200'}`}
+                      >
+                        Reduce (-)
+                      </button>
+                   </div>
+                </div>
+
+                <div className="space-y-2">
+                   <label className="text-sm font-semibold text-slate-600">Quantity</label>
+                   <input 
+                      type="number" 
+                      min="0"
+                      value={bulkValue}
+                      onChange={e => setBulkValue(parseInt(e.target.value) || 0)}
+                      className="w-full p-3 border border-slate-300 rounded-lg text-lg font-bold text-center focus:ring-2 focus:ring-brand-500 outline-none"
+                   />
+                </div>
+
+                <div className="pt-4 flex gap-3">
+                   <button onClick={() => setIsBulkModalOpen(false)} className="flex-1 py-3 text-slate-600 font-bold hover:bg-slate-100 rounded-lg">Cancel</button>
+                   <button onClick={handleBulkSave} className="flex-1 py-3 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 shadow-md">Apply Update</button>
+                </div>
+             </div>
+           </div>
+        </div>
+      )}
+
+      {/* Add/Edit Product Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in flex flex-col max-h-[90vh]">
@@ -287,6 +440,17 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
                         </button>
                        </div>
                     </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1"><Tag size={12}/> Tags</label>
+                    <input
+                      type="text"
+                      value={tagInput}
+                      onChange={e => setTagInput(e.target.value)}
+                      className="w-full p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"
+                      placeholder="e.g. New, Sale, Organic (Comma separated)"
+                    />
                   </div>
 
                   <div className="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
