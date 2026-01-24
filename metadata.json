@@ -1,0 +1,7 @@
+{
+  "name": "easyPOS",
+  "description": "A comprehensive Point of Sale system with inventory management, barcode scanning support, and AI-powered sales insights.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
