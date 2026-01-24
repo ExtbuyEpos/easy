@@ -61,12 +61,13 @@ export const POS: React.FC<POSProps> = ({ products, onCheckout, storeSettings })
   useEffect(() => {
     let animationFrameId: number;
     let stream: MediaStream | null = null;
+    let isActive = true;
 
     const startCamera = async () => {
-        if (isScannerOpen) {
+        if (isScannerOpen && isActive) {
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                if (videoRef.current) {
+                if (videoRef.current && isActive) {
                     videoRef.current.srcObject = stream;
                     videoRef.current.setAttribute("playsinline", "true"); 
                     await videoRef.current.play();
@@ -74,13 +75,17 @@ export const POS: React.FC<POSProps> = ({ products, onCheckout, storeSettings })
                 }
             } catch (err) {
                 console.error("Error accessing camera", err);
-                alert("Could not access camera. Please ensure you have granted camera permissions.");
-                setIsScannerOpen(false);
+                if(isActive) {
+                    alert("Could not access camera. Please ensure you have granted camera permissions.");
+                    setIsScannerOpen(false);
+                }
             }
         }
     };
 
     const tick = () => {
+        if (!isActive) return;
+        
         if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
              const canvas = canvasRef.current;
              if (canvas) {
@@ -103,7 +108,7 @@ export const POS: React.FC<POSProps> = ({ products, onCheckout, storeSettings })
                  }
              }
         }
-        if (isScannerOpen) {
+        if (isScannerOpen && isActive) {
             animationFrameId = requestAnimationFrame(tick);
         }
     };
@@ -113,8 +118,15 @@ export const POS: React.FC<POSProps> = ({ products, onCheckout, storeSettings })
     }
 
     return () => {
+         isActive = false;
          if (animationFrameId) cancelAnimationFrame(animationFrameId);
          if (stream) stream.getTracks().forEach(track => track.stop());
+         
+         // Force track stop if srcObject exists
+         if (videoRef.current && videoRef.current.srcObject) {
+             const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
+             tracks.forEach(t => t.stop());
+         }
     }
   }, [isScannerOpen]);
 

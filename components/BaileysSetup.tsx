@@ -96,22 +96,40 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
     
     if (status === 'ready') {
         const generateQR = async () => {
-            // Mimic Baileys QR format: ref,publicKey,clientId
-            const randomRef = Math.random().toString(36).substring(2, 15);
-            const randomKey = btoa(Math.random().toString()).substring(0, 20);
-            const qrData = `${randomRef},${randomKey},${config.phoneNumber}`;
+            // Helper for random Base64
+            const randomB64 = (len: number) => {
+                const arr = new Uint8Array(len);
+                window.crypto.getRandomValues(arr);
+                // Convert to binary string manually to avoid stack overflow on large arrays, though len is small here
+                let binary = '';
+                for (let i = 0; i < len; i++) {
+                    binary += String.fromCharCode(arr[i]);
+                }
+                return btoa(binary);
+            };
+
+            // Mimic Baileys QR format: ref,publicKey,clientId (All Base64)
+            // Using a phone number in the QR string often crashes the mobile app parser because it expects Base64.
+            const ref = randomB64(32);
+            const pubKey = randomB64(32);
+            const clientId = randomB64(32);
+            
+            // Standard format often seen: "2@" + ... or just comma separated
+            const qrData = `${ref},${pubKey},${clientId}`;
             
             try {
                 const url = await toDataURL(qrData, { 
                     width: 300, 
                     margin: 2, 
-                    color: { dark: '#111827', light: '#ffffff' } 
+                    color: { dark: '#111827', light: '#ffffff' },
+                    errorCorrectionLevel: 'M'
                 });
                 setQrCodeUrl(url);
                 addLog('QR Code rotated. Waiting for scan...');
                 setQrTimer(20); // Reset timer
             } catch (e) {
                 console.error(e);
+                addLog('Error generating QR frame.');
             }
         };
 
@@ -128,7 +146,9 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
         }, 1000);
     }
 
-    return () => clearInterval(interval);
+    return () => {
+        if (interval) clearInterval(interval);
+    };
   }, [status]);
 
   const addLog = (msg: string) => {
