@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Sale, Product } from '../types';
 import { CURRENCY } from '../constants';
-import { TrendingUp, DollarSign, Package, Calendar, Sparkles, PieChart, FileText, FileSpreadsheet, Filter, X, ArrowRight, Download } from 'lucide-react';
+import { TrendingUp, DollarSign, Package, Calendar, Sparkles, PieChart, FileText, FileSpreadsheet, Filter, X, ArrowRight, Download, CreditCard, Banknote } from 'lucide-react';
 import { generateBusinessInsight } from '../services/geminiService';
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -308,15 +308,26 @@ export const Reports: React.FC<ReportsProps> = ({ sales, products }) => {
          </select>
 
          {activeTab === 'dashboard' && (
-             <select 
-             value={paymentFilter}
-             onChange={(e) => setPaymentFilter(e.target.value)}
-             className="bg-slate-50 border border-slate-200 text-slate-600 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2 outline-none"
-             >
-             <option value="All">Payment: All</option>
-             <option value="CASH">Cash</option>
-             <option value="CARD">Card</option>
-             </select>
+             <div className="flex bg-slate-100 p-1 rounded-lg">
+                <button
+                    onClick={() => setPaymentFilter('All')}
+                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${paymentFilter === 'All' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                    All
+                </button>
+                <button
+                    onClick={() => setPaymentFilter('CASH')}
+                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${paymentFilter === 'CASH' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                    <Banknote size={14}/> Cash
+                </button>
+                <button
+                    onClick={() => setPaymentFilter('CARD')}
+                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${paymentFilter === 'CARD' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                    <CreditCard size={14}/> Card
+                </button>
+             </div>
          )}
          
          <div className="flex-1"></div>
