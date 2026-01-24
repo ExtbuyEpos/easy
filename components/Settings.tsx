@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, UserRole, Product, Sale, StoreSettings } from '../types';
-import { Shield, User as UserIcon, Trash2, Plus, Save, X, Lock, Database, Download, Upload, AlertTriangle, Archive, Receipt, Image as ImageIcon, Printer, Percent } from 'lucide-react';
+import { Shield, User as UserIcon, Trash2, Plus, Save, X, Lock, Database, Download, Upload, AlertTriangle, Archive, Receipt, Image as ImageIcon, Printer, Percent, MessageCircle } from 'lucide-react';
 import JSZip from 'jszip';
 import * as XLSX from 'xlsx';
 
@@ -320,6 +320,24 @@ export const Settings: React.FC<SettingsProps> = ({
                                 </div>
                             </div>
                          )}
+                    </div>
+                </div>
+
+                 {/* WhatsApp Integration Section */}
+                 <div className="mt-6 pt-4 border-t border-slate-100">
+                    <h4 className="font-bold text-slate-700 mb-3 flex items-center gap-2 text-sm">
+                        <MessageCircle size={16} /> WhatsApp Integration
+                    </h4>
+                    <div className="space-y-2">
+                       <label className="text-xs font-bold text-slate-500 uppercase">Phone Number</label>
+                       <input 
+                         type="tel"
+                         value={storeForm.whatsappPhoneNumber || ''}
+                         onChange={e => setStoreForm({...storeForm, whatsappPhoneNumber: e.target.value})}
+                         className="w-full p-2 border border-slate-200 rounded-lg text-sm font-mono"
+                         placeholder="+1234567890"
+                       />
+                       <p className="text-[10px] text-slate-400">Used for WhatsApp connection and sharing receipts.</p>
                     </div>
                 </div>
 

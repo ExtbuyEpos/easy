@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StoreSettings } from '../types';
-import { MessageCircle, Save, Smartphone, LayoutTemplate, AlertCircle, RefreshCw, QrCode, CheckCircle, Loader2, Wifi, WifiOff, Settings, Link, Info, Server, Globe, Shield, Lock, PlayCircle } from 'lucide-react';
+import { MessageCircle, Save, Smartphone, LayoutTemplate, AlertCircle, RefreshCw, QrCode, CheckCircle, Loader2, Wifi, WifiOff, Settings, Link, Info, Server, Globe, Shield, Lock, PlayCircle, Terminal, MoreVertical } from 'lucide-react';
 import { toDataURL } from 'qrcode';
 
 interface BaileysSetupProps {
@@ -24,7 +24,7 @@ Discount: {discount}
 {footer}`;
 
 type Tab = 'connect' | 'template';
-type ConnectionStatus = 'disconnected' | 'generating' | 'ready' | 'connecting' | 'connected';
+type ConnectionStatus = 'disconnected' | 'initializing' | 'ready' | 'connecting' | 'connected';
 
 interface ConnectionConfig {
     phoneNumber: string;
@@ -42,11 +42,16 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
   // Connection State
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
-  const [connectedSession, setConnectedSession] = useState<{ name: string; number: string; proxy?: string } | null>(null);
+  const [connectedSession, setConnectedSession] = useState<{ name: string; number: string; platform: string } | null>(null);
+  const [logs, setLogs] = useState<string[]>([]);
+  const logsEndRef = useRef<HTMLDivElement>(null);
+
+  // QR Refresh Timer
+  const [qrTimer, setQrTimer] = useState(0);
 
   // Configuration State
   const [config, setConfig] = useState<ConnectionConfig>({
-      phoneNumber: '',
+      phoneNumber: settings?.whatsappPhoneNumber || '',
       useProxy: false,
       proxyHost: '',
       proxyPort: '',
@@ -69,8 +74,66 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
     if (savedSession) {
         setConnectedSession(JSON.parse(savedSession));
         setStatus('connected');
+        addLog('Restored active session from local storage.');
     }
   }, []);
+
+  // Update config when settings change (if not connected)
+  useEffect(() => {
+     if (settings?.whatsappPhoneNumber && status === 'disconnected' && !config.phoneNumber) {
+         setConfig(prev => ({...prev, phoneNumber: settings.whatsappPhoneNumber!}));
+     }
+  }, [settings, status]);
+
+  // Scroll logs
+  useEffect(() => {
+    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [logs]);
+
+  // QR Code Rotation Logic (Simulating Real Baileys Behavior)
+  useEffect(() => {
+    let interval: any;
+    
+    if (status === 'ready') {
+        const generateQR = async () => {
+            // Mimic Baileys QR format: ref,publicKey,clientId
+            const randomRef = Math.random().toString(36).substring(2, 15);
+            const randomKey = btoa(Math.random().toString()).substring(0, 20);
+            const qrData = `${randomRef},${randomKey},${config.phoneNumber}`;
+            
+            try {
+                const url = await toDataURL(qrData, { 
+                    width: 300, 
+                    margin: 2, 
+                    color: { dark: '#111827', light: '#ffffff' } 
+                });
+                setQrCodeUrl(url);
+                addLog('QR Code rotated. Waiting for scan...');
+                setQrTimer(20); // Reset timer
+            } catch (e) {
+                console.error(e);
+            }
+        };
+
+        generateQR(); // Initial
+
+        interval = setInterval(() => {
+            setQrTimer((prev) => {
+                if (prev <= 1) {
+                    generateQR();
+                    return 20;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+    }
+
+    return () => clearInterval(interval);
+  }, [status]);
+
+  const addLog = (msg: string) => {
+    setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+  };
 
   const handleSaveTemplate = () => {
     const saved = localStorage.getItem('easyPOS_storeSettings');
@@ -96,43 +159,49 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
           alert("Please enter the WhatsApp Phone Number you intend to connect.");
           return;
       }
-      if (config.useProxy && (!config.proxyHost || !config.proxyPort)) {
-          alert("Please enter Proxy Host and Port.");
-          return;
-      }
-
-      setStatus('generating');
       
-      try {
-          // Simulate latency for generating session based on config
-          await new Promise(resolve => setTimeout(resolve, 1500));
-
-          // Mock QR generation
-          const mockSocketString = `https://example.com/mock-whatsapp-auth/${config.phoneNumber}/${Date.now()}`; 
-          const url = await toDataURL(mockSocketString, { width: 300, margin: 2, color: { dark: '#000000', light: '#ffffff' } });
-          setQrCodeUrl(url);
-          setStatus('ready');
-      } catch (err) {
-          console.error("QR Gen Error:", err);
-          setStatus('disconnected');
-      }
+      setLogs([]);
+      setStatus('initializing');
+      addLog('Initializing Baileys Socket...');
+      
+      // Simulate socket connection delay
+      setTimeout(() => {
+          addLog('Connected to WebSocket Server.');
+          if (config.useProxy) {
+              addLog(`Using Proxy: ${config.proxyHost}:${config.proxyPort}`);
+          }
+          addLog('Fetching latest MD version...');
+          
+          setTimeout(() => {
+              setStatus('ready');
+          }, 800);
+      }, 1000);
   };
 
   const handleSimulateScan = () => {
       if (status !== 'ready') return;
       
       setStatus('connecting');
-      // Simulate network delay for authentication
+      addLog('QR Code Scanned!');
+      addLog('Exchanging keys...');
+      
+      // Simulate auth flow
       setTimeout(() => {
-          const session = { 
-              name: "Store Owner", 
-              number: config.phoneNumber,
-              proxy: config.useProxy ? `${config.proxyHost}:${config.proxyPort}` : undefined
-          };
-          setConnectedSession(session);
-          setStatus('connected');
-          localStorage.setItem('easyPOS_whatsappSession', JSON.stringify(session));
-      }, 3000);
+          addLog('Authenticated successfully.');
+          addLog('Syncing history...');
+          
+          setTimeout(() => {
+              const session = { 
+                  name: "Store Owner", 
+                  number: config.phoneNumber,
+                  platform: "Bailyes-Web-Client"
+              };
+              setConnectedSession(session);
+              setStatus('connected');
+              addLog('Session Active. Ready to send messages.');
+              localStorage.setItem('easyPOS_whatsappSession', JSON.stringify(session));
+          }, 1500);
+      }, 1500);
   };
 
   const handleDisconnect = () => {
@@ -141,7 +210,7 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
           setStatus('disconnected');
           localStorage.removeItem('easyPOS_whatsappSession');
           setQrCodeUrl('');
-          setConfig(prev => ({ ...prev, phoneNumber: '' })); // Optional: Clear phone
+          addLog('Session terminated by user.');
       }
   };
 
@@ -169,29 +238,29 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 overflow-hidden">
+    <div className="flex flex-col h-full bg-[#f0f2f5] overflow-hidden">
         {/* Header Section */}
-       <div className="bg-white border-b border-slate-200 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
+       <div className="bg-[#00a884] text-white px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 shadow-md z-10">
            <div className="flex items-center gap-3">
-                <div className="bg-green-100 text-green-600 w-10 h-10 rounded-xl flex items-center justify-center shadow-sm">
+                <div className="bg-white/20 p-2 rounded-lg">
                     <MessageCircle size={24} />
                 </div>
                 <div>
-                    <h2 className="text-xl font-bold text-slate-800">WhatsApp Integration</h2>
-                    <p className="text-xs text-slate-500">Connect Baileys to send automated receipts</p>
+                    <h2 className="text-xl font-bold">WhatsApp Integration</h2>
+                    <p className="text-xs opacity-90">Powered by Baileys Multi-Device</p>
                 </div>
            </div>
            
-           <div className="flex bg-slate-100 p-1 rounded-lg">
+           <div className="flex bg-[#008f6f] p-1 rounded-lg">
                <button 
                  onClick={() => setActiveTab('connect')}
-                 className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'connect' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                 className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'connect' ? 'bg-white text-[#00a884] shadow-sm' : 'text-white/80 hover:text-white hover:bg-white/10'}`}
                >
                    <Link size={16} /> Device Connect
                </button>
                <button 
                  onClick={() => setActiveTab('template')}
-                 className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'template' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                 className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'template' ? 'bg-white text-[#00a884] shadow-sm' : 'text-white/80 hover:text-white hover:bg-white/10'}`}
                >
                    <Settings size={16} /> Template Config
                </button>
@@ -203,229 +272,156 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
                
                {/* --- CONNECTION TAB --- */}
                {activeTab === 'connect' && (
-                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
-                       {/* Left: Configuration & Status */}
-                       <div className="space-y-6">
-                           
+                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+                       
+                       {/* Left: Configuration & Logs */}
+                       <div className="lg:col-span-4 space-y-4">
                            {/* Status Card */}
-                           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                               <h3 className="font-bold text-lg text-slate-800 mb-4">Connection Status</h3>
+                           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                               <h3 className="font-bold text-gray-800 mb-4 text-sm uppercase tracking-wider">Session Status</h3>
                                
-                               <div className={`p-4 rounded-xl flex items-center gap-4 mb-4 ${status === 'connected' ? 'bg-green-50 border border-green-100' : 'bg-slate-50 border border-slate-100'}`}>
-                                   <div className={`w-12 h-12 rounded-full flex items-center justify-center ${status === 'connected' ? 'bg-green-500 text-white' : 'bg-slate-300 text-slate-500'}`}>
-                                       {status === 'connected' ? <Wifi size={24} /> : <WifiOff size={24} />}
-                                   </div>
-                                   <div>
-                                       <div className="font-bold text-slate-800">
-                                           {status === 'connected' ? 'WhatsApp Connected' : 'Disconnected'}
-                                       </div>
-                                       <div className="text-xs text-slate-500">
-                                           {status === 'connected' ? `Session Active` : 'No active session'}
-                                       </div>
-                                   </div>
+                               <div className="flex items-center gap-3 mb-4">
+                                   <div className={`w-3 h-3 rounded-full ${status === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></div>
+                                   <span className="font-semibold text-gray-700 capitalize">{status}</span>
                                </div>
 
                                {status === 'connected' && (
-                                   <div className="space-y-3 animate-fade-in">
-                                       <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-1">
-                                            <div className="flex justify-between">
-                                                <span className="text-slate-500">Number:</span>
-                                                <span className="font-mono font-bold">{connectedSession?.number}</span>
-                                            </div>
-                                            {connectedSession?.proxy && (
-                                                <div className="flex justify-between">
-                                                    <span className="text-slate-500">Proxy:</span>
-                                                    <span className="font-mono font-bold text-xs">{connectedSession.proxy}</span>
-                                                </div>
-                                            )}
+                                   <div className="bg-green-50 border border-green-100 p-4 rounded-lg mb-4">
+                                       <div className="flex items-center gap-3 mb-2">
+                                           <div className="w-10 h-10 bg-green-200 rounded-full flex items-center justify-center text-green-700">
+                                               <Smartphone size={20} />
+                                           </div>
+                                           <div>
+                                               <div className="font-bold text-gray-800">{connectedSession?.name}</div>
+                                               <div className="text-xs text-gray-500">{connectedSession?.number}</div>
+                                           </div>
                                        </div>
                                        <button 
                                             onClick={handleDisconnect}
-                                            className="w-full bg-red-50 text-red-600 border border-red-100 py-3 rounded-xl font-bold hover:bg-red-100 transition-colors"
+                                            className="w-full mt-2 text-xs font-bold text-red-500 hover:text-red-700 border border-red-200 rounded py-1.5 hover:bg-red-50 transition-colors"
                                         >
-                                            Disconnect Device
+                                            Disconnect
                                         </button>
                                    </div>
                                )}
+
+                               {status === 'disconnected' && (
+                                   <button 
+                                     onClick={handleStartConnection}
+                                     className="w-full bg-[#00a884] hover:bg-[#008f6f] text-white py-2.5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 shadow-sm"
+                                   >
+                                       <PlayCircle size={18} /> Start Session
+                                   </button>
+                               )}
                            </div>
 
-                           {/* Setup Form (Only visible when disconnected) */}
-                           {status === 'disconnected' && (
-                               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 animate-fade-in">
-                                   <h3 className="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2">
-                                       <Settings size={20} className="text-slate-400"/> Session Configuration
-                                   </h3>
-                                   
-                                   <div className="space-y-4">
-                                       <div>
-                                           <label className="block text-xs font-bold text-slate-500 uppercase mb-1">WhatsApp Phone Number</label>
-                                           <div className="relative">
-                                               <Smartphone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
-                                               <input 
-                                                   type="tel" 
-                                                   placeholder="+1 234 567 890"
-                                                   value={config.phoneNumber}
-                                                   onChange={(e) => setConfig({...config, phoneNumber: e.target.value})}
-                                                   className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none"
-                                               />
-                                           </div>
-                                       </div>
-
-                                       <div className="border-t border-slate-100 pt-4">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input 
-                                                        type="checkbox" 
-                                                        checked={config.useProxy}
-                                                        onChange={(e) => setConfig({...config, useProxy: e.target.checked})}
-                                                        className="w-4 h-4 rounded text-brand-600"
-                                                    />
-                                                    <span className="text-sm font-bold text-slate-700 flex items-center gap-2"><Globe size={16}/> Use Proxy</span>
-                                                </label>
-                                            </div>
-
-                                            {config.useProxy && (
-                                                <div className="grid grid-cols-2 gap-4 animate-fade-in p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                                    <div className="col-span-2">
-                                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Proxy Host</label>
-                                                        <div className="relative">
-                                                            <Server className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={14} />
-                                                            <input 
-                                                                type="text" 
-                                                                placeholder="192.168.1.1"
-                                                                value={config.proxyHost}
-                                                                onChange={(e) => setConfig({...config, proxyHost: e.target.value})}
-                                                                className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Port</label>
-                                                        <input 
-                                                            type="text" 
-                                                            placeholder="8080"
-                                                            value={config.proxyPort}
-                                                            onChange={(e) => setConfig({...config, proxyPort: e.target.value})}
-                                                            className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-lg"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Username (Optional)</label>
-                                                        <input 
-                                                            type="text" 
-                                                            value={config.proxyUser}
-                                                            onChange={(e) => setConfig({...config, proxyUser: e.target.value})}
-                                                            className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-lg"
-                                                        />
-                                                    </div>
-                                                    <div className="col-span-2">
-                                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Password (Optional)</label>
-                                                        <div className="relative">
-                                                            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={14} />
-                                                            <input 
-                                                                type="password" 
-                                                                value={config.proxyPass}
-                                                                onChange={(e) => setConfig({...config, proxyPass: e.target.value})}
-                                                                className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                       </div>
-
-                                       <button 
-                                         onClick={handleStartConnection}
-                                         className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
-                                       >
-                                           <QrCode size={18} /> Generate Connection QR
-                                       </button>
-                                   </div>
+                           {/* Logs Terminal */}
+                           <div className="bg-gray-900 rounded-lg shadow-sm border border-gray-800 overflow-hidden flex flex-col h-[300px]">
+                               <div className="bg-gray-800 px-4 py-2 flex items-center gap-2 border-b border-gray-700">
+                                   <Terminal size={14} className="text-gray-400" />
+                                   <span className="text-xs font-mono text-gray-300">Connection Logs</span>
                                </div>
-                           )}
-
-                           <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100">
-                               <h4 className="font-bold text-blue-800 mb-2 flex items-center gap-2">
-                                   <Info size={18} /> Integration Note
-                               </h4>
-                               <p className="text-sm text-blue-700 leading-relaxed">
-                                   Ensure your device remains on the "Linked Devices" screen during the pairing process. The system uses the Baileys protocol to establish a secure multi-device session.
-                               </p>
+                               <div className="flex-1 p-4 overflow-y-auto font-mono text-xs text-green-400 space-y-1">
+                                   {logs.length === 0 && <span className="text-gray-600 italic">Waiting for activity...</span>}
+                                   {logs.map((log, i) => (
+                                       <div key={i}>{log}</div>
+                                   ))}
+                                   <div ref={logsEndRef}></div>
+                               </div>
                            </div>
                        </div>
 
-                       {/* Right: QR Display */}
-                       <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center justify-center text-center relative overflow-hidden min-h-[500px]">
-                           {status === 'connected' ? (
-                               <div className="animate-fade-in">
-                                   <div className="w-32 h-32 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600 animate-bounce-short">
-                                       <CheckCircle size={64} />
-                                   </div>
-                                   <h3 className="text-2xl font-bold text-slate-800 mb-2">You're all set!</h3>
-                                   <p className="text-slate-500 max-w-xs mx-auto">Your WhatsApp account ({connectedSession?.number}) is successfully linked.</p>
-                               </div>
-                           ) : status === 'ready' || status === 'connecting' ? (
-                               <div className="w-full max-w-sm animate-fade-in flex flex-col items-center">
-                                   <h3 className="font-bold text-slate-800 mb-2 text-lg">Scan to Link {config.phoneNumber}</h3>
-                                   
-                                   <div className="bg-white p-2 border-2 border-slate-100 rounded-xl shadow-sm inline-block mb-6 relative">
-                                       {qrCodeUrl ? (
-                                           <img src={qrCodeUrl} alt="Scan Me" className="w-64 h-64 object-contain" />
-                                       ) : (
-                                           <div className="w-64 h-64 flex items-center justify-center bg-slate-50 text-slate-400">
-                                               <Loader2 className="animate-spin" size={32} />
-                                           </div>
-                                       )}
-                                       
-                                       {status === 'connecting' && (
-                                            <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-10">
-                                                <Loader2 size={48} className="text-brand-600 animate-spin mb-2" />
-                                                <p className="text-sm font-bold text-slate-600">Connecting...</p>
+                       {/* Right: QR Display & WhatsApp Style UI */}
+                       <div className="lg:col-span-8">
+                           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden h-full min-h-[500px] flex flex-col">
+                               {status === 'connected' ? (
+                                   <div className="flex-1 flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+                                        <div className="w-24 h-24 bg-[#d9fdd3] rounded-full flex items-center justify-center mb-6">
+                                            <CheckCircle size={48} className="text-[#00a884]" />
+                                        </div>
+                                        <h2 className="text-2xl font-light text-gray-800 mb-2">WhatsApp is connected</h2>
+                                        <p className="text-gray-500 max-w-md">
+                                            The system is ready to send automated receipts and notifications to 
+                                            <span className="font-bold text-gray-800 ml-1">{config.phoneNumber}</span>.
+                                        </p>
+                                        <div className="mt-8 grid grid-cols-3 gap-4 w-full max-w-lg">
+                                            <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                                                <div className="font-bold text-xl text-gray-800">Ready</div>
+                                                <div className="text-xs text-gray-500 uppercase">Status</div>
                                             </div>
-                                       )}
+                                            <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                                                <div className="font-bold text-xl text-gray-800">Stable</div>
+                                                <div className="text-xs text-gray-500 uppercase">Connection</div>
+                                            </div>
+                                            <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                                                <div className="font-bold text-xl text-gray-800">0ms</div>
+                                                <div className="text-xs text-gray-500 uppercase">Latency</div>
+                                            </div>
+                                        </div>
                                    </div>
-
-                                   {/* Simulation Trigger Button - Renamed for "Production" look */}
-                                   <button 
-                                      onClick={handleSimulateScan}
-                                      className="mb-6 bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-full font-bold shadow-lg transform transition-all hover:scale-105 flex items-center gap-2"
-                                   >
-                                      <CheckCircle size={20} /> Confirm Connection
-                                   </button>
-
-                                   <ol className="text-left text-sm text-slate-600 space-y-3 max-w-xs mx-auto bg-slate-50 p-4 rounded-xl border border-slate-100">
-                                       <li className="flex gap-2">
-                                           <span className="font-bold text-slate-900">1.</span> Open WhatsApp on <strong>{config.phoneNumber}</strong>
-                                       </li>
-                                       <li className="flex gap-2">
-                                           <span className="font-bold text-slate-900">2.</span> Go to <strong>Linked Devices</strong> &gt; <strong>Link a Device</strong>
-                                       </li>
-                                       <li className="flex gap-2">
-                                           <span className="font-bold text-slate-900">3.</span> Point your phone to this screen
-                                       </li>
-                                   </ol>
-                                   
-                                   <button onClick={() => setStatus('disconnected')} className="mt-6 text-sm text-red-500 hover:text-red-700 underline">
-                                       Cancel & Edit Config
-                                   </button>
-                               </div>
-                           ) : (
-                               <div className="text-slate-400 flex flex-col items-center">
-                                   <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6">
-                                       <Settings size={32} className="text-slate-300" />
+                               ) : status === 'disconnected' ? (
+                                   <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-gray-400">
+                                       <div className="mb-4 opacity-20">
+                                            <QrCode size={80} />
+                                       </div>
+                                       <h3 className="text-lg font-medium text-gray-600">No Active Session</h3>
+                                       <p className="text-sm">Click "Start Session" on the left panel to begin.</p>
                                    </div>
-                                   <p className="text-lg font-bold text-slate-600 mb-2">Configure Session</p>
-                                   <p className="text-sm max-w-xs mb-4">Enter your phone number and optional proxy settings on the left to generate a connection QR code.</p>
-                               </div>
-                           )}
+                               ) : (
+                                   // WhatsApp Web Style QR Screen
+                                   <div className="flex-1 flex flex-col md:flex-row p-8 md:p-12 gap-8 md:gap-12 animate-fade-in">
+                                       <div className="flex-1 space-y-6">
+                                           <h2 className="text-3xl font-light text-gray-700">Use WhatsApp on your computer</h2>
+                                           <ol className="list-decimal ml-5 space-y-4 text-gray-600 text-lg">
+                                               <li>Open WhatsApp on your phone</li>
+                                               <li>Tap <strong>Menu</strong> <MoreVertical size={16} className="inline"/> or <strong>Settings</strong> <Settings size={16} className="inline"/> and select <strong>Linked Devices</strong></li>
+                                               <li>Tap on <strong>Link a Device</strong></li>
+                                               <li>Point your phone to this screen to capture the code</li>
+                                           </ol>
+                                           <div className="pt-4 text-[#00a884] font-medium cursor-pointer hover:underline text-sm">
+                                               Need help getting started?
+                                           </div>
+                                       </div>
 
-                           {status === 'generating' && (
-                               <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-10">
-                                   <Loader2 size={48} className="text-brand-600 animate-spin mb-4" />
-                                   <p className="font-bold text-slate-600">Preparing session...</p>
-                                   <p className="text-xs text-slate-400 mt-2">Configuring Proxy & Socket</p>
-                               </div>
-                           )}
+                                       <div className="relative">
+                                           <div className="bg-white border border-gray-200 rounded-lg p-2 shadow-sm inline-block relative">
+                                                {status === 'initializing' || status === 'connecting' ? (
+                                                    <div className="w-[264px] h-[264px] flex flex-col items-center justify-center bg-gray-50">
+                                                        <Loader2 className="animate-spin text-[#00a884] mb-4" size={40} />
+                                                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{status === 'initializing' ? 'Generating Keys...' : 'Authenticating...'}</p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="relative group">
+                                                        <img src={qrCodeUrl} alt="QR Code" className="w-[264px] h-[264px]" />
+                                                        <div className="absolute inset-0 flex items-center justify-center bg-white/90 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <div className="text-center">
+                                                                <div className="text-[#00a884] font-bold mb-2">Scan with App</div>
+                                                            </div>
+                                                        </div>
+                                                        {/* Fake "Keep me signed in" */}
+                                                        <div className="absolute -bottom-10 left-0 w-full flex items-center justify-center gap-2">
+                                                            <div className="w-4 h-4 rounded-full border border-gray-300 bg-[#00a884] flex items-center justify-center">
+                                                                <CheckCircle size={10} className="text-white" />
+                                                            </div>
+                                                            <span className="text-sm text-gray-600 font-medium">Keep me signed in</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                           </div>
+                                           
+                                           {/* Mock Sim Button strictly for demo purposes */}
+                                            {status === 'ready' && (
+                                                <button 
+                                                    onClick={handleSimulateScan}
+                                                    className="absolute -bottom-20 left-1/2 transform -translate-x-1/2 whitespace-nowrap bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-full text-xs font-bold border border-gray-300 transition-colors"
+                                                >
+                                                    [DEBUG] Simulate Phone Scan
+                                                </button>
+                                            )}
+                                       </div>
+                                   </div>
+                               )}
+                           </div>
                        </div>
                    </div>
                )}
@@ -434,18 +430,18 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
                {activeTab === 'template' && (
                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
                        {/* Editor */}
-                       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col h-full">
+                       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col h-full">
                            <div className="flex justify-between items-center mb-4">
-                               <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                                   <LayoutTemplate size={20} className="text-slate-400"/> Message Template
+                               <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                                   <LayoutTemplate size={20} className="text-gray-400"/> Message Template
                                </h3>
-                               <button onClick={resetTemplate} className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1">
+                               <button onClick={resetTemplate} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
                                    <RefreshCw size={12} /> Reset Default
                                </button>
                            </div>
                            
-                           <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-4 text-xs text-slate-600 space-y-1">
-                               <p className="font-bold text-slate-700 mb-1">Available Placeholders:</p>
+                           <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4 text-xs text-gray-600 space-y-1">
+                               <p className="font-bold text-gray-700 mb-1">Available Placeholders:</p>
                                <div className="grid grid-cols-2 gap-2 font-mono">
                                    <span>{`{store_name}`}</span>
                                    <span>{`{order_id}`}</span>
@@ -459,14 +455,14 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
                            <textarea 
                               value={template}
                               onChange={(e) => setTemplate(e.target.value)}
-                              className="flex-1 w-full p-4 border border-slate-200 rounded-xl font-mono text-sm focus:ring-2 focus:ring-green-500 outline-none resize-none min-h-[300px]"
+                              className="flex-1 w-full p-4 border border-gray-200 rounded-lg font-mono text-sm focus:ring-2 focus:ring-[#00a884] outline-none resize-none min-h-[300px]"
                               placeholder="Type your message template here..."
                            />
 
                            <div className="mt-4">
                                <button 
                                  onClick={handleSaveTemplate}
-                                 className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+                                 className="w-full bg-[#00a884] hover:bg-[#008f6f] text-white py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
                                >
                                    <Save size={20} /> Save Configuration
                                </button>
@@ -475,16 +471,16 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
 
                        {/* Phone Preview */}
                        <div className="flex flex-col h-full">
-                           <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                               <Smartphone size={20} className="text-slate-400"/> Live Preview
+                           <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                               <Smartphone size={20} className="text-gray-400"/> Live Preview
                            </h3>
                            
-                           <div className="flex-1 bg-slate-200 rounded-[3rem] border-8 border-slate-800 p-4 max-w-sm mx-auto w-full relative shadow-2xl min-h-[500px]">
-                               <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-slate-800 rounded-b-xl z-10"></div>
+                           <div className="flex-1 bg-gray-200 rounded-[3rem] border-8 border-gray-800 p-4 max-w-sm mx-auto w-full relative shadow-2xl min-h-[500px]">
+                               <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-gray-800 rounded-b-xl z-10"></div>
                                
                                <div className="bg-[#e5ddd5] h-full w-full rounded-[2rem] overflow-hidden flex flex-col relative">
                                    <div className="bg-[#075e54] p-4 pt-8 text-white flex items-center gap-3 shadow-md z-10">
-                                       <div className="w-8 h-8 rounded-full bg-slate-300"></div>
+                                       <div className="w-8 h-8 rounded-full bg-gray-300"></div>
                                        <div className="flex-1">
                                            <div className="font-bold text-sm">Customer</div>
                                            <div className="text-[10px] opacity-80">online</div>
@@ -492,9 +488,9 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
                                    </div>
 
                                    <div className="flex-1 p-4 overflow-y-auto" style={{backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")', backgroundSize: '300px'}}>
-                                       <div className="bg-[#dcf8c6] p-3 rounded-lg rounded-tr-none shadow-sm max-w-[90%] ml-auto mb-2 text-sm text-slate-800 whitespace-pre-wrap">
+                                       <div className="bg-[#dcf8c6] p-3 rounded-lg rounded-tr-none shadow-sm max-w-[90%] ml-auto mb-2 text-sm text-gray-800 whitespace-pre-wrap">
                                            {getPreview()}
-                                           <div className="text-[10px] text-slate-400 text-right mt-1 flex items-center justify-end gap-1">
+                                           <div className="text-[10px] text-gray-400 text-right mt-1 flex items-center justify-end gap-1">
                                                {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                                <span className="text-blue-400">✓✓</span>
                                            </div>

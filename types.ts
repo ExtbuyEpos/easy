@@ -63,6 +63,7 @@ export interface StoreSettings {
   footerMessage?: string;
   receiptSize?: '58mm' | '80mm';
   whatsappTemplate?: string;
+  whatsappPhoneNumber?: string;
   taxEnabled: boolean;
   taxRate: number;
   taxName: string;

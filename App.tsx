@@ -42,6 +42,7 @@ Discount: {discount}
 ----------------
 
 {footer}`,
+    whatsappPhoneNumber: '',
     taxEnabled: false,
     taxRate: 0,
     taxName: 'Tax'
