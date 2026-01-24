@@ -4,7 +4,9 @@ export enum AppView {
   INVENTORY = 'INVENTORY',
   REPORTS = 'REPORTS',
   STOCK_CHECK = 'STOCK_CHECK',
-  SETTINGS = 'SETTINGS'
+  SETTINGS = 'SETTINGS',
+  BAILEYS_SETUP = 'BAILEYS_SETUP',
+  ORDERS = 'ORDERS'
 }
 
 export type UserRole = 'ADMIN' | 'MANAGER' | 'STAFF' | 'CASHIER';
@@ -29,8 +31,13 @@ export interface Sale {
   id: string;
   timestamp: number;
   items: CartItem[];
+  subTotal: number;
+  discount: number;
+  tax: number;
   total: number;
   paymentMethod: 'CASH' | 'CARD';
+  status?: 'COMPLETED' | 'REFUNDED' | 'PARTIAL';
+  returnedItems?: { [itemId: string]: number }; // Maps Item ID to returned quantity
 }
 
 export interface User {
@@ -55,4 +62,8 @@ export interface StoreSettings {
   logo?: string; // Base64 string
   footerMessage?: string;
   receiptSize?: '58mm' | '80mm';
+  whatsappTemplate?: string;
+  taxEnabled: boolean;
+  taxRate: number;
+  taxName: string;
 }

@@ -155,40 +155,40 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="flex flex-col h-full bg-slate-50 p-4 lg:p-6 overflow-hidden">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Inventory Management</h2>
-          <p className="text-slate-500">Manage stock levels, pricing, images, and barcodes.</p>
+          <h2 className="text-2xl font-bold text-slate-800">Inventory</h2>
+          <p className="text-slate-500 text-sm">Manage stock levels, pricing, images.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2 w-full lg:w-auto">
           {selectedIds.size > 0 && (
             <button
               onClick={() => setIsBulkModalOpen(true)}
-              className="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm transition-all animate-fade-in"
+              className="flex-1 lg:flex-none bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 shadow-sm text-sm"
             >
-              <Layers size={18} /> Bulk Edit Stock ({selectedIds.size})
+              <Layers size={16} /> Bulk Edit ({selectedIds.size})
             </button>
           )}
           <button
             onClick={() => handleOpenModal()}
-            className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm transition-all"
+            className="flex-1 lg:flex-none bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 shadow-sm"
           >
-            <Plus size={20} /> Add Product
+            <Plus size={20} /> <span className="hidden md:inline">Add Product</span><span className="md:hidden">Add</span>
           </button>
         </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex-1 flex flex-col overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+        <div className="p-3 border-b border-slate-100 flex gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
             <input
               type="text"
-              placeholder="Search by Name, SKU, Category or Tags..."
+              placeholder="Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
             />
           </div>
         </div>
@@ -200,24 +200,16 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
                 <th className="p-4 border-b w-10">
                   <input 
                     type="checkbox" 
-                    className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                    className="w-4 h-4 rounded border-gray-300"
                     checked={filteredProducts.length > 0 && selectedIds.size === filteredProducts.length}
-                    ref={input => {
-                      if (input) {
-                        input.indeterminate = selectedIds.size > 0 && selectedIds.size < filteredProducts.length;
-                      }
-                    }}
                     onChange={handleSelectAll}
                   />
                 </th>
-                <th className="p-4 border-b w-16">Image</th>
-                <th className="p-4 border-b">SKU / Barcode</th>
-                <th className="p-4 border-b">Product Name</th>
-                <th className="p-4 border-b">Category</th>
-                <th className="p-4 border-b text-right">Cost</th>
+                <th className="p-4 border-b hidden sm:table-cell">Image</th>
+                <th className="p-4 border-b">Product</th>
                 <th className="p-4 border-b text-right">Price</th>
                 <th className="p-4 border-b text-right">Stock</th>
-                <th className="p-4 border-b text-center">Actions</th>
+                <th className="p-4 border-b text-center w-20">Edit</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -228,12 +220,12 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
                     <td className="p-4">
                       <input 
                         type="checkbox" 
-                        className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                        className="w-4 h-4 rounded border-gray-300"
                         checked={isSelected}
                         onChange={() => handleSelectOne(product.id)}
                       />
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 hidden sm:table-cell">
                       <div className="w-10 h-10 rounded-lg bg-slate-100 overflow-hidden flex items-center justify-center border border-slate-200">
                         {product.image ? (
                           <img src={product.image} alt="" className="w-full h-full object-cover" />
@@ -242,33 +234,17 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
                         )}
                       </div>
                     </td>
-                    <td className="p-4 font-mono text-slate-500 text-xs">{product.sku}</td>
                     <td className="p-4">
-                      <div className="font-medium text-slate-900">{product.name}</div>
-                      {product.tags && product.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {product.tags.map((tag, i) => (
-                            <span key={i} className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded border border-indigo-100 font-medium">
-                              #{tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      <div className="font-medium text-slate-900 truncate max-w-[150px]">{product.name}</div>
+                      <div className="text-xs text-slate-400 font-mono">{product.sku}</div>
                     </td>
-                    <td className="p-4 text-slate-600">
-                      <span className="px-2 py-1 bg-slate-100 rounded-full text-xs">{product.category}</span>
-                    </td>
-                    <td className="p-4 text-right text-slate-500">{CURRENCY}{product.costPrice.toFixed(2)}</td>
                     <td className="p-4 text-right font-medium text-slate-900">{CURRENCY}{product.sellPrice.toFixed(2)}</td>
                     <td className={`p-4 text-right font-bold ${product.stock < 10 ? 'text-red-500' : 'text-green-600'}`}>
                       {product.stock}
                     </td>
-                    <td className="p-4 flex justify-center gap-2">
-                      <button onClick={() => handleOpenModal(product)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
+                    <td className="p-4 text-center">
+                      <button onClick={() => handleOpenModal(product)} className="text-blue-600 p-2 hover:bg-blue-50 rounded">
                         <Edit2 size={16} />
-                      </button>
-                      <button onClick={() => onDeleteProduct(product.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
-                        <Trash2 size={16} />
                       </button>
                     </td>
                   </tr>
@@ -277,99 +253,35 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
             </tbody>
           </table>
           {filteredProducts.length === 0 && (
-            <div className="p-8 text-center text-slate-400">
-              No products found. Add some inventory to get started.
-            </div>
+            <div className="p-8 text-center text-slate-400">No products found.</div>
           )}
         </div>
       </div>
 
-      {/* Bulk Edit Modal */}
-      {isBulkModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
-             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-               <div>
-                  <h3 className="text-xl font-bold text-slate-800">Bulk Stock Update</h3>
-                  <p className="text-xs text-slate-500">Updating {selectedIds.size} products</p>
-               </div>
-               <button onClick={() => setIsBulkModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
-             </div>
-             
-             <div className="p-6 space-y-4">
-                <div className="space-y-2">
-                   <label className="text-sm font-semibold text-slate-600">Action</label>
-                   <div className="grid grid-cols-3 gap-2">
-                      <button 
-                        onClick={() => setBulkAction('SET')}
-                        className={`py-2 text-sm font-bold rounded-lg border ${bulkAction === 'SET' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200'}`}
-                      >
-                        Set To
-                      </button>
-                      <button 
-                         onClick={() => setBulkAction('ADD')}
-                        className={`py-2 text-sm font-bold rounded-lg border ${bulkAction === 'ADD' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-slate-600 border-slate-200'}`}
-                      >
-                        Add (+)
-                      </button>
-                      <button 
-                         onClick={() => setBulkAction('REMOVE')}
-                        className={`py-2 text-sm font-bold rounded-lg border ${bulkAction === 'REMOVE' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-600 border-slate-200'}`}
-                      >
-                        Reduce (-)
-                      </button>
-                   </div>
-                </div>
-
-                <div className="space-y-2">
-                   <label className="text-sm font-semibold text-slate-600">Quantity</label>
-                   <input 
-                      type="number" 
-                      min="0"
-                      value={bulkValue}
-                      onChange={e => setBulkValue(parseInt(e.target.value) || 0)}
-                      className="w-full p-3 border border-slate-300 rounded-lg text-lg font-bold text-center focus:ring-2 focus:ring-brand-500 outline-none"
-                   />
-                </div>
-
-                <div className="pt-4 flex gap-3">
-                   <button onClick={() => setIsBulkModalOpen(false)} className="flex-1 py-3 text-slate-600 font-bold hover:bg-slate-100 rounded-lg">Cancel</button>
-                   <button onClick={handleBulkSave} className="flex-1 py-3 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 shadow-md">Apply Update</button>
-                </div>
-             </div>
-           </div>
-        </div>
-      )}
-
       {/* Add/Edit Product Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-              <h3 className="text-xl font-bold text-slate-800">{editingProduct ? 'Edit Product' : 'Add New Product'}</h3>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-4 lg:p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="text-lg font-bold text-slate-800">{editingProduct ? 'Edit Product' : 'Add New Product'}</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
             </div>
             
-            <div className="p-6 overflow-y-auto">
+            <div className="p-4 lg:p-6 overflow-y-auto">
               <div className="flex flex-col md:flex-row gap-6">
                 {/* Image Upload Section */}
                 <div className="w-full md:w-1/3 flex flex-col gap-3">
-                  <label className="text-xs font-semibold text-slate-500 uppercase">Product Image</label>
+                  <label className="text-xs font-semibold text-slate-500 uppercase">Image</label>
                   <div 
-                    className="aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-brand-400 hover:bg-brand-50 transition-all relative overflow-hidden group"
+                    className="aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center cursor-pointer relative overflow-hidden group"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     {formData.image ? (
-                      <>
-                        <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                           <Edit2 className="text-white" />
-                        </div>
-                      </>
+                      <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
                     ) : (
                       <div className="text-center p-4">
-                        <Upload className="mx-auto text-slate-400 mb-2" size={32} />
-                        <span className="text-xs text-slate-400">Click to upload</span>
+                        <Upload className="mx-auto text-slate-400 mb-2" size={24} />
+                        <span className="text-xs text-slate-400">Upload</span>
                       </div>
                     )}
                     <input 
@@ -380,25 +292,17 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
                       onChange={handleImageUpload}
                     />
                   </div>
-                  {formData.image && (
-                     <button 
-                       onClick={(e) => { e.stopPropagation(); setFormData({...formData, image: ''}) }}
-                       className="text-xs text-red-500 hover:text-red-700 text-center"
-                     >
-                       Remove Image
-                     </button>
-                  )}
                 </div>
 
                 {/* Form Fields Section */}
                 <div className="w-full md:w-2/3 space-y-4">
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500 uppercase">Product Name <span className="text-red-500">*</span></label>
+                    <label className="text-xs font-semibold text-slate-500 uppercase">Product Name</label>
                     <input
                       type="text"
                       value={formData.name}
                       onChange={e => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"
+                      className="w-full p-2.5 border border-slate-200 rounded-lg"
                       placeholder="e.g. Premium Coffee"
                     />
                   </div>
@@ -411,8 +315,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
                         list="category-suggestions"
                         value={formData.category}
                         onChange={e => setFormData({ ...formData, category: e.target.value })}
-                        className="w-full p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"
-                        placeholder="Select or type..."
+                        className="w-full p-2.5 border border-slate-200 rounded-lg"
                       />
                       <datalist id="category-suggestions">
                         {categories.map(cat => (
@@ -422,19 +325,18 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
                     </div>
                     
                     <div className="space-y-1">
-                       <label className="text-xs font-semibold text-slate-500 uppercase">Barcode / SKU</label>
+                       <label className="text-xs font-semibold text-slate-500 uppercase">SKU / Barcode</label>
                        <div className="flex gap-2">
                          <input
                           type="text"
                           value={formData.sku}
                           onChange={e => setFormData({ ...formData, sku: e.target.value })}
-                          className="w-full p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none font-mono text-sm"
-                          placeholder="Auto-generated if empty"
+                          className="w-full p-2.5 border border-slate-200 rounded-lg font-mono text-sm"
+                          placeholder="Auto"
                         />
                         <button 
                           onClick={generateBarcode}
-                          className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg"
-                          title="Generate Random Barcode"
+                          className="p-2 bg-slate-100 rounded-lg text-slate-600"
                         >
                           <RefreshCw size={18} />
                         </button>
@@ -442,48 +344,32 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
                     </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1"><Tag size={12}/> Tags</label>
-                    <input
-                      type="text"
-                      value={tagInput}
-                      onChange={e => setTagInput(e.target.value)}
-                      className="w-full p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"
-                      placeholder="e.g. New, Sale, Organic (Comma separated)"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  <div className="grid grid-cols-3 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-slate-500 uppercase">Cost</label>
                       <input
                         type="number"
-                        min="0"
-                        step="0.01"
                         value={formData.costPrice}
                         onChange={e => setFormData({ ...formData, costPrice: parseFloat(e.target.value) })}
-                        className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"
+                        className="w-full p-2 border border-slate-200 rounded-lg"
                       />
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-slate-500 uppercase">Price</label>
                       <input
                         type="number"
-                        min="0"
-                        step="0.01"
                         value={formData.sellPrice}
                         onChange={e => setFormData({ ...formData, sellPrice: parseFloat(e.target.value) })}
-                        className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"
+                        className="w-full p-2 border border-slate-200 rounded-lg"
                       />
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-slate-500 uppercase">Stock</label>
                       <input
                         type="number"
-                        min="0"
                         value={formData.stock}
                         onChange={e => setFormData({ ...formData, stock: parseInt(e.target.value) })}
-                        className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"
+                        className="w-full p-2 border border-slate-200 rounded-lg"
                       />
                     </div>
                   </div>
@@ -491,10 +377,10 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
               </div>
             </div>
 
-            <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+            <div className="p-4 lg:p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
               <button onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-200 rounded-lg font-medium">Cancel</button>
-              <button onClick={handleSave} className="px-6 py-2.5 bg-brand-600 text-white hover:bg-brand-700 rounded-lg flex items-center gap-2 shadow-sm font-bold">
-                <Save size={18} /> Save Product
+              <button onClick={handleSave} className="px-6 py-2.5 bg-brand-600 text-white hover:bg-brand-700 rounded-lg flex items-center gap-2 font-bold">
+                <Save size={18} /> Save
               </button>
             </div>
           </div>

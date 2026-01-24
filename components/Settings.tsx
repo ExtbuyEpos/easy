@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, UserRole, Product, Sale, StoreSettings } from '../types';
-import { Shield, User as UserIcon, Trash2, Plus, Save, X, Lock, Database, Download, Upload, AlertTriangle, Archive, Receipt, Image as ImageIcon, RefreshCw } from 'lucide-react';
+import { Shield, User as UserIcon, Trash2, Plus, Save, X, Lock, Database, Download, Upload, AlertTriangle, Archive, Receipt, Image as ImageIcon, Printer, Percent } from 'lucide-react';
 import JSZip from 'jszip';
 import * as XLSX from 'xlsx';
 
@@ -91,19 +91,6 @@ export const Settings: React.FC<SettingsProps> = ({
     onUpdateStoreSettings(storeForm);
     setStoreMessage("Settings saved successfully!");
     setTimeout(() => setStoreMessage(null), 3000);
-  };
-
-  const applyBaileysPreset = () => {
-    if(window.confirm("Apply 'BAILEYS' full store setup? This will update store name, address, and receipt settings.")) {
-        setStoreForm(prev => ({
-            ...prev,
-            name: 'BAILEYS',
-            address: 'No. 1 Baileys Plaza\nLekki-Epe Expressway, Lagos',
-            phone: '080-BAILEYS-POS',
-            footerMessage: 'Goods bought in good condition are not returnable. Thanks for your patronage!',
-            receiptSize: '80mm'
-        }));
-    }
   };
 
   // --- BACKUP & RESTORE LOGIC ---
@@ -219,7 +206,7 @@ export const Settings: React.FC<SettingsProps> = ({
             {/* Receipt Customization Panel */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <Receipt size={18} className="text-brand-600"/> Receipt Customization
+                    <Receipt size={18} className="text-brand-600"/> Receipt Template
                 </h3>
                 
                 <div className="space-y-4">
@@ -241,6 +228,7 @@ export const Settings: React.FC<SettingsProps> = ({
                        value={storeForm.name} 
                        onChange={e => setStoreForm({...storeForm, name: e.target.value})}
                        className="w-full p-2 border border-slate-200 rounded-lg text-sm"
+                       placeholder="My Store Name"
                     />
                   </div>
                   
@@ -250,6 +238,7 @@ export const Settings: React.FC<SettingsProps> = ({
                        value={storeForm.address} 
                        onChange={e => setStoreForm({...storeForm, address: e.target.value})}
                        className="w-full p-2 border border-slate-200 rounded-lg text-sm h-20 resize-none"
+                       placeholder="Store Address..."
                     />
                   </div>
 
@@ -260,6 +249,7 @@ export const Settings: React.FC<SettingsProps> = ({
                        value={storeForm.phone} 
                        onChange={e => setStoreForm({...storeForm, phone: e.target.value})}
                        className="w-full p-2 border border-slate-200 rounded-lg text-sm"
+                       placeholder="Phone number"
                     />
                   </div>
 
@@ -270,38 +260,77 @@ export const Settings: React.FC<SettingsProps> = ({
                        value={storeForm.footerMessage} 
                        onChange={e => setStoreForm({...storeForm, footerMessage: e.target.value})}
                        className="w-full p-2 border border-slate-200 rounded-lg text-sm"
+                       placeholder="Thank you for visiting!"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Receipt Size</label>
+                    <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1">
+                        <Printer size={14} /> Paper Size
+                    </label>
                     <select
                         value={storeForm.receiptSize || '80mm'}
                         onChange={e => setStoreForm({...storeForm, receiptSize: e.target.value as '58mm' | '80mm'})}
                         className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-white"
                     >
-                        <option value="80mm">80mm (Standard Thermal)</option>
+                        <option value="80mm">80mm (Standard Wide Thermal)</option>
                         <option value="58mm">58mm (Narrow Thermal)</option>
                     </select>
                   </div>
+                </div>
 
-                  <div className="flex gap-2">
+                {/* Tax Settings */}
+                <div className="mt-6 pt-4 border-t border-slate-100">
+                    <h4 className="font-bold text-slate-700 mb-3 flex items-center gap-2 text-sm">
+                        <Percent size={16} /> Tax Configuration
+                    </h4>
+                    <div className="space-y-3">
+                         <div className="flex items-center gap-2">
+                             <input 
+                               type="checkbox" 
+                               id="enableTax"
+                               checked={storeForm.taxEnabled}
+                               onChange={e => setStoreForm({...storeForm, taxEnabled: e.target.checked})}
+                               className="w-4 h-4 rounded text-brand-600 focus:ring-brand-500"
+                             />
+                             <label htmlFor="enableTax" className="text-sm text-slate-600 font-medium">Enable Tax Calculation</label>
+                         </div>
+                         
+                         {storeForm.taxEnabled && (
+                            <div className="grid grid-cols-2 gap-2 animate-fade-in">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Tax Name</label>
+                                    <input 
+                                       type="text" 
+                                       value={storeForm.taxName}
+                                       onChange={e => setStoreForm({...storeForm, taxName: e.target.value})}
+                                       className="w-full p-2 border border-slate-200 rounded-lg text-sm"
+                                       placeholder="VAT"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Rate (%)</label>
+                                    <input 
+                                       type="number" 
+                                       value={storeForm.taxRate}
+                                       onChange={e => setStoreForm({...storeForm, taxRate: parseFloat(e.target.value) || 0})}
+                                       className="w-full p-2 border border-slate-200 rounded-lg text-sm"
+                                       placeholder="10"
+                                    />
+                                </div>
+                            </div>
+                         )}
+                    </div>
+                </div>
+
+                <div className="mt-6">
                     <button 
                         onClick={handleSaveStoreSettings}
-                        className="flex-1 bg-brand-600 text-white py-2 rounded-lg font-bold hover:bg-brand-700 transition-colors flex items-center justify-center gap-2"
+                        className="w-full bg-brand-600 text-white py-2 rounded-lg font-bold hover:bg-brand-700 transition-colors flex items-center justify-center gap-2"
                     >
                         <Save size={16} /> Save Settings
                     </button>
-                    <button 
-                        onClick={applyBaileysPreset}
-                        className="px-3 py-2 bg-slate-100 text-slate-500 rounded-lg font-bold hover:bg-slate-200 border border-slate-200"
-                        title="Load BAILEYS Setup"
-                    >
-                        <RefreshCw size={16} />
-                    </button>
-                  </div>
-                  
-                  {storeMessage && <div className="text-xs text-green-600 text-center font-bold">{storeMessage}</div>}
+                    {storeMessage && <div className="text-xs text-green-600 text-center font-bold mt-2">{storeMessage}</div>}
                 </div>
             </div>
 

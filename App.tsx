@@ -6,8 +6,11 @@ import { Reports } from './components/Reports';
 import { Login } from './components/Login';
 import { StockCheck } from './components/StockCheck';
 import { Settings } from './components/Settings';
+import { BaileysSetup } from './components/BaileysSetup';
+import { Orders } from './components/Orders';
 import { AppView, Product, Sale, CartItem, User, StoreSettings } from './types';
 import { INITIAL_PRODUCTS, INITIAL_USERS } from './constants';
+import { Menu } from 'lucide-react';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -16,12 +19,32 @@ const App: React.FC = () => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   
+  // Mobile UI State
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   const [storeSettings, setStoreSettings] = useState<StoreSettings>({
     name: 'easyPOS',
     address: 'Retail Management System',
     phone: '',
     footerMessage: 'Thank you for your business!',
-    receiptSize: '80mm'
+    receiptSize: '80mm',
+    whatsappTemplate: `🧾 *{store_name}*
+Order: #{order_id}
+Date: {date}
+
+*Items:*
+{items}
+
+----------------
+Subtotal: {subtotal}
+Discount: {discount}
+*TOTAL: {total}*
+----------------
+
+{footer}`,
+    taxEnabled: false,
+    taxRate: 0,
+    taxName: 'Tax'
   });
 
   // Initialize Data (Simulate Database)
@@ -49,7 +72,11 @@ const App: React.FC = () => {
 
     if (savedSettings) {
       const parsed = JSON.parse(savedSettings);
-      setStoreSettings({ ...parsed, receiptSize: parsed.receiptSize || '80mm' });
+      setStoreSettings(prev => ({ 
+          ...prev, // Keep defaults if new keys are missing in localstorage
+          ...parsed,
+          whatsappTemplate: parsed.whatsappTemplate || prev.whatsappTemplate 
+      }));
     }
   }, []);
 
@@ -86,13 +113,17 @@ const App: React.FC = () => {
     }
   };
 
-  const handleCheckout = (items: CartItem[], total: number, paymentMethod: 'CASH' | 'CARD') => {
+  const handleCheckout = (items: CartItem[], total: number, paymentMethod: 'CASH' | 'CARD', subTotal: number, discount: number, tax: number) => {
     const newSale: Sale = {
       id: Date.now().toString(),
       timestamp: Date.now(),
       items,
+      subTotal,
+      discount,
+      tax,
       total,
-      paymentMethod
+      paymentMethod,
+      status: 'COMPLETED'
     };
 
     setSales([...sales, newSale]);
@@ -106,6 +137,54 @@ const App: React.FC = () => {
       return p;
     });
     setProducts(newProducts);
+  };
+
+  const handleProcessReturn = (saleId: string, returnMap: { [itemId: string]: number }) => {
+    // 1. Update Sales Record
+    const updatedSales = sales.map(sale => {
+      if (sale.id === saleId) {
+        const prevReturns = sale.returnedItems || {};
+        const newReturns = { ...prevReturns };
+        
+        // Merge new returns
+        Object.entries(returnMap).forEach(([itemId, qty]) => {
+          newReturns[itemId] = (newReturns[itemId] || 0) + qty;
+        });
+
+        // Sanity Check: Ensure we don't return more than purchased
+        sale.items.forEach(item => {
+            if (newReturns[item.id] > item.quantity) {
+                newReturns[item.id] = item.quantity;
+            }
+        });
+
+        // Calculate status
+        let totalOriginalCount = 0;
+        let totalReturnedCount = 0;
+
+        sale.items.forEach(item => {
+            totalOriginalCount += item.quantity;
+            totalReturnedCount += (newReturns[item.id] || 0);
+        });
+
+        // If everything returned, mark REFUNDED, else PARTIAL
+        const status = totalReturnedCount >= totalOriginalCount ? 'REFUNDED' : 'PARTIAL';
+
+        return { ...sale, returnedItems: newReturns, status };
+      }
+      return sale;
+    });
+    setSales(updatedSales);
+
+    // 2. Update Stock (Restock items)
+    const updatedProducts = products.map(p => {
+       const returnQty = returnMap[p.id];
+       if (returnQty && returnQty > 0) {
+           return { ...p, stock: p.stock + returnQty };
+       }
+       return p;
+    });
+    setProducts(updatedProducts);
   };
 
   const handleStockUpdate = (id: string, newStock: number) => {
@@ -127,61 +206,113 @@ const App: React.FC = () => {
     localStorage.setItem('easyPOS_storeSettings', JSON.stringify(settings));
   };
 
+  const handleViewChange = (view: AppView) => {
+      setCurrentView(view);
+      setIsMobileMenuOpen(false); // Close mobile menu on navigation
+  };
+
   if (!user) {
     return <Login onLogin={setUser} users={users} />;
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 font-sans">
-      <Sidebar 
-        currentView={currentView} 
-        onChangeView={setCurrentView} 
-        onLogout={() => setUser(null)} 
-        currentUser={user}
-      />
+    <div className="flex h-screen overflow-hidden bg-slate-50 font-sans flex-col lg:flex-row">
       
-      <main className="flex-1 overflow-hidden relative">
-        {currentView === AppView.POS && (
-          <POS 
-            products={products} 
-            onCheckout={handleCheckout} 
-            storeSettings={storeSettings}
-          />
-        )}
-        
-        {currentView === AppView.INVENTORY && (
-          <Inventory 
-            products={products} 
-            onAddProduct={handleAddProduct}
-            onUpdateProduct={handleUpdateProduct}
-            onBulkUpdateProduct={handleBulkUpdateProduct}
-            onDeleteProduct={handleDeleteProduct}
-          />
-        )}
-        
-        {currentView === AppView.STOCK_CHECK && (
-          <StockCheck 
-            products={products}
-            onUpdateStock={handleStockUpdate}
-          />
-        )}
+      {/* Mobile Sidebar Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm transition-opacity"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
 
-        {currentView === AppView.REPORTS && (
-          <Reports sales={sales} products={products} />
-        )}
-
-        {currentView === AppView.SETTINGS && user.role === 'ADMIN' && (
-          <Settings 
-             users={users} 
-             products={products}
-             sales={sales}
-             onAddUser={handleAddUser} 
-             onDeleteUser={handleDeleteUser}
-             currentUser={user}
-             storeSettings={storeSettings}
-             onUpdateStoreSettings={handleUpdateStoreSettings}
+      {/* Sidebar - Responsive Container */}
+      <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-slate-900 shadow-2xl transform transition-transform duration-300 lg:translate-x-0 lg:static lg:w-64 lg:shadow-none ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <Sidebar 
+            currentView={currentView} 
+            onChangeView={handleViewChange} 
+            onLogout={() => setUser(null)} 
+            currentUser={user}
+            onCloseMobile={() => setIsMobileMenuOpen(false)}
           />
-        )}
+      </div>
+      
+      {/* Main Layout Area */}
+      <main className="flex-1 overflow-hidden relative flex flex-col min-w-0">
+        
+        {/* Mobile Header */}
+        <div className="lg:hidden bg-slate-900 text-white p-4 flex items-center justify-between shrink-0 shadow-md z-30">
+            <div className="flex items-center gap-3">
+               <button onClick={() => setIsMobileMenuOpen(true)} className="p-1 hover:bg-slate-800 rounded">
+                  <Menu size={24} />
+               </button>
+               <h1 className="font-bold text-lg tracking-tight">easyPOS</h1>
+            </div>
+            <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center font-bold text-sm">
+                    {user.name.charAt(0).toUpperCase()}
+                </div>
+            </div>
+        </div>
+
+        {/* Content Viewport */}
+        <div className="flex-1 overflow-hidden relative">
+            {currentView === AppView.POS && (
+            <POS 
+                products={products} 
+                onCheckout={handleCheckout} 
+                storeSettings={storeSettings}
+            />
+            )}
+            
+            {currentView === AppView.INVENTORY && (
+            <Inventory 
+                products={products} 
+                onAddProduct={handleAddProduct}
+                onUpdateProduct={handleUpdateProduct}
+                onBulkUpdateProduct={handleBulkUpdateProduct}
+                onDeleteProduct={handleDeleteProduct}
+            />
+            )}
+            
+            {currentView === AppView.STOCK_CHECK && (
+            <StockCheck 
+                products={products}
+                onUpdateStock={handleStockUpdate}
+            />
+            )}
+
+            {currentView === AppView.ORDERS && (
+            <Orders 
+                sales={sales} 
+                onProcessReturn={handleProcessReturn} 
+            />
+            )}
+
+            {currentView === AppView.REPORTS && (
+            <Reports sales={sales} products={products} />
+            )}
+
+            {currentView === AppView.SETTINGS && user.role === 'ADMIN' && (
+            <Settings 
+                users={users} 
+                products={products}
+                sales={sales}
+                onAddUser={handleAddUser} 
+                onDeleteUser={handleDeleteUser}
+                currentUser={user}
+                storeSettings={storeSettings}
+                onUpdateStoreSettings={handleUpdateStoreSettings}
+            />
+            )}
+
+            {currentView === AppView.BAILEYS_SETUP && user.role === 'ADMIN' && (
+                <BaileysSetup 
+                onUpdateStoreSettings={handleUpdateStoreSettings} 
+                settings={storeSettings}
+                />
+            )}
+        </div>
       </main>
     </div>
   );
