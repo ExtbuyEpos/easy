@@ -100,7 +100,6 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
             const randomB64 = (len: number) => {
                 const arr = new Uint8Array(len);
                 window.crypto.getRandomValues(arr);
-                // Convert to binary string manually to avoid stack overflow on large arrays, though len is small here
                 let binary = '';
                 for (let i = 0; i < len; i++) {
                     binary += String.fromCharCode(arr[i]);
@@ -109,12 +108,13 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
             };
 
             // Mimic Baileys QR format: ref,publicKey,clientId (All Base64)
-            // Using a phone number in the QR string often crashes the mobile app parser because it expects Base64.
+            // IMPORTANT: Using a raw phone number here causes the WhatsApp app to crash.
+            // We must use valid Base64 strings to simulate the handshake data.
             const ref = randomB64(32);
             const pubKey = randomB64(32);
             const clientId = randomB64(32);
             
-            // Standard format often seen: "2@" + ... or just comma separated
+            // Standard format: ref,pubKey,clientId
             const qrData = `${ref},${pubKey},${clientId}`;
             
             try {

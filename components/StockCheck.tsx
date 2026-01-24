@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Product } from '../types';
-import { ScanLine, CheckCircle, AlertTriangle, Save, RefreshCw, History, Trash2, Plus, Minus, Search, ArrowRight } from 'lucide-react';
+import { ScanLine, CheckCircle, AlertTriangle, Save, RefreshCw, History, Trash2, Plus, Minus, Search, ArrowRight, Download } from 'lucide-react';
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
@@ -116,6 +116,23 @@ export const StockCheck: React.FC<StockCheckProps> = ({ products, onUpdateStock 
       if (window.confirm("Clear all scanned items?")) {
           setSessionList([]);
       }
+  };
+
+  const handleExportCSV = () => {
+     if (sessionList.length === 0) return;
+     
+     const data = sessionList.map(item => ({
+       SKU: item.product.sku,
+       Name: item.product.name,
+       SystemStock: item.systemStock,
+       PhysicalCount: item.physicalCount,
+       Variance: item.physicalCount - item.systemStock
+     }));
+     
+     const ws = XLSX.utils.json_to_sheet(data);
+     const wb = XLSX.utils.book_new();
+     XLSX.utils.book_append_sheet(wb, ws, "Stock Check");
+     XLSX.writeFile(wb, "stock_check_results.csv");
   };
 
   return (
@@ -254,8 +271,11 @@ export const StockCheck: React.FC<StockCheckProps> = ({ products, onUpdateStock 
                   Total Items Scanned: <span className="font-bold text-slate-900">{sessionList.reduce((acc, item) => acc + item.physicalCount, 0)}</span>
               </div>
               <div className="flex gap-2">
-                  <button className="px-4 py-2 border border-slate-300 text-slate-600 font-bold rounded-lg hover:bg-slate-50">
-                      Export CSV
+                  <button 
+                    onClick={handleExportCSV}
+                    className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 font-bold rounded-lg hover:bg-slate-50 transition-colors"
+                  >
+                      <Download size={16} /> Export CSV
                   </button>
               </div>
           </div>
