@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Product, CartItem, StoreSettings, Sale } from '../types';
+import { Product, CartItem, StoreSettings, Sale, Language } from '../types';
 import { CURRENCY } from '../constants';
 import { ShoppingCart, Plus, Minus, Search, Image as ImageIcon, QrCode, X, History, ShoppingBag, DollarSign, TrendingUp, Package, Edit3, Trash2, CheckCircle, Printer, MessageCircle, MoreVertical, CreditCard, Receipt, Percent, Tag, ChevronUp } from 'lucide-react';
 import jsQR from 'jsqr';
 import QRCode from 'qrcode';
+import { formatNumber, formatCurrency } from '../utils/format';
 
 interface POSProps {
   products: Product[];
@@ -13,9 +14,10 @@ interface POSProps {
   onViewOrderHistory: () => void;
   onUpdateStoreSettings: (settings: StoreSettings) => void;
   t?: (key: string) => string;
+  language: Language;
 }
 
-export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSettings, onViewOrderHistory, onUpdateStoreSettings, t = (k) => k }) => {
+export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSettings, onViewOrderHistory, onUpdateStoreSettings, t = (k) => k, language }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [skuInput, setSkuInput] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -189,7 +191,9 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
                     <div className="flex flex-col flex-1">
                         <h3 className="font-black text-slate-800 dark:text-slate-100 text-xs md:text-sm leading-tight line-clamp-2 h-8 mb-2">{product.name}</h3>
                         <div className="mt-auto flex justify-between items-center">
-                            <div className="text-sm md:text-lg font-black text-brand-600 dark:text-brand-400">{CURRENCY}{product.sellPrice.toFixed(2)}</div>
+                            <div className="text-sm md:text-lg font-black text-brand-600 dark:text-brand-400">
+                                {formatCurrency(product.sellPrice, language, CURRENCY)}
+                            </div>
                             <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-xl flex items-center justify-center group-hover:bg-brand-600 group-hover:text-white transition-all shadow-sm">
                                 <Plus size={18} strokeWidth={3} />
                             </div>
@@ -206,7 +210,7 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
             <div className="flex items-center gap-8 animate-marquee whitespace-nowrap">
                 {recentSales.map(s => (
                     <div key={s.id} className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                        ORD-{s.id.slice(-4)} • <span className="text-white">{CURRENCY}{s.total.toFixed(2)}</span> • {new Date(s.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        ORD-{s.id.slice(-4)} • <span className="text-white">{formatCurrency(s.total, language, CURRENCY)}</span> • {new Date(s.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                     </div>
                 ))}
             </div>
@@ -221,11 +225,11 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
           <div className="flex items-center gap-3">
               <div className="relative">
                   <ShoppingBag className="text-brand-600" size={28} />
-                  {cart.length > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">{cart.reduce((a,b)=>a+b.quantity,0)}</span>}
+                  {cart.length > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">{formatNumber(cart.reduce((a,b)=>a+b.quantity,0), language)}</span>}
               </div>
               <div>
                   <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Current Total</div>
-                  <div className="text-xl font-black dark:text-white">{CURRENCY}{finalTotal.toFixed(2)}</div>
+                  <div className="text-xl font-black dark:text-white">{formatCurrency(finalTotal, language, CURRENCY)}</div>
               </div>
           </div>
           <button className="bg-brand-600 text-white px-8 py-3.5 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center gap-2 shadow-lg shadow-brand-500/20">
@@ -266,10 +270,10 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
                       <div key={item.id} onClick={() => handleEditCartItem(index, item)} className="group flex justify-between items-start gap-4 p-4 -mx-2 rounded-[1.5rem] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer">
                          <div className="flex-1 min-w-0">
                              <span className="text-sm font-black text-slate-800 dark:text-slate-100 block truncate">{item.name}</span>
-                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.quantity} x {CURRENCY}{item.sellPrice.toFixed(2)}</span>
+                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{formatNumber(item.quantity, language)} x {formatCurrency(item.sellPrice, language, CURRENCY)}</span>
                          </div>
                          <div className="text-right">
-                             <span className="text-sm font-black text-slate-900 dark:text-white">{CURRENCY}{(item.sellPrice * item.quantity).toFixed(2)}</span>
+                             <span className="text-sm font-black text-slate-900 dark:text-white">{formatCurrency(item.sellPrice * item.quantity, language, CURRENCY)}</span>
                          </div>
                       </div>
                     ))}
@@ -279,24 +283,24 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
                     <div className="space-y-2">
                         <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
                             <span>Subtotal</span>
-                            <span>{CURRENCY}{cartSubtotal.toFixed(2)}</span>
+                            <span>{formatCurrency(cartSubtotal, language, CURRENCY)}</span>
                         </div>
                         {discountValue > 0 && (
                           <div className="flex justify-between text-[10px] font-black text-emerald-600 uppercase tracking-widest animate-fade-in">
-                              <span>Discount {discountType === 'percent' ? `(${discountValue}%)` : ''}</span>
-                              <span>-{CURRENCY}{totalDiscountAmount.toFixed(2)}</span>
+                              <span>Discount {discountType === 'percent' ? `(${formatNumber(discountValue, language)}%)` : ''}</span>
+                              <span>-{formatCurrency(totalDiscountAmount, language, CURRENCY)}</span>
                           </div>
                         )}
                         {storeSettings.taxEnabled && (
                           <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                              <span>{storeSettings.taxName} ({storeSettings.taxRate}%)</span>
-                              <span>{CURRENCY}{taxAmount.toFixed(2)}</span>
+                              <span>{storeSettings.taxName} ({formatNumber(storeSettings.taxRate, language)}%)</span>
+                              <span>{formatCurrency(taxAmount, language, CURRENCY)}</span>
                           </div>
                         )}
                     </div>
                     <div className="flex justify-between items-end pt-2 border-t border-slate-100 dark:border-slate-800">
                         <span className="text-xs font-black text-slate-400 uppercase tracking-widest pb-1">Total Due</span>
-                        <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{CURRENCY}{finalTotal.toFixed(2)}</span>
+                        <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{formatCurrency(finalTotal, language, CURRENCY)}</span>
                     </div>
                 </div>
              </div>
@@ -361,7 +365,7 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Quantity Control</label>
                           <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-800 p-2 rounded-[2.5rem] border-2 border-slate-100 dark:border-slate-700 shadow-inner">
                              <button onClick={() => setEditingCartItem({ ...editingCartItem, item: { ...editingCartItem.item, quantity: Math.max(1, editingCartItem.item.quantity - 1) }})} className="w-16 h-16 flex items-center justify-center bg-white dark:bg-slate-700 rounded-3xl text-slate-500 active:scale-90 shadow-sm"><Minus size={24} strokeWidth={3}/></button>
-                             <span className="flex-1 text-center font-black text-4xl dark:text-white">{editingCartItem.item.quantity}</span>
+                             <span className="flex-1 text-center font-black text-4xl dark:text-white">{formatNumber(editingCartItem.item.quantity, language)}</span>
                              <button onClick={() => setEditingCartItem({ ...editingCartItem, item: { ...editingCartItem.item, quantity: editingCartItem.item.quantity + 1 }})} className="w-16 h-16 flex items-center justify-center bg-white dark:bg-slate-700 rounded-3xl text-slate-500 active:scale-90 shadow-sm"><Plus size={24} strokeWidth={3}/></button>
                           </div>
                       </div>
@@ -395,8 +399,8 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
                 <div className="border-y-2 border-dashed border-slate-200 py-6 mb-8 space-y-3 font-mono text-sm">
                    {lastSale.items.map((item: any) => (
                      <div key={item.id} className="flex justify-between items-start">
-                        <span className="flex-1 pr-4">{item.name} <span className="text-[10px] text-slate-400 block mt-0.5">x{item.quantity}</span></span>
-                        <span className="font-bold text-slate-900">{CURRENCY}{(item.sellPrice * item.quantity).toFixed(2)}</span>
+                        <span className="flex-1 pr-4">{item.name} <span className="text-[10px] text-slate-400 block mt-0.5">x{formatNumber(item.quantity, language)}</span></span>
+                        <span className="font-bold text-slate-900">{formatCurrency(item.sellPrice * item.quantity, language, CURRENCY)}</span>
                      </div>
                    ))}
                 </div>
@@ -405,12 +409,12 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
                     {lastSale.discount > 0 && (
                         <div className="flex justify-between items-center text-xs font-mono text-emerald-600 font-bold">
                             <span>Discount Applied</span>
-                            <span>-{CURRENCY}{lastSale.discount.toFixed(2)}</span>
+                            <span>-{formatCurrency(lastSale.discount, language, CURRENCY)}</span>
                         </div>
                     )}
                     <div className="flex justify-between items-center">
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Charged ({lastSale.paymentMethod})</span>
-                        <span className="text-5xl font-black tracking-tighter">{CURRENCY}{lastSale.total.toFixed(2)}</span>
+                        <span className="text-5xl font-black tracking-tighter">{formatCurrency(lastSale.total, language, CURRENCY)}</span>
                     </div>
                 </div>
 

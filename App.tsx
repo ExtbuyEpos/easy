@@ -173,12 +173,10 @@ const App: React.FC = () => {
   return (
     <div className="flex h-[100svh] overflow-hidden bg-[#111827] dark:bg-slate-950 font-sans flex-col lg:flex-row transition-colors">
       
-      {/* Mobile Drawer Backdrop */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 bg-black/70 z-[60] lg:hidden backdrop-blur-md" onClick={() => setIsMobileMenuOpen(false)} />
       )}
 
-      {/* Sidebar - Desktop Collapsible / Mobile Drawer */}
       <div className={`
         fixed inset-y-0 left-0 rtl:left-auto rtl:right-0 z-[70] w-72 transform transition-all duration-500 ease-out 
         lg:static lg:w-72 lg:translate-x-0
@@ -204,13 +202,11 @@ const App: React.FC = () => {
           />
       </div>
 
-      {/* Main Container */}
       <main className={`
         flex-1 overflow-hidden relative flex flex-col min-w-0 bg-[#f8fafc] dark:bg-slate-950 transition-all duration-500
         ${isSidebarVisible && window.innerWidth >= 1024 ? 'lg:rounded-l-[44px] rtl:lg:rounded-r-[44px] shadow-2xl' : 'rounded-none'}
       `}>
         
-        {/* Alerts / Status */}
         <div className="absolute top-0 left-0 right-0 z-50 pointer-events-none flex justify-center">
             {!isOnline && (
               <div className="bg-red-600 text-white text-[9px] font-black px-6 py-1 rounded-b-xl shadow-lg flex items-center gap-2 animate-bounce pointer-events-auto">
@@ -224,7 +220,6 @@ const App: React.FC = () => {
             )}
         </div>
 
-        {/* Floating Menu Button (When Sidebar Hidden) */}
         {!isSidebarVisible && (
             <div className="hidden lg:block absolute top-6 left-6 z-[60] no-print">
                 <button onClick={() => setIsSidebarVisible(true)} className="p-3 bg-white dark:bg-slate-900 text-slate-800 dark:text-white rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 hover:scale-105 active:scale-95 transition-all">
@@ -233,7 +228,6 @@ const App: React.FC = () => {
             </div>
         )}
 
-        {/* Mobile Header */}
         <div className="lg:hidden bg-slate-900 text-white p-5 flex items-center justify-between shrink-0 shadow-lg z-30">
             <div className="flex items-center gap-4">
                 <button onClick={() => setIsMobileMenuOpen(true)} className="p-2.5 bg-slate-800 rounded-xl active:scale-95 transition-transform"><Menu size={24} /></button>
@@ -242,25 +236,24 @@ const App: React.FC = () => {
             <div className="w-10 h-10 rounded-2xl bg-brand-600 flex items-center justify-center font-black text-white">{user.name.charAt(0).toUpperCase()}</div>
         </div>
 
-        {/* View Component Rendering */}
         <div className="flex-1 overflow-hidden relative">
             {currentView === AppView.POS && (
-              <POS products={products} sales={sales} onCheckout={handleCheckout} storeSettings={storeSettings} onViewOrderHistory={() => setCurrentView(AppView.ORDERS)} onUpdateStoreSettings={handleUpdateStoreSettings} t={t} />
+              <POS products={products} sales={sales} onCheckout={handleCheckout} storeSettings={storeSettings} onViewOrderHistory={() => setCurrentView(AppView.ORDERS)} onUpdateStoreSettings={handleUpdateStoreSettings} t={t} language={language} />
             )}
             {(currentView === AppView.INVENTORY || currentView === AppView.CATEGORIES) && (
-              <Inventory products={products} categories={categories} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} onBulkUpdateProduct={handleBulkUpdateProduct} onDeleteProduct={handleDeleteProduct} initialTab={currentView === AppView.CATEGORIES ? 'categories' : 'products'} onGoBack={() => setCurrentView(AppView.POS)} t={t} currentUser={user} />
+              <Inventory products={products} categories={categories} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} onBulkUpdateProduct={handleBulkUpdateProduct} onDeleteProduct={handleDeleteProduct} initialTab={currentView === AppView.CATEGORIES ? 'categories' : 'products'} onGoBack={() => setCurrentView(AppView.POS)} t={t} currentUser={user} language={language} />
             )}
             {currentView === AppView.STOCK_CHECK && (
-              <StockCheck products={products} onUpdateStock={handleStockUpdate} onGoBack={() => setCurrentView(AppView.POS)} />
+              <StockCheck products={products} onUpdateStock={handleStockUpdate} onGoBack={() => setCurrentView(AppView.POS)} language={language} />
             )}
             {currentView === AppView.ORDERS && (
-              <Orders sales={sales} onProcessReturn={() => {}} storeSettings={storeSettings} onGoBack={() => setCurrentView(AppView.POS)} />
+              <Orders sales={sales} onProcessReturn={() => {}} storeSettings={storeSettings} onGoBack={() => setCurrentView(AppView.POS)} language={language} />
             )}
             {currentView === AppView.REPORTS && (
-              <Reports sales={sales} products={products} onGoBack={() => setCurrentView(AppView.POS)} />
+              <Reports sales={sales} products={products} onGoBack={() => setCurrentView(AppView.POS)} language={language} />
             )}
             {currentView === AppView.SETTINGS && (
-              <Settings users={users} products={products} sales={sales} onAddUser={() => {}} onDeleteUser={() => {}} currentUser={user} storeSettings={storeSettings} onUpdateStoreSettings={handleUpdateStoreSettings} onGoBack={() => setCurrentView(AppView.POS)} />
+              <Settings users={users} products={products} sales={sales} onAddUser={() => {}} onDeleteUser={() => {}} currentUser={user} storeSettings={storeSettings} onUpdateStoreSettings={handleUpdateStoreSettings} onGoBack={() => setCurrentView(AppView.POS)} language={language} toggleLanguage={toggleLanguage} t={t} />
             )}
             {currentView === AppView.BAILEYS_SETUP && (
               <BaileysSetup onUpdateStoreSettings={handleUpdateStoreSettings} settings={storeSettings} onGoBack={() => setCurrentView(AppView.POS)} t={t} />

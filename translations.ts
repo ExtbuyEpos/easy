@@ -81,6 +81,15 @@ export const translations: Record<Language, Translations> = {
     'delete': 'Delete',
     'bulkEdit': 'Bulk Edit',
     'lowStockAlert': 'Low Stock Alert',
+    'createCategory': 'Create New Category',
+    'uploadImage': 'Upload Image',
+    'imageUrl': 'Image URL',
+
+    // Returns/Orders
+    'refundInvoice': 'Refund Invoice',
+    'refundAmount': 'Refund Amount',
+    'processRefund': 'Process Refund',
+    'originalOrder': 'Original Order',
     
     // WhatsApp Integration
     'linkWithQr': 'Link with QR Code',
@@ -182,6 +191,15 @@ export const translations: Record<Language, Translations> = {
     'delete': 'حذف',
     'bulkEdit': 'تعديل جماعي',
     'lowStockAlert': 'تنبيه مخزون منخفض',
+    'createCategory': 'إنشاء فئة جديدة',
+    'uploadImage': 'رفع صورة',
+    'imageUrl': 'رابط الصورة',
+
+    // Returns/Orders
+    'refundInvoice': 'فاتورة استرجاع',
+    'refundAmount': 'مبلغ الاسترجاع',
+    'processRefund': 'إتمام الاسترجاع',
+    'originalOrder': 'الطلب الأصلي',
 
     // WhatsApp Integration
     'linkWithQr': 'ربط عبر رمز QR',
