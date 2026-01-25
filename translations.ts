@@ -1,3 +1,4 @@
+
 import { Language, Translations } from './types';
 
 export const translations: Record<Language, Translations> = {
@@ -12,7 +13,7 @@ export const translations: Record<Language, Translations> = {
     'defaultLogin': 'Default',
     'smartRetail': 'Smart Retail Management',
     'professionalSolution': 'The professional offline-capable solution for your business growth.',
-    'copyright': '© 2025 easyPOS. All Rights Reserved.',
+    'copyright': '© 2026 easyPOS. All Rights Reserved.',
     'poweredBy': 'Powered by ZAHRAT AL SAWSEN',
     'loginWithPhone': 'Login with Phone Number',
     'loginWithCredentials': 'Login with Username',
@@ -113,7 +114,7 @@ export const translations: Record<Language, Translations> = {
     'defaultLogin': 'الافتراضي',
     'smartRetail': 'نظام إدارة مبيعات ذكي',
     'professionalSolution': 'الحل الاحترافي المناسب لنمو أعمالك.',
-    'copyright': '© 2025 easyPOS. جميع الحقوق محفوظة.',
+    'copyright': '© 2026 easyPOS. جميع الحقوق محفوظة.',
     'poweredBy': 'تم التطوير بواسطة زهرة السوسن',
     'loginWithPhone': 'تسجيل الدخول برقم الهاتف',
     'loginWithCredentials': 'تسجيل الدخول باسم المستخدم',
