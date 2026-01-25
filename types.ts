@@ -67,4 +67,5 @@ export interface StoreSettings {
   taxEnabled: boolean;
   taxRate: number;
   taxName: string;
+  autoPrint: boolean;
 }

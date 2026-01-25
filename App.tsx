@@ -49,7 +49,8 @@ Discount: {discount}
     whatsappPhoneNumber: '',
     taxEnabled: false,
     taxRate: 0,
-    taxName: 'Tax'
+    taxName: 'Tax',
+    autoPrint: false
   });
 
   // --- Network Listeners ---
@@ -309,6 +310,8 @@ Discount: {discount}
                 products={products} 
                 onCheckout={handleCheckout} 
                 storeSettings={storeSettings}
+                onViewOrderHistory={() => handleViewChange(AppView.ORDERS)}
+                onUpdateStoreSettings={handleUpdateStoreSettings}
             />
             )}
             
@@ -332,7 +335,8 @@ Discount: {discount}
             {currentView === AppView.ORDERS && (
             <Orders 
                 sales={sales} 
-                onProcessReturn={handleProcessReturn} 
+                onProcessReturn={handleProcessReturn}
+                storeSettings={storeSettings} 
             />
             )}
 

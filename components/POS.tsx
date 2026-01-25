@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Product, CartItem, StoreSettings } from '../types';
 import { CURRENCY } from '../constants';
-import { ShoppingCart, CreditCard, Trash2, Plus, Minus, Search, Printer, CheckCircle, MessageCircle, Phone, Image as ImageIcon, Receipt, Edit3, PlusCircle, X, Save, Tag, QrCode, Camera, ChevronLeft, ShoppingBag, Percent, DollarSign, Filter } from 'lucide-react';
+import { ShoppingCart, CreditCard, Trash2, Plus, Minus, Search, Printer, CheckCircle, MessageCircle, Phone, Image as ImageIcon, Receipt, Edit3, PlusCircle, X, Save, Tag, QrCode, Camera, ChevronLeft, ShoppingBag, Percent, DollarSign, Filter, History } from 'lucide-react';
 import jsQR from 'jsqr';
+import QRCode from 'qrcode';
 
 interface POSProps {
   products: Product[];
   onCheckout: (items: CartItem[], total: number, paymentMethod: 'CASH' | 'CARD', subTotal: number, discount: number, tax: number) => void;
   storeSettings: StoreSettings;
+  onViewOrderHistory: () => void;
+  onUpdateStoreSettings: (settings: StoreSettings) => void;
 }
 
-export const POS: React.FC<POSProps> = ({ products, onCheckout, storeSettings }) => {
+export const POS: React.FC<POSProps> = ({ products, onCheckout, storeSettings, onViewOrderHistory, onUpdateStoreSettings }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [skuInput, setSkuInput] = useState('');
   const [showInvoice, setShowInvoice] = useState(false);
@@ -25,6 +28,9 @@ export const POS: React.FC<POSProps> = ({ products, onCheckout, storeSettings })
       id: string, 
       paymentMethod: string
   } | null>(null);
+
+  // QR Code for Receipt
+  const [invoiceQr, setInvoiceQr] = useState<string>('');
 
   const [customerPhone, setCustomerPhone] = useState('');
   const skuInputRef = useRef<HTMLInputElement>(null);
@@ -57,6 +63,29 @@ export const POS: React.FC<POSProps> = ({ products, onCheckout, storeSettings })
     }
   }, []);
 
+  // --- AUTO PRINT LOGIC ---
+  useEffect(() => {
+    if (showInvoice && storeSettings.autoPrint && lastSale) {
+        const timer = setTimeout(() => {
+            window.print();
+        }, 500); // Slight delay to ensure rendering
+        return () => clearTimeout(timer);
+    }
+  }, [showInvoice, storeSettings.autoPrint, lastSale]);
+
+  // --- GENERATE INVOICE QR ---
+  useEffect(() => {
+    if (lastSale) {
+        QRCode.toDataURL(lastSale.id, { margin: 1, width: 120 })
+            .then(url => setInvoiceQr(url))
+            .catch(err => console.error("QR Gen Error", err));
+    }
+  }, [lastSale]);
+
+  const toggleAutoPrint = (enabled: boolean) => {
+    onUpdateStoreSettings({ ...storeSettings, autoPrint: enabled });
+  };
+
   // --- DEEP SEARCH FILTERING ---
   const filteredProducts = skuInput.trim() === '' 
       ? products 
@@ -66,7 +95,6 @@ export const POS: React.FC<POSProps> = ({ products, onCheckout, storeSettings })
               p.name.toLowerCase().includes(term) ||
               p.sku.includes(term) ||
               p.category.toLowerCase().includes(term) ||
-              p.sellPrice.toString().includes(term) ||
               (p.tags && p.tags.some(t => t.toLowerCase().includes(term)))
           );
       });
@@ -174,11 +202,6 @@ export const POS: React.FC<POSProps> = ({ products, onCheckout, storeSettings })
       }
       return [...prev, { ...product, quantity: 1 }];
     });
-    
-    // Auto-focus logic for rapid entry
-    if(window.innerWidth > 768) {
-        setTimeout(() => skuInputRef.current?.focus(), 10);
-    }
   };
 
   const removeFromCart = (id: string) => {
@@ -363,24 +386,15 @@ Date: {date}
         {/* Search & Scan Bar */}
         <div className="bg-white p-3 lg:p-4 shadow-sm flex items-center gap-2 lg:gap-4 shrink-0 z-20 sticky top-0 lg:static">
           <Search className="text-slate-400 hidden lg:block" />
-          <form onSubmit={handleSkuSubmit} className="flex-1 relative">
+          <form onSubmit={handleSkuSubmit} className="flex-1">
             <input
               ref={skuInputRef}
               type="text"
               value={skuInput}
               onChange={(e) => setSkuInput(e.target.value)}
-              placeholder="Search by Name, SKU, Tag or Price..."
+              placeholder="Search by Name, SKU, or Tag..."
               className="w-full text-base lg:text-lg outline-none bg-slate-100 lg:bg-transparent px-4 py-2.5 rounded-full lg:rounded-none placeholder-slate-400 text-slate-800 focus:bg-white focus:ring-2 focus:ring-brand-500 lg:focus:ring-0 transition-all"
             />
-            {skuInput && (
-                <button 
-                  type="button" 
-                  onClick={() => { setSkuInput(''); skuInputRef.current?.focus(); }}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full"
-                >
-                    <X size={16} />
-                </button>
-            )}
           </form>
           <button 
              onClick={() => setIsScannerOpen(true)}
@@ -388,6 +402,13 @@ Date: {date}
           >
              <QrCode size={18} />
              <span className="hidden md:inline">Scan QR</span>
+          </button>
+          <button 
+             onClick={onViewOrderHistory}
+             className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2.5 rounded-full lg:rounded-lg transition-colors font-medium text-sm whitespace-nowrap active:scale-95 transform"
+          >
+             <History size={18} />
+             <span className="hidden md:inline">Orders</span>
           </button>
         </div>
 
@@ -811,12 +832,37 @@ Date: {date}
             </div>
              
              {storeSettings.footerMessage && (
-                <div className="text-center text-xs text-slate-500 mb-6 italic">
+                <div className="text-center text-xs text-slate-500 mb-4 italic">
                    "{storeSettings.footerMessage}"
                 </div>
              )}
+             
+             {/* Invoice QR Code */}
+             {invoiceQr && (
+                 <div className="flex flex-col items-center justify-center pt-2 border-t border-dashed border-slate-200 print:border-black">
+                     <img src={invoiceQr} alt="Invoice QR" className="w-24 h-24 mb-1" />
+                     <p className="text-[10px] text-slate-400 font-mono">Scan for Return</p>
+                 </div>
+             )}
 
             <div className="mt-6 mb-6 pt-4 border-t border-slate-100 no-print">
+               {/* Auto Print Toggle */}
+               <div className="flex items-center justify-between bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4">
+                  <div className="flex items-center gap-2">
+                      <Printer size={16} className="text-blue-600" />
+                      <span className="text-sm font-bold text-blue-800">Auto-print receipts</span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={storeSettings.autoPrint}
+                      onChange={(e) => toggleAutoPrint(e.target.checked)}
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+               </div>
+
               <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Send Receipt via WhatsApp</label>
               <div className="flex gap-2">
                 <input 
