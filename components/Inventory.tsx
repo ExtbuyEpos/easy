@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Product } from '../types';
-import { Plus, Search, Trash2, Edit2, Save, X, Image as ImageIcon, RefreshCw, Upload, Tag, Layers, CheckSquare } from 'lucide-react';
+import { Plus, Search, Trash2, Edit2, Save, X, Image as ImageIcon, RefreshCw, Upload, Tag, Layers, CheckSquare, MoreHorizontal, Filter } from 'lucide-react';
 import { CURRENCY } from '../constants';
 
 interface InventoryProps {
@@ -156,132 +156,205 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
 
   return (
     <div className="flex flex-col h-full bg-slate-50 p-4 lg:p-6 overflow-hidden">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">Inventory</h2>
-          <p className="text-slate-500 text-sm">Manage stock levels, pricing, images.</p>
-        </div>
-        <div className="flex flex-wrap gap-2 w-full lg:w-auto">
-          {selectedIds.size > 0 && (
+      
+      {/* Top Header & Actions */}
+      <div className="flex flex-col gap-4 mb-4 shrink-0">
+         <div className="flex justify-between items-center">
+             <div>
+                <h2 className="text-2xl font-bold text-slate-800">Inventory</h2>
+                <p className="text-slate-500 text-sm hidden lg:block">Manage stock levels, pricing, images.</p>
+            </div>
             <button
-              onClick={() => setIsBulkModalOpen(true)}
-              className="flex-1 lg:flex-none bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 shadow-sm text-sm"
+                onClick={() => handleOpenModal()}
+                className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform"
             >
-              <Layers size={16} /> Bulk Edit ({selectedIds.size})
+                <Plus size={20} /> <span className="font-medium">Add Product</span>
             </button>
-          )}
-          <button
-            onClick={() => handleOpenModal()}
-            className="flex-1 lg:flex-none bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 shadow-sm"
-          >
-            <Plus size={20} /> <span className="hidden md:inline">Add Product</span><span className="md:hidden">Add</span>
-          </button>
-        </div>
+         </div>
+
+         <div className="flex gap-2 items-center">
+             <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+                <input
+                    type="text"
+                    placeholder="Search products..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm bg-white"
+                />
+             </div>
+             {/* Filter Button (Visual placeholder for future enhancement) */}
+             <button className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800">
+                 <Filter size={18} />
+             </button>
+         </div>
+
+         {/* Bulk Actions Bar (Only visible when items selected) */}
+         {selectedIds.size > 0 && (
+            <div className="bg-slate-800 text-white p-3 rounded-lg flex items-center justify-between animate-fade-in shadow-lg">
+                <div className="flex items-center gap-2">
+                    <CheckSquare size={16} className="text-brand-400"/>
+                    <span className="text-sm font-bold">{selectedIds.size} Selected</span>
+                </div>
+                <button 
+                  onClick={() => setIsBulkModalOpen(true)}
+                  className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded text-xs font-bold transition-colors"
+                >
+                    Bulk Edit
+                </button>
+            </div>
+         )}
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex-1 flex flex-col overflow-hidden">
-        <div className="p-3 border-b border-slate-100 flex gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
-            <input
-              type="text"
-              placeholder="Search..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
-            />
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-600 font-semibold sticky top-0 z-10">
-              <tr>
-                <th className="p-4 border-b w-10">
-                  <input 
+        {/* Mobile: Card View | Desktop: Table View */}
+        <div className="flex-1 overflow-auto bg-slate-50">
+          
+          {/* Desktop Table Header */}
+          <div className="hidden md:flex bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 sticky top-0 z-10 text-sm">
+             <div className="p-4 w-12 text-center">
+                <input 
                     type="checkbox" 
-                    className="w-4 h-4 rounded border-gray-300"
+                    className="w-4 h-4 rounded border-gray-300 focus:ring-brand-500"
                     checked={filteredProducts.length > 0 && selectedIds.size === filteredProducts.length}
                     onChange={handleSelectAll}
-                  />
-                </th>
-                <th className="p-4 border-b hidden sm:table-cell">Image</th>
-                <th className="p-4 border-b">Product</th>
-                <th className="p-4 border-b text-right">Price</th>
-                <th className="p-4 border-b text-right">Stock</th>
-                <th className="p-4 border-b text-center w-20">Edit</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredProducts.map(product => {
+                />
+             </div>
+             <div className="p-4 w-20">Image</div>
+             <div className="p-4 flex-1">Product Details</div>
+             <div className="p-4 w-32 text-right">Price</div>
+             <div className="p-4 w-24 text-center">Stock</div>
+             <div className="p-4 w-20 text-center">Edit</div>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {filteredProducts.map(product => {
                 const isSelected = selectedIds.has(product.id);
                 return (
-                  <tr key={product.id} className={`hover:bg-slate-50 transition-colors ${isSelected ? 'bg-slate-50' : ''}`}>
-                    <td className="p-4">
-                      <input 
-                        type="checkbox" 
-                        className="w-4 h-4 rounded border-gray-300"
-                        checked={isSelected}
-                        onChange={() => handleSelectOne(product.id)}
-                      />
-                    </td>
-                    <td className="p-4 hidden sm:table-cell">
-                      <div className="w-10 h-10 rounded-lg bg-slate-100 overflow-hidden flex items-center justify-center border border-slate-200">
-                        {product.image ? (
-                          <img src={product.image} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <ImageIcon size={16} className="text-slate-400" />
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="font-medium text-slate-900 truncate max-w-[150px]">{product.name}</div>
-                      <div className="text-xs text-slate-400 font-mono">{product.sku}</div>
-                    </td>
-                    <td className="p-4 text-right font-medium text-slate-900">{CURRENCY}{product.sellPrice.toFixed(2)}</td>
-                    <td className={`p-4 text-right font-bold ${product.stock < 10 ? 'text-red-500' : 'text-green-600'}`}>
-                      {product.stock}
-                    </td>
-                    <td className="p-4 text-center">
-                      <button onClick={() => handleOpenModal(product)} className="text-blue-600 p-2 hover:bg-blue-50 rounded">
-                        <Edit2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
+                  <div key={product.id} className={`group bg-white hover:bg-slate-50 transition-colors ${isSelected ? 'bg-blue-50/50' : ''}`}>
+                    {/* Desktop Row Layout */}
+                    <div className="hidden md:flex items-center">
+                        <div className="p-4 w-12 text-center">
+                            <input 
+                                type="checkbox" 
+                                className="w-4 h-4 rounded border-gray-300 focus:ring-brand-500"
+                                checked={isSelected}
+                                onChange={() => handleSelectOne(product.id)}
+                            />
+                        </div>
+                        <div className="p-4 w-20">
+                            <div className="w-10 h-10 rounded-lg bg-slate-100 overflow-hidden border border-slate-200">
+                                {product.image ? (
+                                    <img src={product.image} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                    <ImageIcon className="w-full h-full p-2 text-slate-300" />
+                                )}
+                            </div>
+                        </div>
+                        <div className="p-4 flex-1">
+                            <div className="font-bold text-slate-800">{product.name}</div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-xs text-slate-500 font-mono bg-slate-100 px-1.5 py-0.5 rounded">{product.sku}</span>
+                                <span className="text-[10px] text-slate-400 uppercase tracking-wide px-1.5 py-0.5 border border-slate-100 rounded-full">{product.category}</span>
+                            </div>
+                        </div>
+                        <div className="p-4 w-32 text-right font-medium text-slate-900">
+                            {CURRENCY}{product.sellPrice.toFixed(2)}
+                        </div>
+                        <div className={`p-4 w-24 text-center font-bold ${product.stock < 10 ? 'text-red-500' : 'text-green-600'}`}>
+                            {product.stock}
+                        </div>
+                        <div className="p-4 w-20 text-center">
+                            <button onClick={() => handleOpenModal(product)} className="text-slate-400 hover:text-brand-600 transition-colors p-2">
+                                <Edit2 size={16} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Mobile Card Layout */}
+                    <div className="md:hidden p-4 flex gap-4 relative">
+                        {/* Selection Overlay for Mobile */}
+                        <div className="absolute top-4 left-4 z-10">
+                            <input 
+                                type="checkbox" 
+                                className="w-5 h-5 rounded border-gray-300 focus:ring-brand-500 bg-white shadow-sm"
+                                checked={isSelected}
+                                onChange={() => handleSelectOne(product.id)}
+                            />
+                        </div>
+
+                        <div className="w-20 h-20 shrink-0 rounded-lg bg-slate-100 overflow-hidden border border-slate-200 mt-1">
+                             {product.image ? (
+                                <img src={product.image} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                                <ImageIcon className="w-full h-full p-4 text-slate-300" />
+                            )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start mb-1">
+                                <h3 className="font-bold text-slate-800 truncate pr-4">{product.name}</h3>
+                                <button onClick={() => handleOpenModal(product)} className="text-brand-600 p-1 -mr-2">
+                                    <Edit2 size={18} />
+                                </button>
+                            </div>
+                            <div className="text-xs text-slate-500 font-mono mb-2">{product.sku}</div>
+                            
+                            <div className="flex justify-between items-end">
+                                <div className="text-lg font-bold text-slate-900">{CURRENCY}{product.sellPrice.toFixed(2)}</div>
+                                <div className={`px-2 py-1 rounded text-xs font-bold ${product.stock < 10 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                                    {product.stock} in stock
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                  </div>
                 );
-              })}
-            </tbody>
-          </table>
+            })}
+          </div>
+          
           {filteredProducts.length === 0 && (
-            <div className="p-8 text-center text-slate-400">No products found.</div>
+            <div className="p-12 text-center text-slate-400 flex flex-col items-center">
+                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                    <Search size={32} className="opacity-50" />
+                </div>
+                <p>No products found.</p>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Add/Edit Product Modal */}
+      {/* Add/Edit Product Modal - Full Screen on Mobile */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-4 lg:p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 md:p-4">
+          <div className="bg-white w-full h-full md:h-auto md:max-h-[90vh] md:max-w-2xl md:rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-fade-in">
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
               <h3 className="text-lg font-bold text-slate-800">{editingProduct ? 'Edit Product' : 'Add New Product'}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
+              <button onClick={() => setIsModalOpen(false)} className="bg-slate-200 p-2 rounded-full text-slate-600 hover:bg-slate-300"><X size={20} /></button>
             </div>
             
-            <div className="p-4 lg:p-6 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6">
               <div className="flex flex-col md:flex-row gap-6">
                 {/* Image Upload Section */}
                 <div className="w-full md:w-1/3 flex flex-col gap-3">
-                  <label className="text-xs font-semibold text-slate-500 uppercase">Image</label>
+                  <label className="text-xs font-semibold text-slate-500 uppercase">Product Image</label>
                   <div 
-                    className="aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center cursor-pointer relative overflow-hidden group"
+                    className="aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center cursor-pointer relative overflow-hidden group hover:border-brand-400 transition-colors"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     {formData.image ? (
-                      <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
+                      <>
+                        <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="text-white text-xs font-bold">Change Image</span>
+                        </div>
+                      </>
                     ) : (
                       <div className="text-center p-4">
-                        <Upload className="mx-auto text-slate-400 mb-2" size={24} />
-                        <span className="text-xs text-slate-400">Upload</span>
+                        <div className="bg-white p-3 rounded-full shadow-sm inline-block mb-3">
+                            <Upload className="text-brand-500" size={24} />
+                        </div>
+                        <span className="text-xs text-slate-400 block font-medium">Tap to Upload</span>
                       </div>
                     )}
                     <input 
@@ -295,27 +368,28 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
                 </div>
 
                 {/* Form Fields Section */}
-                <div className="w-full md:w-2/3 space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500 uppercase">Product Name</label>
+                <div className="w-full md:w-2/3 space-y-5">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Product Name</label>
                     <input
                       type="text"
                       value={formData.name}
                       onChange={e => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full p-2.5 border border-slate-200 rounded-lg"
+                      className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none transition-all"
                       placeholder="e.g. Premium Coffee"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-500 uppercase">Category</label>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase">Category</label>
                       <input
                         type="text"
                         list="category-suggestions"
                         value={formData.category}
                         onChange={e => setFormData({ ...formData, category: e.target.value })}
-                        className="w-full p-2.5 border border-slate-200 rounded-lg"
+                        className="w-full p-3 border border-slate-200 rounded-xl outline-none focus:border-brand-500"
+                        placeholder="Select..."
                       />
                       <datalist id="category-suggestions">
                         {categories.map(cat => (
@@ -324,19 +398,20 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
                       </datalist>
                     </div>
                     
-                    <div className="space-y-1">
-                       <label className="text-xs font-semibold text-slate-500 uppercase">SKU / Barcode</label>
+                    <div className="space-y-1.5">
+                       <label className="text-xs font-bold text-slate-500 uppercase">SKU / Barcode</label>
                        <div className="flex gap-2">
                          <input
                           type="text"
                           value={formData.sku}
                           onChange={e => setFormData({ ...formData, sku: e.target.value })}
-                          className="w-full p-2.5 border border-slate-200 rounded-lg font-mono text-sm"
+                          className="w-full p-3 border border-slate-200 rounded-xl font-mono text-sm outline-none focus:border-brand-500"
                           placeholder="Auto"
                         />
                         <button 
                           onClick={generateBarcode}
-                          className="p-2 bg-slate-100 rounded-lg text-slate-600"
+                          className="px-3 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition-colors"
+                          title="Generate Random SKU"
                         >
                           <RefreshCw size={18} />
                         </button>
@@ -344,32 +419,32 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-500 uppercase">Cost</label>
+                  <div className="grid grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase">Cost</label>
                       <input
                         type="number"
                         value={formData.costPrice}
                         onChange={e => setFormData({ ...formData, costPrice: parseFloat(e.target.value) })}
-                        className="w-full p-2 border border-slate-200 rounded-lg"
+                        className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-brand-500"
                       />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-500 uppercase">Price</label>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase">Price</label>
                       <input
                         type="number"
                         value={formData.sellPrice}
                         onChange={e => setFormData({ ...formData, sellPrice: parseFloat(e.target.value) })}
-                        className="w-full p-2 border border-slate-200 rounded-lg"
+                        className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-brand-500 font-bold text-slate-800"
                       />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-500 uppercase">Stock</label>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase">Stock</label>
                       <input
                         type="number"
                         value={formData.stock}
                         onChange={e => setFormData({ ...formData, stock: parseInt(e.target.value) })}
-                        className="w-full p-2 border border-slate-200 rounded-lg"
+                        className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-brand-500"
                       />
                     </div>
                   </div>
@@ -377,13 +452,62 @@ export const Inventory: React.FC<InventoryProps> = ({ products, onAddProduct, on
               </div>
             </div>
 
-            <div className="p-4 lg:p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-              <button onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-200 rounded-lg font-medium">Cancel</button>
-              <button onClick={handleSave} className="px-6 py-2.5 bg-brand-600 text-white hover:bg-brand-700 rounded-lg flex items-center gap-2 font-bold">
-                <Save size={18} /> Save
+            <div className="p-4 bg-white border-t border-slate-100 flex gap-3 shrink-0 pb-safe">
+              <button onClick={() => setIsModalOpen(false)} className="flex-1 py-3.5 text-slate-600 hover:bg-slate-100 rounded-xl font-bold transition-colors">Cancel</button>
+              <button onClick={handleSave} className="flex-[2] py-3.5 bg-brand-600 text-white hover:bg-brand-700 rounded-xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-brand-200 transition-all active:scale-[0.98]">
+                <Save size={20} /> Save Product
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Bulk Edit Modal */}
+      {isBulkModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+             <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in">
+                 <div className="p-4 border-b border-slate-100 bg-slate-50">
+                     <h3 className="font-bold text-slate-800">Bulk Update Stock</h3>
+                     <p className="text-xs text-slate-500">Updating {selectedIds.size} products</p>
+                 </div>
+                 <div className="p-6 space-y-4">
+                     <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
+                         {(['SET', 'ADD', 'REMOVE'] as const).map(action => (
+                             <button
+                                key={action}
+                                onClick={() => setBulkAction(action)}
+                                className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${bulkAction === action ? 'bg-white shadow text-brand-600' : 'text-slate-500'}`}
+                             >
+                                 {action}
+                             </button>
+                         ))}
+                     </div>
+                     
+                     <div className="space-y-1">
+                         <label className="text-xs font-bold text-slate-500 uppercase">Quantity Value</label>
+                         <input 
+                            type="number" 
+                            min="0"
+                            value={bulkValue}
+                            onChange={(e) => setBulkValue(parseInt(e.target.value))}
+                            className="w-full p-3 border border-slate-200 rounded-lg text-lg font-bold text-center focus:ring-2 focus:ring-brand-500 outline-none"
+                         />
+                     </div>
+
+                     <button 
+                        onClick={handleBulkSave}
+                        className="w-full bg-slate-900 text-white py-3 rounded-lg font-bold hover:bg-slate-800 transition-colors"
+                     >
+                         Apply Update
+                     </button>
+                     <button 
+                        onClick={() => setIsBulkModalOpen(false)}
+                        className="w-full text-slate-500 py-2 text-sm font-medium"
+                     >
+                         Cancel
+                     </button>
+                 </div>
+             </div>
         </div>
       )}
     </div>

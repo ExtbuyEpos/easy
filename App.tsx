@@ -10,7 +10,7 @@ import { BaileysSetup } from './components/BaileysSetup';
 import { Orders } from './components/Orders';
 import { AppView, Product, Sale, CartItem, User, StoreSettings } from './types';
 import { INITIAL_PRODUCTS, INITIAL_USERS } from './constants';
-import { Menu } from 'lucide-react';
+import { Menu, CloudOff, RefreshCw } from 'lucide-react';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -21,6 +21,10 @@ const App: React.FC = () => {
   
   // Mobile UI State
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Network State
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const [storeSettings, setStoreSettings] = useState<StoreSettings>({
     name: 'easyPOS',
@@ -48,7 +52,31 @@ Discount: {discount}
     taxName: 'Tax'
   });
 
-  // Initialize Data (Simulate Database)
+  // --- Network Listeners ---
+  useEffect(() => {
+    const handleOnline = () => {
+        setIsOnline(true);
+        setIsSyncing(true);
+        // Simulate Sync Process
+        setTimeout(() => {
+            setIsSyncing(false);
+        }, 2500);
+    };
+
+    const handleOffline = () => {
+        setIsOnline(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Initialize Data (Simulate Database) & Pre-load Local Storage
   useEffect(() => {
     const savedProducts = localStorage.getItem('easyPOS_products');
     const savedSales = localStorage.getItem('easyPOS_sales');
@@ -81,7 +109,7 @@ Discount: {discount}
     }
   }, []);
 
-  // Persistence Effects
+  // Persistence Effects (Offline Storage)
   useEffect(() => {
     if (products.length > 0) localStorage.setItem('easyPOS_products', JSON.stringify(products));
   }, [products]);
@@ -235,11 +263,29 @@ Discount: {discount}
             onLogout={() => setUser(null)} 
             currentUser={user}
             onCloseMobile={() => setIsMobileMenuOpen(false)}
+            isOnline={isOnline}
+            isSyncing={isSyncing}
           />
       </div>
       
       {/* Main Layout Area */}
       <main className="flex-1 overflow-hidden relative flex flex-col min-w-0">
+        
+        {/* Sync/Offline Banner (Top Overlay) */}
+        {!isOnline && (
+            <div className="bg-red-500 text-white text-xs font-bold text-center py-1 absolute top-0 left-0 right-0 z-50">
+                <span className="flex items-center justify-center gap-2">
+                    <CloudOff size={14} /> YOU ARE OFFLINE. DATA SAVING LOCALLY.
+                </span>
+            </div>
+        )}
+        {isSyncing && (
+             <div className="bg-blue-500 text-white text-xs font-bold text-center py-1 absolute top-0 left-0 right-0 z-50 animate-pulse">
+                <span className="flex items-center justify-center gap-2">
+                    <RefreshCw size={14} className="animate-spin" /> CONNECTION RESTORED. SYNCING DATA...
+                </span>
+            </div>
+        )}
         
         {/* Mobile Header */}
         <div className="lg:hidden bg-slate-900 text-white p-4 flex items-center justify-between shrink-0 shadow-md z-30">
@@ -257,7 +303,7 @@ Discount: {discount}
         </div>
 
         {/* Content Viewport */}
-        <div className="flex-1 overflow-hidden relative">
+        <div className={`flex-1 overflow-hidden relative ${(!isOnline || isSyncing) ? 'pt-6' : ''}`}>
             {currentView === AppView.POS && (
             <POS 
                 products={products} 

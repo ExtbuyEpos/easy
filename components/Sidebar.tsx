@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutGrid, ShoppingCart, Package, BarChart3, LogOut, ScanLine, Settings, MessageCircle, X, History } from 'lucide-react';
+import { LayoutGrid, ShoppingCart, Package, BarChart3, LogOut, ScanLine, Settings, MessageCircle, X, History, Wifi, WifiOff, Cloud, RefreshCw } from 'lucide-react';
 import { AppView, User, UserRole } from '../types';
 
 interface SidebarProps {
@@ -8,9 +8,11 @@ interface SidebarProps {
   onLogout: () => void;
   currentUser: User;
   onCloseMobile?: () => void;
+  isOnline: boolean;
+  isSyncing: boolean;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, onLogout, currentUser, onCloseMobile }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, onLogout, currentUser, onCloseMobile, isOnline, isSyncing }) => {
   
   // Define visibility logic
   const getNavItems = (role: UserRole) => {
@@ -18,7 +20,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, onL
       { view: AppView.POS, label: 'POS Terminal', icon: ShoppingCart },
     ];
     
-    // Orders & Returns accessible to everyone except pure Cashiers (unless policy allows, currently added for most)
+    // Orders & Returns accessible to everyone except pure Cashiers
     if (['ADMIN', 'MANAGER', 'STAFF'].includes(role)) {
        items.push({ view: AppView.ORDERS, label: 'Orders & Returns', icon: History });
     }
@@ -85,6 +87,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, onL
           </button>
         ))}
       </nav>
+
+      {/* Network Status Indicator */}
+      <div className="px-4 pb-2">
+         <div className={`p-3 rounded-lg flex items-center gap-3 text-xs font-bold border ${isOnline ? 'bg-emerald-900/30 border-emerald-800 text-emerald-400' : 'bg-red-900/30 border-red-800 text-red-400'}`}>
+             {isSyncing ? (
+                 <RefreshCw size={16} className="animate-spin" />
+             ) : isOnline ? (
+                 <Wifi size={16} />
+             ) : (
+                 <WifiOff size={16} />
+             )}
+             
+             <div className="flex-1">
+                 <div>{isSyncing ? 'SYNCING DATA...' : isOnline ? 'ONLINE MODE' : 'OFFLINE MODE'}</div>
+                 <div className="font-normal opacity-80 text-[10px]">
+                     {isOnline ? 'Data synced to cloud' : 'Data saved to device'}
+                 </div>
+             </div>
+         </div>
+      </div>
 
       <div className="p-4 border-t border-slate-800">
         <button

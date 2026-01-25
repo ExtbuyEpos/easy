@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StoreSettings } from '../types';
 import { MessageCircle, Save, Smartphone, LayoutTemplate, AlertCircle, RefreshCw, QrCode, CheckCircle, Loader2, Wifi, WifiOff, Settings, Link, Info, Server, Globe, Shield, Lock, PlayCircle, Terminal, MoreVertical } from 'lucide-react';
-import { toDataURL } from 'qrcode';
+import QRCode from 'qrcode';
 
 interface BaileysSetupProps {
   onUpdateStoreSettings: (settings: StoreSettings) => void;
@@ -108,8 +108,6 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
             };
 
             // Mimic Baileys QR format: ref,publicKey,clientId (All Base64)
-            // IMPORTANT: Using a raw phone number here causes the WhatsApp app to crash.
-            // We must use valid Base64 strings to simulate the handshake data.
             const ref = randomB64(32);
             const pubKey = randomB64(32);
             const clientId = randomB64(32);
@@ -118,7 +116,8 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
             const qrData = `${ref},${pubKey},${clientId}`;
             
             try {
-                const url = await toDataURL(qrData, { 
+                // Using QRCode default export for better compatibility with esm.sh
+                const url = await QRCode.toDataURL(qrData, { 
                     width: 300, 
                     margin: 2, 
                     color: { dark: '#111827', light: '#ffffff' },
@@ -128,7 +127,7 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
                 addLog('QR Code rotated. Waiting for scan...');
                 setQrTimer(20); // Reset timer
             } catch (e) {
-                console.error(e);
+                console.error('QR Generation Error:', e);
                 addLog('Error generating QR frame.');
             }
         };
@@ -214,7 +213,7 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
               const session = { 
                   name: "Store Owner", 
                   number: config.phoneNumber,
-                  platform: "Bailyes-Web-Client"
+                  platform: "Baileys-Web-Client"
               };
               setConnectedSession(session);
               setStatus('connected');
