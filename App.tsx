@@ -151,9 +151,23 @@ const App: React.FC = () => {
     }
   };
 
-  const handleCheckout = async (items: CartItem[], total: number, paymentMethod: 'CASH' | 'CARD', subTotal: number, discount: number, tax: number) => {
+  const handleCheckout = async (items: CartItem[], total: number, paymentMethod: 'CASH' | 'CARD', subTotal: number, discount: number, tax: number, discountType: 'percent' | 'fixed') => {
     const saleId = Date.now().toString();
-    const newSale: Sale = { id: saleId, timestamp: Date.now(), items, subTotal, discount, tax, total, paymentMethod, status: 'COMPLETED' };
+    const newSale: Sale = { 
+      id: saleId, 
+      timestamp: Date.now(), 
+      items, 
+      subTotal, 
+      discount, 
+      discountType,
+      tax, 
+      taxRate: storeSettings.taxRate,
+      total, 
+      paymentMethod, 
+      status: 'COMPLETED',
+      processedBy: user?.id 
+    };
+    
     if (db) {
         const batch = writeBatch(db);
         batch.set(doc(db, 'sales', saleId), newSale);
@@ -238,6 +252,25 @@ const App: React.FC = () => {
       setStoreSettings(settings);
       localStorage.setItem('easyPOS_storeSettings', JSON.stringify(settings));
     }
+  };
+
+  const handleAddUser = async (newUser: User) => {
+      if (db) await setDoc(doc(db, 'users', newUser.id), newUser);
+      else {
+          const updated = [...users, newUser];
+          setUsers(updated);
+          localStorage.setItem('easyPOS_users', JSON.stringify(updated));
+      }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+      if (!window.confirm('Delete operator access?')) return;
+      if (db) await deleteDoc(doc(db, 'users', id));
+      else {
+          const updated = users.filter(u => u.id !== id);
+          setUsers(updated);
+          localStorage.setItem('easyPOS_users', JSON.stringify(updated));
+      }
   };
 
   if (!user) return <Login onLogin={setUser} users={users} t={t} isDarkMode={isDarkMode} toggleTheme={toggleTheme} language={language} toggleLanguage={toggleLanguage} />;
@@ -327,7 +360,7 @@ const App: React.FC = () => {
               <Reports sales={sales} products={products} onGoBack={() => setCurrentView(AppView.POS)} language={language} />
             )}
             {currentView === AppView.SETTINGS && (
-              <Settings users={users} products={products} sales={sales} onAddUser={() => {}} onDeleteUser={() => {}} currentUser={user} storeSettings={storeSettings} onUpdateStoreSettings={handleUpdateStoreSettings} onGoBack={() => setCurrentView(AppView.POS)} language={language} toggleLanguage={toggleLanguage} t={t} />
+              <Settings users={users} products={products} sales={sales} onAddUser={handleAddUser} onDeleteUser={handleDeleteUser} currentUser={user} storeSettings={storeSettings} onUpdateStoreSettings={handleUpdateStoreSettings} onGoBack={() => setCurrentView(AppView.POS)} language={language} toggleLanguage={toggleLanguage} t={t} />
             )}
             {currentView === AppView.BAILEYS_SETUP && (
               <BaileysSetup onUpdateStoreSettings={handleUpdateStoreSettings} settings={storeSettings} onGoBack={() => setCurrentView(AppView.POS)} t={t} />

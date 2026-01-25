@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Product, User, Language } from '../types';
 import { Plus, Search, Trash2, Edit2, Save, X, Image as ImageIcon, RefreshCw, Upload, Package, AlertCircle, ChevronLeft, TrendingUp, DollarSign, List, Grid, Check, ArrowRightLeft } from 'lucide-react';
@@ -157,14 +158,14 @@ export const Inventory: React.FC<InventoryProps> = ({
             <div className="group bg-white dark:bg-slate-900 p-4 md:p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex items-center gap-4 transition-all hover:shadow-2xl">
                 <div className="bg-emerald-50 dark:bg-emerald-900/30 p-3 rounded-2xl text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white transition-all"><DollarSign size={22}/></div>
                 <div>
-                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Valuation</div>
+                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Asset Value</div>
                     <div className="text-lg font-black text-slate-900 dark:text-white leading-none">{formatCurrency(totalInvValue, language, CURRENCY)}</div>
                 </div>
             </div>
             <div className="hidden lg:flex group bg-white dark:bg-slate-900 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 items-center gap-4 transition-all hover:shadow-2xl">
                 <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-2xl text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all"><TrendingUp size={22}/></div>
                 <div>
-                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Potential Profit</div>
+                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Estimated ROI</div>
                     <div className="text-lg font-black text-slate-900 dark:text-white leading-none">{formatCurrency(totalInvValue - totalInvCost, language, CURRENCY)}</div>
                 </div>
             </div>
@@ -187,10 +188,6 @@ export const Inventory: React.FC<InventoryProps> = ({
                     <option value="All">{t('all')}</option>
                     {suggestionCategories.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
-                <div className="flex bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[1.8rem] p-1.5 shadow-sm">
-                    <button className="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl text-brand-600"><List size={18}/></button>
-                    <button className="p-3 text-slate-400 hover:text-slate-600"><Grid size={18}/></button>
-                </div>
              </div>
          </div>
       </div>
@@ -203,7 +200,7 @@ export const Inventory: React.FC<InventoryProps> = ({
                       <th className="p-6 md:p-8">{t('productName')}</th>
                       <th className="p-8 text-right hidden md:table-cell">{t('cost')}</th>
                       <th className="p-6 md:p-8 text-right">{t('price')}</th>
-                      <th className="p-8 text-center hidden lg:table-cell">Margin %</th>
+                      <th className="p-8 text-center hidden lg:table-cell">Net ROI %</th>
                       <th className="p-6 md:p-8 text-center">{t('stock')}</th>
                       <th className="p-6 md:p-8 text-right">{t('action')}</th>
                    </tr>
@@ -235,7 +232,7 @@ export const Inventory: React.FC<InventoryProps> = ({
                               {formatCurrency(p.sellPrice, language, CURRENCY)}
                           </td>
                           <td className="p-8 text-center hidden lg:table-cell">
-                              <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${margin > 40 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20' : margin > 20 ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/20' : 'bg-slate-50 text-slate-500 dark:bg-slate-800'}`}>
+                              <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${margin >= 50 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20' : margin >= 20 ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/20' : 'bg-red-50 text-red-600 dark:bg-red-950/20'}`}>
                                   {formatNumber(margin, language)}%
                               </span>
                           </td>
@@ -268,7 +265,7 @@ export const Inventory: React.FC<InventoryProps> = ({
              <div className="p-8 md:p-12 pb-6 md:pb-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
                  <div>
                     <h3 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic leading-none">{editingProduct ? t('editProduct') : t('addProduct')}</h3>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mt-2">Unified Inventory Control Module</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mt-2">Inventory Ledger Entry</p>
                  </div>
                  <button onClick={() => setIsModalOpen(false)} className="bg-white dark:bg-slate-800 p-4 rounded-3xl text-slate-400 hover:text-red-500 transition-all shadow-xl border border-slate-100 dark:border-slate-700 active:scale-90"><X size={28}/></button>
              </div>

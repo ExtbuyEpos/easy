@@ -20,7 +20,7 @@ export interface Translations {
 
 export interface Product {
   id: string;
-  sku: string; // Barcode
+  sku: string;
   name: string;
   costPrice: number;
   sellPrice: number;
@@ -40,11 +40,14 @@ export interface Sale {
   items: CartItem[];
   subTotal: number;
   discount: number;
+  discountType?: 'percent' | 'fixed';
   tax: number;
+  taxRate?: number;
   total: number;
   paymentMethod: 'CASH' | 'CARD';
   status?: 'COMPLETED' | 'REFUNDED' | 'PARTIAL';
-  returnedItems?: { [itemId: string]: number }; // Maps Item ID to returned quantity
+  returnedItems?: { [itemId: string]: number };
+  processedBy?: string; // User ID
 }
 
 export interface User {
@@ -53,20 +56,14 @@ export interface User {
   username: string;
   password?: string;
   role: UserRole;
-}
-
-export interface DashboardStats {
-  totalSales: number;
-  transactionCount: number;
-  lowStockCount: number;
-  profit: number;
+  employeeId?: string;
 }
 
 export interface StoreSettings {
   name: string;
   address: string;
   phone: string;
-  logo?: string; // Base64 string
+  logo?: string;
   footerMessage?: string;
   receiptSize?: '58mm' | '80mm';
   whatsappTemplate?: string;
@@ -75,4 +72,15 @@ export interface StoreSettings {
   taxRate: number;
   taxName: string;
   autoPrint: boolean;
+}
+
+export interface StockAdjustment {
+  id: string;
+  timestamp: number;
+  sku: string;
+  name: string;
+  oldStock: number;
+  newStock: number;
+  variance: number;
+  processedBy?: string;
 }
