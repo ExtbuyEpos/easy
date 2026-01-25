@@ -95,12 +95,12 @@ export const Orders: React.FC<OrdersProps> = ({ sales, onProcessReturn }) => {
 
   return (
     <div className="flex flex-col h-full bg-slate-50 p-6 overflow-hidden">
-      <div className="mb-6">
+      <div className="mb-6 print:hidden">
         <h2 className="text-2xl font-bold text-slate-800">Orders & Returns</h2>
         <p className="text-slate-500 text-sm">View history, reprint receipts, and process refunds.</p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex-1 flex flex-col overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex-1 flex flex-col overflow-hidden print:hidden">
         {/* Toolbar */}
         <div className="p-4 border-b border-slate-100 flex gap-4">
            <div className="relative flex-1 max-w-md">
@@ -163,44 +163,44 @@ export const Orders: React.FC<OrdersProps> = ({ sales, onProcessReturn }) => {
         </div>
       </div>
 
-      {/* ORDER DETAIL MODAL */}
+      {/* ORDER DETAIL MODAL - PRINT OPTIMIZED */}
       {selectedSale && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 print:p-0 print:bg-white print:fixed print:inset-0 print:z-[10000]">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in flex flex-col max-h-[90vh] print:shadow-none print:w-full print:max-w-none print:max-h-none print:h-auto print:rounded-none">
             {/* Header */}
-            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 print:bg-white print:border-none">
                <div>
                   <h3 className="font-bold text-slate-800">Order #{selectedSale.id.slice(-6)}</h3>
                   <span className="text-xs text-slate-500">{new Date(selectedSale.timestamp).toLocaleString()}</span>
                </div>
-               <button onClick={() => setSelectedSale(null)} className="text-slate-400 hover:text-slate-600"><X size={24}/></button>
+               <button onClick={() => setSelectedSale(null)} className="text-slate-400 hover:text-slate-600 no-print"><X size={24}/></button>
             </div>
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6">
                 
-                {/* Status Banner */}
-                <div className={`p-3 rounded-lg flex items-center gap-2 mb-6 ${getStatusColor(selectedSale.status)}`}>
+                {/* Status Banner (Hide in Print usually, or keep if relevant) */}
+                <div className={`p-3 rounded-lg flex items-center gap-2 mb-6 ${getStatusColor(selectedSale.status)} no-print`}>
                     {selectedSale.status === 'REFUNDED' ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
                     <span className="font-bold text-sm">Order Status: {selectedSale.status || 'COMPLETED'}</span>
                 </div>
 
                 {/* Items List */}
-                <div className="space-y-4">
+                <div className="space-y-4 font-mono text-sm">
                   {selectedSale.items.map(item => {
                      const returnedCount = selectedSale.returnedItems?.[item.id] || 0;
                      const remainingQty = item.quantity - returnedCount;
                      const pendingReturnQty = returnDraft[item.id] || 0;
                      
                      return (
-                        <div key={item.id} className="flex justify-between items-center border-b border-slate-50 pb-4 last:border-0">
+                        <div key={item.id} className="flex justify-between items-center border-b border-slate-50 pb-4 last:border-0 print:border-slate-200">
                            <div className="flex-1">
                               <div className="font-bold text-slate-800">{item.name}</div>
                               <div className="text-xs text-slate-500 font-mono">
                                  {CURRENCY}{item.sellPrice.toFixed(2)} x {item.quantity}
                               </div>
                               {returnedCount > 0 && (
-                                 <div className="text-xs text-red-500 font-bold mt-1">
+                                 <div className="text-xs text-red-500 font-bold mt-1 no-print">
                                     {returnedCount} Previously Returned
                                  </div>
                               )}
@@ -231,7 +231,7 @@ export const Orders: React.FC<OrdersProps> = ({ sales, onProcessReturn }) => {
                 </div>
 
                 {/* Totals */}
-                <div className="mt-6 pt-4 border-t border-slate-200 space-y-2">
+                <div className="mt-6 pt-4 border-t border-slate-200 space-y-2 print:border-slate-800">
                     <div className="flex justify-between text-sm text-slate-500">
                         <span>Subtotal</span>
                         <span>{CURRENCY}{selectedSale.subTotal.toFixed(2)}</span>
@@ -256,7 +256,7 @@ export const Orders: React.FC<OrdersProps> = ({ sales, onProcessReturn }) => {
 
                 {/* Refund Summary Panel */}
                 {isReturnMode && (
-                   <div className="mt-6 bg-red-50 p-4 rounded-xl border border-red-100 animate-fade-in">
+                   <div className="mt-6 bg-red-50 p-4 rounded-xl border border-red-100 animate-fade-in no-print">
                       <div className="flex justify-between items-center mb-2">
                          <span className="font-bold text-red-800">Refund Amount</span>
                          <span className="font-bold text-2xl text-red-600">{CURRENCY}{refundTotal.toFixed(2)}</span>
@@ -269,7 +269,7 @@ export const Orders: React.FC<OrdersProps> = ({ sales, onProcessReturn }) => {
             </div>
 
             {/* Footer Actions */}
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-3 no-print">
                {isReturnMode ? (
                   <>
                     <button 
@@ -288,7 +288,10 @@ export const Orders: React.FC<OrdersProps> = ({ sales, onProcessReturn }) => {
                   </>
                ) : (
                   <>
-                     <button className="flex-1 py-3 bg-slate-200 text-slate-800 font-bold rounded-lg hover:bg-slate-300 transition-colors flex items-center justify-center gap-2">
+                     <button 
+                        onClick={() => window.print()}
+                        className="flex-1 py-3 bg-slate-200 text-slate-800 font-bold rounded-lg hover:bg-slate-300 transition-colors flex items-center justify-center gap-2"
+                     >
                         <Printer size={18} /> Reprint
                      </button>
                      {selectedSale.status !== 'REFUNDED' && (

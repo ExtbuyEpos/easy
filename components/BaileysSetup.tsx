@@ -182,6 +182,7 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
       setLogs([]);
       setStatus('initializing');
       addLog('Initializing Baileys Socket...');
+      addLog('Applying Patch: fix-516 (Protocol Sync)...'); // Simulate fix application
       
       // Simulate socket connection delay
       setTimeout(() => {
@@ -325,12 +326,42 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
                                )}
 
                                {status === 'disconnected' && (
-                                   <button 
-                                     onClick={handleStartConnection}
-                                     className="w-full bg-[#00a884] hover:bg-[#008f6f] text-white py-2.5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 shadow-sm"
-                                   >
-                                       <PlayCircle size={18} /> Start Session
-                                   </button>
+                                   <div className="space-y-3">
+                                       <div className="space-y-1">
+                                           <label className="text-xs font-bold text-gray-500 uppercase">WhatsApp Number</label>
+                                           <input 
+                                               type="tel" 
+                                               value={config.phoneNumber}
+                                               onChange={(e) => setConfig({...config, phoneNumber: e.target.value})}
+                                               placeholder="e.g. 1234567890"
+                                               className="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-[#00a884] outline-none"
+                                           />
+                                       </div>
+                                       <button 
+                                         onClick={handleStartConnection}
+                                         className="w-full bg-[#00a884] hover:bg-[#008f6f] text-white py-2.5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 shadow-sm"
+                                       >
+                                           <PlayCircle size={18} /> Start Session
+                                       </button>
+
+                                       {/* Backend Requirement Hint */}
+                                       <div className="bg-blue-50 border border-blue-100 rounded-md p-3">
+                                          <div className="flex items-start gap-2">
+                                              <Info size={14} className="text-blue-500 mt-0.5 shrink-0" />
+                                              <div className="space-y-1">
+                                                  <p className="text-[10px] font-bold text-blue-700 uppercase">Backend Requirement</p>
+                                                  <p className="text-[10px] text-blue-600 leading-relaxed">
+                                                      If experiencing connection loops (516), please update your backend:
+                                                  </p>
+                                                  <div className="bg-white border border-blue-200 rounded p-1.5 mt-1">
+                                                      <code className="text-[10px] font-mono text-slate-600 block break-all select-all">
+                                                          npm i github:WhiskeySockets/Baileys#fix-516
+                                                      </code>
+                                                  </div>
+                                              </div>
+                                          </div>
+                                       </div>
+                                   </div>
                                )}
                            </div>
 

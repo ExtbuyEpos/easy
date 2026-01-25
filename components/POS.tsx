@@ -322,10 +322,10 @@ Date: {date}
   return (
     <div className="flex h-full bg-slate-100 relative overflow-hidden flex-col lg:flex-row">
       
-      {/* Product Grid - Main Area */}
-      <div className="flex-1 flex flex-col overflow-hidden h-full order-1 lg:order-1">
+      {/* Product Grid - Main Area (Hidden when printing) */}
+      <div className="flex-1 flex flex-col overflow-hidden h-full order-1 lg:order-1 print:hidden">
         
-        {/* Search & Scan Bar - Sticky on Mobile */}
+        {/* Search & Scan Bar */}
         <div className="bg-white p-3 lg:p-4 shadow-sm flex items-center gap-2 lg:gap-4 shrink-0 z-20 sticky top-0 lg:static">
           <Search className="text-slate-400 hidden lg:block" />
           <form onSubmit={handleSkuSubmit} className="flex-1">
@@ -393,8 +393,8 @@ Date: {date}
         </div>
       </div>
 
-      {/* MOBILE BOTTOM SUMMARY BAR */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-slate-900 text-white p-3 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] safe-area-bottom">
+      {/* MOBILE BOTTOM SUMMARY BAR (Hidden when printing) */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-slate-900 text-white p-3 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] safe-area-bottom print:hidden">
          <button 
            onClick={() => setIsCartOpen(true)}
            className="w-full flex items-center justify-between px-4 py-3 active:bg-slate-800 rounded-xl transition-colors"
@@ -415,11 +415,12 @@ Date: {date}
          </button>
       </div>
 
-      {/* Cart/Invoice Panel - Responsive Drawer */}
+      {/* Cart/Invoice Panel - Responsive Drawer (Hidden when printing) */}
       <div className={`
          fixed inset-0 z-40 bg-slate-200 shadow-xl flex flex-col border-l border-slate-300 transition-transform duration-300
          lg:static lg:w-96 lg:translate-x-0 lg:z-auto lg:h-full lg:order-2
          ${isCartOpen ? 'translate-x-0' : 'translate-x-full'}
+         print:hidden
       `}>
         {/* Mobile Header for Cart */}
         <div className="lg:hidden bg-slate-800 text-white p-4 flex justify-between items-center shrink-0 shadow-md">
@@ -588,9 +589,9 @@ Date: {date}
         </div>
       </div>
 
-      {/* QR SCANNER MODAL */}
+      {/* QR SCANNER MODAL (Hidden in print) */}
       {isScannerOpen && (
-          <div className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-4 print:hidden">
               <button onClick={() => setIsScannerOpen(false)} className="absolute top-6 right-6 text-white bg-white/20 p-3 rounded-full hover:bg-white/30 transition-colors">
                   <X size={24} />
               </button>
@@ -608,9 +609,9 @@ Date: {date}
           </div>
       )}
 
-      {/* EDIT ITEM MODAL */}
+      {/* EDIT ITEM MODAL (Hidden in print) */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 print:hidden">
            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in flex flex-col">
               <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                   <h3 className="font-bold text-slate-800">Edit Item</h3>
@@ -654,9 +655,9 @@ Date: {date}
         </div>
       )}
 
-      {/* CUSTOM ITEM MODAL */}
+      {/* CUSTOM ITEM MODAL (Hidden in print) */}
       {isCustomModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 print:hidden">
            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in">
               <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                   <h3 className="font-bold text-slate-800">Add Custom Item</h3>
@@ -699,10 +700,10 @@ Date: {date}
         </div>
       )}
 
-      {/* Final Invoice Modal (Post-Checkout) */}
+      {/* Final Invoice Modal (Post-Checkout) - PRINT OPTIMIZED */}
       {showInvoice && lastSale && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 print:p-0">
-          <div className={`bg-white shadow-2xl p-6 print:shadow-none animate-fade-in relative max-h-[90vh] overflow-y-auto rounded-xl ${isSmallReceipt ? 'w-[280px] print:w-[58mm] text-xs' : 'w-full max-w-sm print:w-full'}`}>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 print:p-0 print:bg-white print:absolute print:inset-0 print:z-[10000] print:block">
+          <div className={`bg-white shadow-2xl p-6 print:p-0 print:shadow-none animate-fade-in relative max-h-[90vh] overflow-y-auto rounded-xl ${isSmallReceipt ? 'w-[280px] print:w-[58mm] text-xs' : 'w-full max-w-sm print:w-full'}`}>
             <button onClick={() => setShowInvoice(false)} className="absolute top-3 right-3 bg-slate-100 rounded-full p-2 text-slate-800 hover:bg-slate-200 no-print">
               <X size={20} />
             </button>
