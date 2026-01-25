@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Product, CartItem, StoreSettings, Sale, Language } from '../types';
 import { CURRENCY } from '../constants';
-import { ShoppingCart, Plus, Minus, Search, Image as ImageIcon, QrCode, X, History, ShoppingBag, DollarSign, TrendingUp, Package, Edit3, Trash2, CheckCircle, Printer, MessageCircle, MoreVertical, CreditCard, Receipt, Percent, Tag, ChevronUp, Share2, Send } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Search, Image as ImageIcon, QrCode, X, History, ShoppingBag, DollarSign, TrendingUp, Package, Edit3, Trash2, CheckCircle, Printer, MessageCircle, MoreVertical, CreditCard, Receipt, Percent, Tag, ChevronUp, Share2, Send, Loader2 } from 'lucide-react';
 import jsQR from 'jsqr';
 import QRCode from 'qrcode';
 import { formatNumber, formatCurrency } from '../utils/format';
@@ -116,12 +117,33 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
 
   const handleShareWhatsApp = () => {
     if (!lastSale) return;
+    
+    // Check if the bridge is linked in the settings (via localStorage simulation)
+    const isLinked = localStorage.getItem('easyPOS_whatsappSession') === 'active';
+    if (!isLinked) {
+        alert("Please setup your WhatsApp Bridge in the settings first!");
+        return;
+    }
+
+    const customerPhone = prompt("Enter customer WhatsApp number (e.g. 971501234567):");
+    if (!customerPhone) return;
+
     setIsSendingWA(true);
-    // Simulate API Call
+
+    const messageTemplate = storeSettings.whatsappTemplate || "Order #{{orderId}} from {{storeName}}. Total: {{total}}";
+    const formattedMessage = messageTemplate
+        .replace(/{{storeName}}/g, storeSettings.name)
+        .replace(/{{orderId}}/g, lastSale.id.slice(-6))
+        .replace(/{{total}}/g, formatCurrency(lastSale.total, language, CURRENCY))
+        .replace(/{{receiptUrl}}/g, `https://easypos.io/r/${lastSale.id}`);
+
+    // Simulate API Call delay for premium feel
     setTimeout(() => {
       setIsSendingWA(false);
-      alert("Receipt sent via WhatsApp successfully!");
-    }, 1500);
+      // Construct WA Link
+      const waUrl = `https://wa.me/${customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(formattedMessage)}`;
+      window.open(waUrl, '_blank');
+    }, 1200);
   };
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
@@ -180,7 +202,7 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
           </div>
         </div>
 
-        {/* Product Grid - Optimized for Mobile */}
+        {/* Product Grid */}
         <div className="flex-1 overflow-y-auto p-4 lg:p-8 custom-scrollbar bg-slate-50/50 dark:bg-slate-950">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
                 {filteredProducts.map(product => (

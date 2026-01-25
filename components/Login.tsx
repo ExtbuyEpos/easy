@@ -252,7 +252,7 @@ export const Login: React.FC<LoginProps> = ({
                  </div>
                  <div className="flex items-center justify-center gap-2 text-[9px] text-slate-400 font-black uppercase tracking-widest italic">
                     <MessageSquare size={12} className="text-brand-500" />
-                    Encrypted via Baileys Multi-Device
+                    Encrypted via easyPOS Multi-Device
                  </div>
               </div>
           </div>
