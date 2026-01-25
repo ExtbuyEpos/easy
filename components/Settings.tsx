@@ -329,13 +329,16 @@ export const Settings: React.FC<SettingsProps> = ({
                         <MessageCircle size={16} /> WhatsApp Integration
                     </h4>
                     <div className="space-y-2">
-                       <label className="text-xs font-bold text-slate-500 uppercase">Phone Number</label>
+                       <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1">
+                           Phone Number <span className="text-red-500" title="Required">*</span>
+                       </label>
                        <input 
                          type="tel"
                          value={storeForm.whatsappPhoneNumber || ''}
                          onChange={e => setStoreForm({...storeForm, whatsappPhoneNumber: e.target.value})}
                          className="w-full p-2 border border-slate-200 rounded-lg text-sm font-mono"
                          placeholder="+1234567890"
+                         required
                        />
                        <p className="text-[10px] text-slate-400">Used for WhatsApp connection and sharing receipts.</p>
                     </div>

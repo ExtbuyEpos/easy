@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StoreSettings } from '../types';
-import { MessageCircle, Save, Smartphone, LayoutTemplate, AlertCircle, RefreshCw, QrCode, CheckCircle, Loader2, Wifi, WifiOff, Settings, Link, Info, Server, Globe, Shield, Lock, PlayCircle, Terminal, MoreVertical } from 'lucide-react';
+import { MessageCircle, Save, Smartphone, LayoutTemplate, AlertCircle, RefreshCw, QrCode, CheckCircle, Loader2, Wifi, WifiOff, Settings, Link, Info, Server, Globe, Shield, Lock, PlayCircle, Terminal, MoreVertical, Copy, Check } from 'lucide-react';
 import QRCode from 'qrcode';
 
 interface BaileysSetupProps {
@@ -45,6 +45,7 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
   const [connectedSession, setConnectedSession] = useState<{ name: string; number: string; platform: string } | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState(false);
 
   // QR Refresh Timer
   const [qrTimer, setQrTimer] = useState(0);
@@ -234,6 +235,12 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
       }
   };
 
+  const handleCopyCommand = () => {
+      navigator.clipboard.writeText("npm i github:WhiskeySockets/Baileys#fix-516");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+  };
+
   const getPreview = () => {
     const previewData = {
         store_name: "My Store",
@@ -345,20 +352,29 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
                                        </button>
 
                                        {/* Backend Requirement Hint */}
-                                       <div className="bg-blue-50 border border-blue-100 rounded-md p-3">
-                                          <div className="flex items-start gap-2">
-                                              <Info size={14} className="text-blue-500 mt-0.5 shrink-0" />
-                                              <div className="space-y-1">
-                                                  <p className="text-[10px] font-bold text-blue-700 uppercase">Backend Requirement</p>
-                                                  <p className="text-[10px] text-blue-600 leading-relaxed">
-                                                      If experiencing connection loops (516), please update your backend:
-                                                  </p>
-                                                  <div className="bg-white border border-blue-200 rounded p-1.5 mt-1">
-                                                      <code className="text-[10px] font-mono text-slate-600 block break-all select-all">
-                                                          npm i github:WhiskeySockets/Baileys#fix-516
-                                                      </code>
-                                                  </div>
+                                       <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 shadow-sm animate-fade-in relative overflow-hidden">
+                                          <div className="flex flex-col gap-2">
+                                              <div className="flex items-center gap-2 text-orange-700 font-bold text-xs uppercase">
+                                                  <AlertCircle size={14} /> Critical Fix Required
                                               </div>
+                                              <p className="text-[11px] text-orange-800 leading-relaxed">
+                                                  To resolve Baileys connection loop error (516), run this command on your backend server:
+                                              </p>
+                                              <div className="bg-white border border-orange-200 rounded p-2 flex items-center justify-between group cursor-pointer hover:border-orange-400 transition-colors pr-1">
+                                                  <code className="text-[10px] font-mono text-slate-700 break-all mr-2">
+                                                      npm i github:WhiskeySockets/Baileys#fix-516
+                                                  </code>
+                                                  <button 
+                                                    onClick={handleCopyCommand}
+                                                    className="p-1.5 bg-orange-100 hover:bg-orange-200 rounded text-orange-700 transition-colors"
+                                                    title="Copy Command"
+                                                  >
+                                                      {copied ? <Check size={14} /> : <Copy size={14} />}
+                                                  </button>
+                                              </div>
+                                              <p className="text-[10px] text-orange-600 italic">
+                                                  * This patch fixes the protocol sync issue.
+                                              </p>
                                           </div>
                                        </div>
                                    </div>

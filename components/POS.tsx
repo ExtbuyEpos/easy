@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Product, CartItem, StoreSettings } from '../types';
 import { CURRENCY } from '../constants';
-import { ShoppingCart, CreditCard, Trash2, Plus, Minus, Search, Printer, CheckCircle, MessageCircle, Phone, Image as ImageIcon, Receipt, Edit3, PlusCircle, X, Save, Tag, QrCode, Camera, ChevronLeft, ShoppingBag, Percent, DollarSign } from 'lucide-react';
+import { ShoppingCart, CreditCard, Trash2, Plus, Minus, Search, Printer, CheckCircle, MessageCircle, Phone, Image as ImageIcon, Receipt, Edit3, PlusCircle, X, Save, Tag, QrCode, Camera, ChevronLeft, ShoppingBag, Percent, DollarSign, Filter } from 'lucide-react';
 import jsQR from 'jsqr';
 
 interface POSProps {
@@ -56,6 +56,20 @@ export const POS: React.FC<POSProps> = ({ products, onCheckout, storeSettings })
         skuInputRef.current?.focus();
     }
   }, []);
+
+  // --- DEEP SEARCH FILTERING ---
+  const filteredProducts = skuInput.trim() === '' 
+      ? products 
+      : products.filter(p => {
+          const term = skuInput.toLowerCase();
+          return (
+              p.name.toLowerCase().includes(term) ||
+              p.sku.includes(term) ||
+              p.category.toLowerCase().includes(term) ||
+              p.sellPrice.toString().includes(term) ||
+              (p.tags && p.tags.some(t => t.toLowerCase().includes(term)))
+          );
+      });
 
   // --- QR SCANNER LOGIC ---
   useEffect(() => {
@@ -149,6 +163,10 @@ export const POS: React.FC<POSProps> = ({ products, onCheckout, storeSettings })
 
   // --- CART LOGIC ---
   const addToCart = (product: Product) => {
+    if (product.stock <= 0) {
+        alert("Item out of stock!");
+        return;
+    }
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
@@ -156,6 +174,11 @@ export const POS: React.FC<POSProps> = ({ products, onCheckout, storeSettings })
       }
       return [...prev, { ...product, quantity: 1 }];
     });
+    
+    // Auto-focus logic for rapid entry
+    if(window.innerWidth > 768) {
+        setTimeout(() => skuInputRef.current?.focus(), 10);
+    }
   };
 
   const removeFromCart = (id: string) => {
@@ -174,17 +197,29 @@ export const POS: React.FC<POSProps> = ({ products, onCheckout, storeSettings })
 
   const handleSkuSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const product = products.find(p => p.sku === skuInput || p.name.toLowerCase() === skuInput.toLowerCase());
-    if (product) {
-      if (product.stock <= 0) {
-        alert("Item out of stock!");
-      } else {
-        addToCart(product);
+    
+    // 1. Try Exact SKU Match first (Scanner behavior)
+    const exactMatch = products.find(p => p.sku === skuInput);
+    if (exactMatch) {
+        addToCart(exactMatch);
         setSkuInput('');
-      }
-    } else {
-      alert("Product not found");
+        return;
     }
+
+    // 2. If filtered list has exactly one item (Search selection)
+    if (filteredProducts.length === 1) {
+        addToCart(filteredProducts[0]);
+        setSkuInput('');
+        return;
+    }
+
+    // 3. If multiple items, do nothing (user must select)
+    if (filteredProducts.length > 1) {
+        // Optional: Could focus the grid or show a toast "Multiple items found"
+        return;
+    }
+
+    alert("Product not found");
   };
 
   // --- EDIT ITEM LOGIC ---
@@ -328,15 +363,24 @@ Date: {date}
         {/* Search & Scan Bar */}
         <div className="bg-white p-3 lg:p-4 shadow-sm flex items-center gap-2 lg:gap-4 shrink-0 z-20 sticky top-0 lg:static">
           <Search className="text-slate-400 hidden lg:block" />
-          <form onSubmit={handleSkuSubmit} className="flex-1">
+          <form onSubmit={handleSkuSubmit} className="flex-1 relative">
             <input
               ref={skuInputRef}
               type="text"
               value={skuInput}
               onChange={(e) => setSkuInput(e.target.value)}
-              placeholder="Scan Barcode or Search..."
+              placeholder="Search by Name, SKU, Tag or Price..."
               className="w-full text-base lg:text-lg outline-none bg-slate-100 lg:bg-transparent px-4 py-2.5 rounded-full lg:rounded-none placeholder-slate-400 text-slate-800 focus:bg-white focus:ring-2 focus:ring-brand-500 lg:focus:ring-0 transition-all"
             />
+            {skuInput && (
+                <button 
+                  type="button" 
+                  onClick={() => { setSkuInput(''); skuInputRef.current?.focus(); }}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full"
+                >
+                    <X size={16} />
+                </button>
+            )}
           </form>
           <button 
              onClick={() => setIsScannerOpen(true)}
@@ -349,47 +393,54 @@ Date: {date}
 
         {/* Scrollable Products */}
         <div className="flex-1 overflow-y-auto p-3 lg:p-6 pb-24 lg:pb-6 bg-slate-50/50">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4">
-            {products.map(product => (
-                <div 
-                key={product.id} 
-                onClick={() => addToCart(product)}
-                className={`bg-white rounded-xl shadow-sm border border-slate-200 cursor-pointer hover:border-brand-500 hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group active:scale-[0.98] ${product.stock === 0 ? 'opacity-60 grayscale' : ''}`}
-                >
-                <div className="relative aspect-square bg-slate-100 flex items-center justify-center overflow-hidden">
-                    {product.image ? (
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                    ) : (
-                    <ImageIcon className="text-slate-300" size={32} />
-                    )}
-                    <div className="absolute top-2 left-2 right-2 flex justify-between">
-                        <span className="bg-white/90 backdrop-blur-sm text-brand-700 text-[10px] lg:text-xs px-2 py-1 rounded-full font-bold shadow-sm truncate max-w-[70%]">{product.category}</span>
-                    </div>
-                    {product.stock === 0 && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                        <span className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-lg">Out of Stock</span>
-                    </div>
-                    )}
+            {filteredProducts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                    <Search size={48} className="mb-4 opacity-20" />
+                    <p>No products found for "{skuInput}"</p>
                 </div>
-                
-                <div className="p-3">
-                    <div className="flex justify-between items-start mb-1">
-                        <span className="text-[10px] text-slate-400 font-mono truncate">{product.sku}</span>
-                        <p className={`text-[10px] ${product.stock < 5 ? 'text-red-500 font-bold' : 'text-slate-500'}`}>
-                            {product.stock} left
-                        </p>
+            ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4">
+                {filteredProducts.map(product => (
+                    <div 
+                    key={product.id} 
+                    onClick={() => addToCart(product)}
+                    className={`bg-white rounded-xl shadow-sm border border-slate-200 cursor-pointer hover:border-brand-500 hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group active:scale-[0.98] ${product.stock === 0 ? 'opacity-60 grayscale' : ''}`}
+                    >
+                    <div className="relative aspect-square bg-slate-100 flex items-center justify-center overflow-hidden">
+                        {product.image ? (
+                        <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        ) : (
+                        <ImageIcon className="text-slate-300" size={32} />
+                        )}
+                        <div className="absolute top-2 left-2 right-2 flex justify-between">
+                            <span className="bg-white/90 backdrop-blur-sm text-brand-700 text-[10px] lg:text-xs px-2 py-1 rounded-full font-bold shadow-sm truncate max-w-[70%]">{product.category}</span>
+                        </div>
+                        {product.stock === 0 && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                            <span className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-lg">Out of Stock</span>
+                        </div>
+                        )}
                     </div>
-                    <h3 className="font-semibold text-slate-800 text-sm leading-tight mb-2 line-clamp-2 h-10">{product.name}</h3>
-                    <div className="flex justify-between items-center mt-auto">
-                        <div className="text-base font-bold text-brand-600">{CURRENCY}{product.sellPrice.toFixed(2)}</div>
-                        <div className="bg-brand-50 p-1.5 rounded-lg text-brand-600 group-hover:bg-brand-500 group-hover:text-white transition-colors">
-                            <Plus size={16} />
+                    
+                    <div className="p-3">
+                        <div className="flex justify-between items-start mb-1">
+                            <span className="text-[10px] text-slate-400 font-mono truncate">{product.sku}</span>
+                            <p className={`text-[10px] ${product.stock < 5 ? 'text-red-500 font-bold' : 'text-slate-500'}`}>
+                                {product.stock} left
+                            </p>
+                        </div>
+                        <h3 className="font-semibold text-slate-800 text-sm leading-tight mb-2 line-clamp-2 h-10">{product.name}</h3>
+                        <div className="flex justify-between items-center mt-auto">
+                            <div className="text-base font-bold text-brand-600">{CURRENCY}{product.sellPrice.toFixed(2)}</div>
+                            <div className="bg-brand-50 p-1.5 rounded-lg text-brand-600 group-hover:bg-brand-500 group-hover:text-white transition-colors">
+                                <Plus size={16} />
+                            </div>
                         </div>
                     </div>
+                    </div>
+                ))}
                 </div>
-                </div>
-            ))}
-            </div>
+            )}
         </div>
       </div>
 
@@ -722,12 +773,17 @@ Date: {date}
             </div>
 
             <div className="border-t border-b border-dashed border-slate-300 py-4 mb-4 space-y-2 font-mono text-sm">
-              {lastSale.items.map((item, i) => (
-                <div key={i} className="flex justify-between">
-                  <span className="text-slate-800">{item.name} x{item.quantity}</span>
-                  <span className="text-slate-600">{CURRENCY}{(item.sellPrice * item.quantity).toFixed(2)}</span>
-                </div>
-              ))}
+                {lastSale.items.map((item, i) => (
+                    <div key={i} className="flex flex-col border-b border-dashed border-slate-200 pb-2 last:border-0 last:pb-0">
+                        <div className="flex justify-between items-start">
+                            <span className="text-slate-800 font-bold leading-tight">{item.name}</span>
+                            <span className="text-slate-900 font-bold">{CURRENCY}{(item.sellPrice * item.quantity).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-slate-500 mt-0.5">
+                            <span>{item.quantity} x {CURRENCY}{item.sellPrice.toFixed(2)}</span>
+                        </div>
+                    </div>
+                ))}
             </div>
 
             <div className="space-y-1 mb-4 border-b border-slate-200 pb-4">
