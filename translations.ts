@@ -12,6 +12,13 @@ export const translations: Record<Language, Translations> = {
     'defaultLogin': 'Default',
     'smartRetail': 'Smart Retail Management',
     'professionalSolution': 'The professional offline-capable solution for your business growth.',
+    'copyright': '© 2025 easyPOS. All Rights Reserved.',
+    'poweredBy': 'Powered by ZAHRAT AL SAWSEN',
+    'loginWithPhone': 'Login with Phone Number',
+    'loginWithCredentials': 'Login with Username',
+    'phoneNumber': 'Phone Number',
+    'getOtp': 'Get Verification Code',
+    'verify': 'Verify & Enter',
 
     // Sidebar
     'posTerminal': 'POS Terminal',
@@ -52,6 +59,9 @@ export const translations: Record<Language, Translations> = {
     'editItem': 'Edit Item',
     'updateItem': 'Update Item',
     'addToCart': 'Add to Cart',
+    'dailySales': 'Daily Sales',
+    'todayRevenue': "Today's Revenue",
+    'todayOrders': "Today's Orders",
     
     // Inventory
     'inventoryMgmt': 'Inventory Management',
@@ -71,6 +81,19 @@ export const translations: Record<Language, Translations> = {
     'bulkEdit': 'Bulk Edit',
     'lowStockAlert': 'Low Stock Alert',
     
+    // WhatsApp Integration
+    'linkWithQr': 'Link with QR Code',
+    'linkWithPhone': 'Link with Phone Number',
+    'pairingCode': 'Pairing Code',
+    'enterPhoneLink': 'Enter phone number to link WhatsApp',
+    'generateCode': 'Generate Pairing Code',
+    'waInstruction': 'Enter this code on your phone in WhatsApp > Linked Devices > Link with Phone Number',
+    'noNotificationWarning': 'WhatsApp will NOT send a notification. You must open the "Link with Phone Number" menu manually on your phone.',
+    'waStep1': 'Open WhatsApp on your mobile phone.',
+    'waStep2': 'Go to Settings > Linked Devices.',
+    'waStep3': 'Tap "Link a Device" then "Link with phone number instead".',
+    'waStep4': 'Enter the code displayed below on your phone screen.',
+
     // General
     'search': 'Search',
     'action': 'Action',
@@ -90,6 +113,13 @@ export const translations: Record<Language, Translations> = {
     'defaultLogin': 'الافتراضي',
     'smartRetail': 'نظام إدارة مبيعات ذكي',
     'professionalSolution': 'الحل الاحترافي المناسب لنمو أعمالك.',
+    'copyright': '© 2025 easyPOS. جميع الحقوق محفوظة.',
+    'poweredBy': 'تم التطوير بواسطة زهرة السوسن',
+    'loginWithPhone': 'تسجيل الدخول برقم الهاتف',
+    'loginWithCredentials': 'تسجيل الدخول باسم المستخدم',
+    'phoneNumber': 'رقم الهاتف',
+    'getOtp': 'طلب رمز التحقق',
+    'verify': 'التحقق والدخول',
 
     // Sidebar
     'posTerminal': 'نقطة البيع',
@@ -130,6 +160,9 @@ export const translations: Record<Language, Translations> = {
     'editItem': 'تعديل العنصر',
     'updateItem': 'تحديث',
     'addToCart': 'إضافة للسلة',
+    'dailySales': 'مبيعات اليوم',
+    'todayRevenue': 'دخل اليوم',
+    'todayOrders': 'طلبات اليوم',
 
     // Inventory
     'inventoryMgmt': 'إدارة المخزون',
@@ -148,6 +181,19 @@ export const translations: Record<Language, Translations> = {
     'delete': 'حذف',
     'bulkEdit': 'تعديل جماعي',
     'lowStockAlert': 'تنبيه مخزون منخفض',
+
+    // WhatsApp Integration
+    'linkWithQr': 'ربط عبر رمز QR',
+    'linkWithPhone': 'ربط عبر رقم الهاتف',
+    'pairingCode': 'رمز الاقتران',
+    'enterPhoneLink': 'أدخل رقم الهاتف لربط واتساب',
+    'generateCode': 'إنشاء رمز الاقتران',
+    'waInstruction': 'أدخل هذا الرمز في هاتفك في واتساب > الأجهزة المرتبطة > ربط برقم هاتف',
+    'noNotificationWarning': 'لن يرسل واتساب تنبيهاً تلقائياً. يجب عليك فتح قائمة "ربط برقم هاتف" يدوياً في هاتفك.',
+    'waStep1': 'افتح تطبيق واتساب على هاتفك.',
+    'waStep2': 'اذهب إلى الإعدادات > الأجهزة المرتبطة.',
+    'waStep3': 'اضغط على "ربط جهاز" ثم "الربط برقم الهاتف بدلاً من ذلك".',
+    'waStep4': 'أدخل الرمز الموضح أدناه في شاشة هاتفك.',
 
     // General
     'search': 'بحث',

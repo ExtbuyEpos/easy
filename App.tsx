@@ -11,9 +11,8 @@ import { Orders } from './components/Orders';
 import { AppView, Product, Sale, CartItem, User, StoreSettings, Language } from './types';
 import { INITIAL_PRODUCTS, INITIAL_USERS } from './constants';
 import { translations } from './translations';
-import { Menu, CloudOff, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Menu, CloudOff, AlertTriangle, PanelLeftOpen } from 'lucide-react';
 
-// Firebase Imports
 import { db } from './firebase';
 import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 
@@ -25,58 +24,25 @@ const App: React.FC = () => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   
-  // Theme & Language State
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    return localStorage.getItem('easyPOS_theme') === 'dark';
-  });
-  const [language, setLanguage] = useState<Language>(() => {
-    return (localStorage.getItem('easyPOS_language') as Language) || 'en';
-  });
-
-  // Mobile UI State
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => localStorage.getItem('easyPOS_theme') === 'dark');
+  const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('easyPOS_language') as Language) || 'en');
+  
+  const [isSidebarVisible, setIsSidebarVisible] = useState(window.innerWidth >= 1024);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Network State
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isFirebaseConfigured, setIsFirebaseConfigured] = useState(!!db);
+  const [isFirebaseConfigured] = useState(!!db);
 
   const [storeSettings, setStoreSettings] = useState<StoreSettings>({
-    name: 'easyPOS',
-    address: 'Retail Management System',
-    phone: '',
-    footerMessage: 'Thank you for your business!',
-    receiptSize: '80mm',
-    whatsappTemplate: `🧾 *{store_name}*
-Order: #{order_id}
-Date: {date}
-
-*Items:*
-{items}
-
-----------------
-Subtotal: {subtotal}
-Discount: {discount}
-*TOTAL: {total}*
-----------------
-
-{footer}`,
-    whatsappPhoneNumber: '',
-    taxEnabled: false,
-    taxRate: 0,
-    taxName: 'Tax',
-    autoPrint: false
+    name: 'easyPOS', address: 'Retail Management System', phone: '', footerMessage: 'Thank you!',
+    receiptSize: '80mm', whatsappTemplate: '', whatsappPhoneNumber: '', taxEnabled: false, taxRate: 0, taxName: 'Tax', autoPrint: false
   });
 
-  // --- Theme & Language Effects ---
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('easyPOS_theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('easyPOS_theme', 'light');
-    }
+    if (isDarkMode) document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+    localStorage.setItem('easyPOS_theme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 
   useEffect(() => {
@@ -87,26 +53,18 @@ Discount: {discount}
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
   const toggleLanguage = () => setLanguage(prev => prev === 'en' ? 'ar' : 'en');
-  
-  // Translation Helper
   const t = (key: string) => translations[language][key] || key;
 
-  // --- Network Listeners ---
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    return () => {
-        window.removeEventListener('online', handleOnline);
-        window.removeEventListener('offline', handleOffline);
-    };
+    return () => { window.removeEventListener('online', handleOnline); window.removeEventListener('offline', handleOffline); };
   }, []);
 
-  // --- DATA LOADING (Hybrid: Firestore or LocalStorage) ---
   useEffect(() => {
     if (db) {
-        // --- FIRESTORE MODE ---
         setIsSyncing(true);
         const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
             const data = snapshot.docs.map(doc => doc.data() as Product);
@@ -117,17 +75,14 @@ Discount: {discount}
                  batch.commit();
             }
         });
-
         const unsubCategories = onSnapshot(collection(db, 'categories'), (snapshot) => {
             const data = snapshot.docs.map(doc => doc.id);
             setCategories(data.length > 0 ? data : Array.from(new Set(INITIAL_PRODUCTS.map(p => p.category))).sort());
         });
-
         const unsubSales = onSnapshot(collection(db, 'sales'), (snapshot) => {
             const data = snapshot.docs.map(doc => doc.data() as Sale);
             setSales(data.sort((a,b) => b.timestamp - a.timestamp));
         });
-
         const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
             const data = snapshot.docs.map(doc => doc.data() as User);
             setUsers(data);
@@ -135,76 +90,33 @@ Discount: {discount}
                 INITIAL_USERS.forEach(u => setDoc(doc(db, 'users', u.id), u));
             }
         });
-
         const unsubSettings = onSnapshot(doc(db, 'settings', 'store'), (docSnap) => {
-            if (docSnap.exists()) {
-                setStoreSettings(docSnap.data() as StoreSettings);
-            }
+            if (docSnap.exists()) setStoreSettings(docSnap.data() as StoreSettings);
             setIsSyncing(false);
         });
-
-        return () => {
-            unsubProducts();
-            unsubCategories();
-            unsubSales();
-            unsubUsers();
-            unsubSettings();
-        };
+        return () => { unsubProducts(); unsubCategories(); unsubSales(); unsubUsers(); unsubSettings(); };
     } else {
-        // --- LOCAL STORAGE MODE ---
         const savedProducts = localStorage.getItem('easyPOS_products');
         const savedCategories = localStorage.getItem('easyPOS_categories');
         const savedSales = localStorage.getItem('easyPOS_sales');
         const savedUsers = localStorage.getItem('easyPOS_users');
         const savedSettings = localStorage.getItem('easyPOS_storeSettings');
-
         setProducts(savedProducts ? JSON.parse(savedProducts) : INITIAL_PRODUCTS);
         setCategories(savedCategories ? JSON.parse(savedCategories) : Array.from(new Set(INITIAL_PRODUCTS.map(p => p.category))).sort());
         setSales(savedSales ? JSON.parse(savedSales) : []);
         setUsers(savedUsers ? JSON.parse(savedUsers) : INITIAL_USERS);
-        
-        if (savedSettings) {
-            setStoreSettings(prev => ({ ...prev, ...JSON.parse(savedSettings) }));
-        }
+        if (savedSettings) setStoreSettings(prev => ({ ...prev, ...JSON.parse(savedSettings) }));
     }
   }, []);
 
-  // --- LOCAL PERSISTENCE (Only if !db) ---
-  useEffect(() => {
-      if (!db) {
-          localStorage.setItem('easyPOS_products', JSON.stringify(products));
-          localStorage.setItem('easyPOS_categories', JSON.stringify(categories));
-          localStorage.setItem('easyPOS_sales', JSON.stringify(sales));
-          localStorage.setItem('easyPOS_users', JSON.stringify(users));
-          localStorage.setItem('easyPOS_storeSettings', JSON.stringify(storeSettings));
-      }
-  }, [products, categories, sales, users, storeSettings]);
-
-
-  // --- ACTIONS (Switch between DB and Local State) ---
-
   const handleAddProduct = async (newProduct: Product) => {
-    if (db) {
-        await setDoc(doc(db, 'products', newProduct.id), newProduct);
-        if (!categories.includes(newProduct.category)) {
-            await setDoc(doc(db, 'categories', newProduct.category), { name: newProduct.category });
-        }
-    } else {
-        setProducts([...products, newProduct]);
-        if (!categories.includes(newProduct.category)) setCategories([...categories, newProduct.category]);
-    }
+    if (db) await setDoc(doc(db, 'products', newProduct.id), newProduct);
+    else setProducts([...products, newProduct]);
   };
 
   const handleUpdateProduct = async (updatedProduct: Product) => {
-    if (db) {
-        await setDoc(doc(db, 'products', updatedProduct.id), updatedProduct);
-        if (!categories.includes(updatedProduct.category)) {
-            await setDoc(doc(db, 'categories', updatedProduct.category), { name: updatedProduct.category });
-        }
-    } else {
-        setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
-        if (!categories.includes(updatedProduct.category)) setCategories([...categories, updatedProduct.category]);
-    }
+    if (db) await setDoc(doc(db, 'products', updatedProduct.id), updatedProduct);
+    else setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
   };
 
   const handleBulkUpdateProduct = async (updatedProducts: Product[]) => {
@@ -219,126 +131,34 @@ Discount: {discount}
   };
 
   const handleDeleteProduct = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) return;
-    if (db) {
-      await deleteDoc(doc(db, 'products', id));
-    } else {
-      setProducts(products.filter(p => p.id !== id));
-    }
-  };
-
-  const handleAddCategory = async (category: string) => {
-    if (db) {
-        await setDoc(doc(db, 'categories', category), { name: category });
-    } else {
-        if (!categories.includes(category)) setCategories([...categories, category]);
-    }
-  };
-
-  const handleUpdateCategory = async (oldCategory: string, newCategory: string) => {
-    if (db) {
-        const batch = writeBatch(db);
-        batch.set(doc(db, 'categories', newCategory), { name: newCategory });
-        batch.delete(doc(db, 'categories', oldCategory));
-        products.filter(p => p.category === oldCategory).forEach(p => {
-            batch.update(doc(db, 'products', p.id), { category: newCategory });
-        });
-        await batch.commit();
-    } else {
-        setCategories(categories.map(c => c === oldCategory ? newCategory : c));
-        setProducts(products.map(p => p.category === oldCategory ? { ...p, category: newCategory } : p));
-    }
-  };
-
-  const handleDeleteCategory = async (category: string) => {
-    if (!window.confirm(`Delete category "${category}"?`)) return;
-    if (db) {
-       await deleteDoc(doc(db, 'categories', category));
-    } else {
-       setCategories(categories.filter(c => c !== category));
-    }
+    if (!window.confirm('Delete product?')) return;
+    if (db) await deleteDoc(doc(db, 'products', id));
+    else setProducts(products.filter(p => p.id !== id));
   };
 
   const handleCheckout = async (items: CartItem[], total: number, paymentMethod: 'CASH' | 'CARD', subTotal: number, discount: number, tax: number) => {
     const saleId = Date.now().toString();
-    const newSale: Sale = {
-      id: saleId,
-      timestamp: Date.now(),
-      items, subTotal, discount, tax, total, paymentMethod, status: 'COMPLETED'
-    };
-
+    const newSale: Sale = { id: saleId, timestamp: Date.now(), items, subTotal, discount, tax, total, paymentMethod, status: 'COMPLETED' };
     if (db) {
         const batch = writeBatch(db);
         batch.set(doc(db, 'sales', saleId), newSale);
         items.forEach(item => {
             const currentProduct = products.find(p => p.id === item.id);
-            if (currentProduct) {
-                 batch.update(doc(db, 'products', item.id), { stock: currentProduct.stock - item.quantity });
-            }
+            if (currentProduct) batch.update(doc(db, 'products', item.id), { stock: currentProduct.stock - item.quantity });
         });
         await batch.commit();
     } else {
         setSales([...sales, newSale]);
-        const newProducts = products.map(p => {
+        setProducts(products.map(p => {
             const soldItem = items.find(i => i.id === p.id);
             return soldItem ? { ...p, stock: p.stock - soldItem.quantity } : p;
-        });
-        setProducts(newProducts);
-    }
-  };
-
-  const handleProcessReturn = async (saleId: string, returnMap: { [itemId: string]: number }) => {
-    // Shared Logic
-    const sale = sales.find(s => s.id === saleId);
-    if (!sale) return;
-
-    const prevReturns = sale.returnedItems || {};
-    const newReturns = { ...prevReturns };
-    Object.entries(returnMap).forEach(([itemId, qty]) => {
-        newReturns[itemId] = (newReturns[itemId] || 0) + qty;
-    });
-
-    let totalOriginalCount = 0;
-    let totalReturnedCount = 0;
-    sale.items.forEach(item => {
-        totalOriginalCount += item.quantity;
-        totalReturnedCount += (newReturns[item.id] || 0);
-    });
-    const status = totalReturnedCount >= totalOriginalCount ? 'REFUNDED' : 'PARTIAL';
-
-    if (db) {
-        const batch = writeBatch(db);
-        batch.update(doc(db, 'sales', saleId), { returnedItems: newReturns, status });
-        Object.entries(returnMap).forEach(([itemId, qty]) => {
-            const product = products.find(p => p.id === itemId);
-            if (product) batch.update(doc(db, 'products', itemId), { stock: product.stock + qty });
-        });
-        await batch.commit();
-    } else {
-        setSales(sales.map(s => s.id === saleId ? { ...s, returnedItems: newReturns, status } : s));
-        setProducts(products.map(p => {
-             const returnQty = returnMap[p.id];
-             return returnQty ? { ...p, stock: p.stock + returnQty } : p;
         }));
     }
   };
 
   const handleStockUpdate = async (id: string, newStock: number) => {
-    if (db) {
-        await updateDoc(doc(db, 'products', id), { stock: newStock });
-    } else {
-        setProducts(products.map(p => p.id === id ? { ...p, stock: newStock } : p));
-    }
-  };
-
-  const handleAddUser = async (newUser: User) => {
-    if (db) await setDoc(doc(db, 'users', newUser.id), newUser);
-    else setUsers([...users, newUser]);
-  };
-
-  const handleDeleteUser = async (id: string) => {
-    if (db) await deleteDoc(doc(db, 'users', id));
-    else setUsers(users.filter(u => u.id !== id));
+    if (db) await updateDoc(doc(db, 'products', id), { stock: newStock });
+    else setProducts(products.map(p => p.id === id ? { ...p, stock: newStock } : p));
   };
 
   const handleUpdateStoreSettings = async (settings: StoreSettings) => {
@@ -346,158 +166,104 @@ Discount: {discount}
     else setStoreSettings(settings);
   };
 
-  const handleViewChange = (view: AppView) => {
-      setCurrentView(view);
-      setIsMobileMenuOpen(false);
-  };
+  if (!user) return <Login onLogin={setUser} users={users} t={t} isDarkMode={isDarkMode} toggleTheme={toggleTheme} language={language} toggleLanguage={toggleLanguage} />;
 
-  const handleGoBack = () => setCurrentView(AppView.POS);
-
-  // Common Props for Views
-  const viewProps = { t, isDarkMode };
-
-  if (!user) {
-    return <Login onLogin={setUser} users={users} t={t} isDarkMode={isDarkMode} toggleTheme={toggleTheme} language={language} toggleLanguage={toggleLanguage} />;
-  }
+  const isSidebarShown = isMobileMenuOpen || (isSidebarVisible && window.innerWidth >= 1024);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 font-sans flex-col lg:flex-row transition-colors duration-200">
+    <div className="flex h-[100svh] overflow-hidden bg-[#111827] dark:bg-slate-950 font-sans flex-col lg:flex-row transition-colors">
       
+      {/* Mobile Drawer Backdrop */}
       {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm transition-opacity"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black/70 z-[60] lg:hidden backdrop-blur-md" onClick={() => setIsMobileMenuOpen(false)} />
       )}
 
-      <div className={`fixed inset-y-0 left-0 rtl:left-auto rtl:right-0 z-50 w-72 bg-slate-900 dark:bg-slate-950 shadow-2xl transform transition-transform duration-300 lg:translate-x-0 lg:static lg:w-64 lg:shadow-none ${isMobileMenuOpen ? 'translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'}`}>
+      {/* Sidebar - Desktop Collapsible / Mobile Drawer */}
+      <div className={`
+        fixed inset-y-0 left-0 rtl:left-auto rtl:right-0 z-[70] w-72 transform transition-all duration-500 ease-out 
+        lg:static lg:w-72 lg:translate-x-0
+        ${isSidebarShown ? 'translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'}
+        ${!isSidebarVisible && window.innerWidth >= 1024 ? 'lg:hidden' : ''}
+      `}>
           <Sidebar 
             currentView={currentView} 
-            onChangeView={handleViewChange} 
+            onChangeView={(v) => { setCurrentView(v); setIsMobileMenuOpen(false); }} 
             onLogout={() => setUser(null)} 
-            currentUser={user}
-            onCloseMobile={() => setIsMobileMenuOpen(false)}
-            isOnline={isOnline}
-            isSyncing={isSyncing}
-            isDarkMode={isDarkMode}
-            toggleTheme={toggleTheme}
-            language={language}
-            toggleLanguage={toggleLanguage}
-            t={t}
+            currentUser={user} 
+            onClose={() => {
+                if(window.innerWidth < 1024) setIsMobileMenuOpen(false);
+                else setIsSidebarVisible(false);
+            }} 
+            isOnline={isOnline} 
+            isSyncing={isSyncing} 
+            isDarkMode={isDarkMode} 
+            toggleTheme={toggleTheme} 
+            language={language} 
+            toggleLanguage={toggleLanguage} 
+            t={t} 
           />
       </div>
-      
-      <main className="flex-1 overflow-hidden relative flex flex-col min-w-0 bg-slate-50 dark:bg-slate-950">
+
+      {/* Main Container */}
+      <main className={`
+        flex-1 overflow-hidden relative flex flex-col min-w-0 bg-[#f8fafc] dark:bg-slate-950 transition-all duration-500
+        ${isSidebarVisible && window.innerWidth >= 1024 ? 'lg:rounded-l-[44px] rtl:lg:rounded-r-[44px] shadow-2xl' : 'rounded-none'}
+      `}>
         
-        {/* Alerts / Banners */}
-        {!isOnline && (
-            <div className="bg-red-500 text-white text-xs font-bold text-center py-1 absolute top-0 left-0 right-0 z-50">
-                <span className="flex items-center justify-center gap-2">
-                    <CloudOff size={14} /> {t('offlineMode')}
-                </span>
-            </div>
-        )}
-        {!isFirebaseConfigured && isOnline && (
-            <div className="bg-orange-500 text-white text-xs font-bold text-center py-1 absolute top-0 left-0 right-0 z-50 cursor-pointer hover:bg-orange-600" onClick={() => setCurrentView(AppView.SETTINGS)}>
-                <span className="flex items-center justify-center gap-2">
-                    <AlertTriangle size={14} /> Local Storage Only. Click to Configure Firebase Sync.
-                </span>
-            </div>
-        )}
-        
-        <div className="lg:hidden bg-slate-900 dark:bg-slate-950 text-white p-4 flex items-center justify-between shrink-0 shadow-md z-30">
-            <div className="flex items-center gap-3">
-               <button onClick={() => setIsMobileMenuOpen(true)} className="p-1 hover:bg-slate-800 rounded">
-                  <Menu size={24} />
-               </button>
-               <h1 className="font-bold text-lg tracking-tight">easyPOS</h1>
-            </div>
-            <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center font-bold text-sm">
-                    {user.name.charAt(0).toUpperCase()}
-                </div>
-            </div>
+        {/* Alerts / Status */}
+        <div className="absolute top-0 left-0 right-0 z-50 pointer-events-none flex justify-center">
+            {!isOnline && (
+              <div className="bg-red-600 text-white text-[9px] font-black px-6 py-1 rounded-b-xl shadow-lg flex items-center gap-2 animate-bounce pointer-events-auto">
+                <CloudOff size={12} /> {t('offlineMode')}
+              </div>
+            )}
+            {!isFirebaseConfigured && isOnline && (
+              <div className="bg-orange-500 text-white text-[9px] font-black px-6 py-1 rounded-b-xl shadow-lg cursor-pointer flex items-center gap-2 animate-pulse pointer-events-auto" onClick={() => setCurrentView(AppView.SETTINGS)}>
+                <AlertTriangle size={12} /> SYNC REQUIRED (TAP)
+              </div>
+            )}
         </div>
 
-        <div className={`flex-1 overflow-hidden relative ${(!isOnline || (!isFirebaseConfigured && isOnline)) ? 'pt-6' : ''}`}>
+        {/* Floating Menu Button (When Sidebar Hidden) */}
+        {!isSidebarVisible && (
+            <div className="hidden lg:block absolute top-6 left-6 z-[60] no-print">
+                <button onClick={() => setIsSidebarVisible(true)} className="p-3 bg-white dark:bg-slate-900 text-slate-800 dark:text-white rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 hover:scale-105 active:scale-95 transition-all">
+                    <PanelLeftOpen size={24} className="text-brand-500" />
+                </button>
+            </div>
+        )}
+
+        {/* Mobile Header */}
+        <div className="lg:hidden bg-slate-900 text-white p-5 flex items-center justify-between shrink-0 shadow-lg z-30">
+            <div className="flex items-center gap-4">
+                <button onClick={() => setIsMobileMenuOpen(true)} className="p-2.5 bg-slate-800 rounded-xl active:scale-95 transition-transform"><Menu size={24} /></button>
+                <h1 className="font-black text-xl italic uppercase tracking-tighter">easyPOS</h1>
+            </div>
+            <div className="w-10 h-10 rounded-2xl bg-brand-600 flex items-center justify-center font-black text-white">{user.name.charAt(0).toUpperCase()}</div>
+        </div>
+
+        {/* View Component Rendering */}
+        <div className="flex-1 overflow-hidden relative">
             {currentView === AppView.POS && (
-            <POS 
-                products={products} 
-                onCheckout={handleCheckout} 
-                storeSettings={storeSettings}
-                onViewOrderHistory={() => handleViewChange(AppView.ORDERS)}
-                onUpdateStoreSettings={handleUpdateStoreSettings}
-                {...viewProps}
-            />
+              <POS products={products} sales={sales} onCheckout={handleCheckout} storeSettings={storeSettings} onViewOrderHistory={() => setCurrentView(AppView.ORDERS)} onUpdateStoreSettings={handleUpdateStoreSettings} t={t} />
             )}
-            
             {(currentView === AppView.INVENTORY || currentView === AppView.CATEGORIES) && (
-            <Inventory 
-                products={products} 
-                categories={categories}
-                onAddProduct={handleAddProduct}
-                onUpdateProduct={handleUpdateProduct}
-                onBulkUpdateProduct={handleBulkUpdateProduct}
-                onDeleteProduct={handleDeleteProduct}
-                onAddCategory={handleAddCategory}
-                onUpdateCategory={handleUpdateCategory}
-                onDeleteCategory={handleDeleteCategory}
-                initialTab={currentView === AppView.CATEGORIES ? 'categories' : 'products'}
-                onGoBack={handleGoBack}
-                {...viewProps}
-            />
+              <Inventory products={products} categories={categories} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} onBulkUpdateProduct={handleBulkUpdateProduct} onDeleteProduct={handleDeleteProduct} initialTab={currentView === AppView.CATEGORIES ? 'categories' : 'products'} onGoBack={() => setCurrentView(AppView.POS)} t={t} />
             )}
-            
             {currentView === AppView.STOCK_CHECK && (
-            <StockCheck 
-                products={products}
-                onUpdateStock={handleStockUpdate}
-                onGoBack={handleGoBack}
-                {...viewProps}
-            />
+              <StockCheck products={products} onUpdateStock={handleStockUpdate} onGoBack={() => setCurrentView(AppView.POS)} />
             )}
-
             {currentView === AppView.ORDERS && (
-            <Orders 
-                sales={sales} 
-                onProcessReturn={handleProcessReturn}
-                storeSettings={storeSettings} 
-                onGoBack={handleGoBack}
-                {...viewProps}
-            />
+              <Orders sales={sales} onProcessReturn={() => {}} storeSettings={storeSettings} onGoBack={() => setCurrentView(AppView.POS)} />
             )}
-
             {currentView === AppView.REPORTS && (
-            <Reports 
-                sales={sales} 
-                products={products} 
-                onGoBack={handleGoBack}
-                {...viewProps}
-            />
+              <Reports sales={sales} products={products} onGoBack={() => setCurrentView(AppView.POS)} />
             )}
-
-            {currentView === AppView.SETTINGS && user.role === 'ADMIN' && (
-            <Settings 
-                users={users} 
-                products={products}
-                sales={sales}
-                onAddUser={handleAddUser} 
-                onDeleteUser={handleDeleteUser}
-                currentUser={user}
-                storeSettings={storeSettings}
-                onUpdateStoreSettings={handleUpdateStoreSettings}
-                onGoBack={handleGoBack}
-                {...viewProps}
-            />
+            {currentView === AppView.SETTINGS && (
+              <Settings users={users} products={products} sales={sales} onAddUser={() => {}} onDeleteUser={() => {}} currentUser={user} storeSettings={storeSettings} onUpdateStoreSettings={handleUpdateStoreSettings} onGoBack={() => setCurrentView(AppView.POS)} />
             )}
-
-            {currentView === AppView.BAILEYS_SETUP && user.role === 'ADMIN' && (
-                <BaileysSetup 
-                onUpdateStoreSettings={handleUpdateStoreSettings} 
-                settings={storeSettings}
-                onGoBack={handleGoBack}
-                {...viewProps}
-                />
+            {currentView === AppView.BAILEYS_SETUP && (
+              <BaileysSetup onUpdateStoreSettings={handleUpdateStoreSettings} settings={storeSettings} onGoBack={() => setCurrentView(AppView.POS)} t={t} />
             )}
         </div>
       </main>

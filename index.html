@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <title>easyPOS - Smart Point of Sale</title>
     <!-- Add Cairo font for Arabic support -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,11 +27,10 @@
                 700: '#0369a1',
                 900: '#0c4a6e',
               },
-              // Dark mode specific background (deeper slate)
               dark: {
-                bg: '#0f172a', // slate-900
-                card: '#1e293b', // slate-800
-                text: '#f8fafc', // slate-50
+                bg: '#0f172a', 
+                card: '#1e293b', 
+                text: '#f8fafc', 
               }
             }
           }
@@ -39,31 +38,44 @@
       }
     </script>
     <style>
-      /* Custom scrollbar for cleaner UI */
+      /* Fluid UI & Scrollbar Improvements */
+      :root {
+        --app-height: 100%;
+      }
+      html, body {
+        height: 100svh;
+        overflow: hidden;
+        touch-action: manipulation;
+      }
+      #root {
+        height: 100svh;
+      }
       ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
+        width: 5px;
+        height: 5px;
       }
       ::-webkit-scrollbar-track {
-        background: #f1f1f1;
+        background: transparent;
       }
       .dark ::-webkit-scrollbar-track {
-        background: #1e293b;
+        background: transparent;
       }
       ::-webkit-scrollbar-thumb {
         background: #cbd5e1;
-        border-radius: 4px;
+        border-radius: 10px;
       }
       .dark ::-webkit-scrollbar-thumb {
-        background: #475569;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
+        background: #334155;
       }
       @media print {
         .no-print { display: none !important; }
         .print-only { display: block !important; }
-        body { background: white; }
+        body { background: white; height: auto; overflow: visible; }
+      }
+      /* Prevent text selection on buttons for app-like feel */
+      button {
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
       }
     </style>
   <script type="importmap">
@@ -90,7 +102,7 @@
 }
 </script>
 </head>
-  <body class="bg-gray-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased h-screen overflow-hidden transition-colors duration-200">
+  <body class="bg-gray-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased transition-colors duration-200">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
