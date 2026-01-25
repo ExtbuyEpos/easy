@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Product } from '../types';
 import { ScanLine, CheckCircle, AlertTriangle, Save, RefreshCw, History as HistoryIcon, Trash2, Plus, Minus, Search, ArrowRight, Download, FileSpreadsheet, Calendar } from 'lucide-react';
 import * as XLSX from "xlsx";
+import { db } from '../firebase';
+import { collection, addDoc, onSnapshot, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 
 interface StockCheckProps {
   products: Product[];
@@ -34,26 +36,32 @@ export const StockCheck: React.FC<StockCheckProps> = ({ products, onUpdateStock 
   const [sessionList, setSessionList] = useState<ScannedItem[]>([]);
   const [lastScannedId, setLastScannedId] = useState<string | null>(null);
   
-  // History List (Persisted)
+  // History List (Persisted via Firestore or Local)
   const [history, setHistory] = useState<StockHistoryItem[]>([]);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Load history from local storage on mount
+  // Subscribe to Stock History
   useEffect(() => {
-      const savedHistory = localStorage.getItem('easyPOS_stockHistory');
-      if (savedHistory) {
-          try {
-              setHistory(JSON.parse(savedHistory));
-          } catch (e) {
-              console.error("Failed to parse stock history", e);
-          }
-      }
+    if (db) {
+        const unsubscribe = onSnapshot(collection(db, 'stock_history'), (snapshot) => {
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StockHistoryItem));
+            setHistory(data.sort((a,b) => b.timestamp - a.timestamp));
+        });
+        return () => unsubscribe();
+    } else {
+        // Local Fallback (Not persisted in this demo version effectively without LS key, but assuming session)
+        // If critical, could add localStorage for history too.
+        const saved = localStorage.getItem('easyPOS_stockHistory');
+        if(saved) setHistory(JSON.parse(saved));
+    }
   }, []);
 
-  // Save history to local storage whenever it changes
+  // Persist history locally if !db
   useEffect(() => {
-      localStorage.setItem('easyPOS_stockHistory', JSON.stringify(history));
+      if (!db && history.length > 0) {
+          localStorage.setItem('easyPOS_stockHistory', JSON.stringify(history));
+      }
   }, [history]);
 
   // Focus input when switching to scan tab
@@ -134,14 +142,14 @@ export const StockCheck: React.FC<StockCheckProps> = ({ products, onUpdateStock 
       setSessionList(prev => prev.filter(item => item.product.id !== productId));
   };
 
-  const handleCommitStock = (item: ScannedItem) => {
+  const handleCommitStock = async (item: ScannedItem) => {
       if (window.confirm(`Update stock for "${item.product.name}" from ${item.systemStock} to ${item.physicalCount}?`)) {
           // 1. Update Actual Product Stock
           onUpdateStock(item.product.id, item.physicalCount);
 
           // 2. Add to History Log
-          const historyRecord: StockHistoryItem = {
-              id: Date.now().toString() + Math.random().toString().slice(2, 5),
+          const historyRecord = {
+              id: Date.now().toString(), // fallback ID
               timestamp: Date.now(),
               sku: item.product.sku,
               name: item.product.name,
@@ -149,7 +157,17 @@ export const StockCheck: React.FC<StockCheckProps> = ({ products, onUpdateStock 
               newStock: item.physicalCount,
               variance: item.physicalCount - item.systemStock
           };
-          setHistory(prev => [historyRecord, ...prev]);
+          
+          if (db) {
+              try {
+                  const { id, ...data } = historyRecord;
+                  await addDoc(collection(db, 'stock_history'), data);
+              } catch(e) {
+                  console.error("Failed to save stock history", e);
+              }
+          } else {
+              setHistory(prev => [historyRecord, ...prev]);
+          }
 
           // 3. Update the session list to reflect the new system stock (so variance becomes 0)
           setSessionList(prev => prev.map(i => {
@@ -161,15 +179,18 @@ export const StockCheck: React.FC<StockCheckProps> = ({ products, onUpdateStock 
       }
   };
 
-  const handleClearSession = () => {
-      if (window.confirm("Clear all scanned items?")) {
-          setSessionList([]);
-      }
-  };
-
-  const handleClearHistory = () => {
+  const handleClearHistory = async () => {
     if (window.confirm("Are you sure you want to delete the entire history log? This cannot be undone.")) {
-        setHistory([]);
+        if (db) {
+            const batch = writeBatch(db);
+            history.forEach(h => {
+                batch.delete(doc(db, 'stock_history', h.id));
+            });
+            await batch.commit();
+        } else {
+            setHistory([]);
+            localStorage.removeItem('easyPOS_stockHistory');
+        }
     }
   };
 
@@ -197,9 +218,9 @@ export const StockCheck: React.FC<StockCheckProps> = ({ products, onUpdateStock 
         Date: new Date(item.timestamp).toLocaleDateString(),
         Time: new Date(item.timestamp).toLocaleTimeString(),
         SKU: item.sku,
-        Name: item.name,
-        'Old Stock': item.oldStock,
-        'New Stock': item.newStock,
+        'Item Name': item.name,
+        'System Stock': item.oldStock,
+        'Physical Count': item.newStock,
         Variance: item.variance
     }));
 
@@ -275,7 +296,7 @@ export const StockCheck: React.FC<StockCheckProps> = ({ products, onUpdateStock 
                         disabled={history.length === 0}
                         className="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
                       >
-                          <FileSpreadsheet size={16} /> Export CSV
+                          <Download size={16} /> Download History
                       </button>
                   </div>
               </div>

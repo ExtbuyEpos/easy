@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, UserRole, Product, Sale, StoreSettings } from '../types';
-import { Shield, User as UserIcon, Trash2, Plus, Save, X, Lock, Database, Download, Upload, AlertTriangle, Archive, Receipt, Image as ImageIcon, Printer, Percent, MessageCircle } from 'lucide-react';
+import { Shield, User as UserIcon, Trash2, Plus, Save, X, Lock, Database, Download, Upload, AlertTriangle, Archive, Receipt, Image as ImageIcon, Printer, Percent, MessageCircle, Cloud, LogOut } from 'lucide-react';
 import JSZip from 'jszip';
 import * as XLSX from 'xlsx';
+import { saveFirebaseConfig, clearFirebaseConfig } from '../firebase';
 
 interface SettingsProps {
   users: User[];
@@ -34,10 +35,32 @@ export const Settings: React.FC<SettingsProps> = ({
   // Store Settings Form State
   const [storeForm, setStoreForm] = useState<StoreSettings>(storeSettings);
   const [storeMessage, setStoreMessage] = useState<string | null>(null);
+  
+  // Firebase Form
+  const [firebaseConfigStr, setFirebaseConfigStr] = useState('');
 
   useEffect(() => {
     setStoreForm(storeSettings);
+    const existing = localStorage.getItem('easyPOS_firebaseConfig');
+    if(existing) setFirebaseConfigStr(existing);
   }, [storeSettings]);
+
+  // --- FIREBASE CONFIG LOGIC ---
+  const handleSaveFirebase = () => {
+      if(saveFirebaseConfig(firebaseConfigStr)) {
+          alert("Firebase Config Saved! The app will now reload.");
+          window.location.reload();
+      } else {
+          alert("Invalid JSON configuration. Please check the syntax.");
+      }
+  };
+
+  const handleClearFirebase = () => {
+      if(window.confirm("Disconnect Firebase? This will revert to LocalStorage mode.")) {
+          clearFirebaseConfig();
+          window.location.reload();
+      }
+  };
 
   // --- USER MANAGEMENT LOGIC ---
   const handleSubmit = (e: React.FormEvent) => {
@@ -200,9 +223,42 @@ export const Settings: React.FC<SettingsProps> = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* LEFT COLUMN: Receipt Settings & Backup */}
+        {/* LEFT COLUMN */}
         <div className="lg:col-span-1 space-y-6">
             
+            {/* Firebase Sync Panel */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 animate-fade-in">
+                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <Cloud size={18} className="text-orange-600"/> Cloud Synchronization
+                </h3>
+                <div className="space-y-3">
+                    <p className="text-xs text-slate-500">
+                        Paste your Firebase Configuration JSON here to enable real-time sync across devices.
+                    </p>
+                    <textarea 
+                        value={firebaseConfigStr}
+                        onChange={(e) => setFirebaseConfigStr(e.target.value)}
+                        placeholder='{"apiKey": "...", "projectId": "..."}'
+                        className="w-full h-24 p-2 text-xs font-mono border border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                    />
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={handleSaveFirebase}
+                            className="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg font-bold text-xs transition-colors"
+                        >
+                            Save & Connect
+                        </button>
+                        <button 
+                            onClick={handleClearFirebase}
+                            className="p-2 text-slate-400 hover:text-red-500 border border-slate-200 rounded-lg transition-colors"
+                            title="Disconnect"
+                        >
+                            <LogOut size={16} />
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             {/* Receipt Customization Panel */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">

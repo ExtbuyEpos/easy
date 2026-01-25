@@ -43,7 +43,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, users }) => {
             </p>
           </div>
           <div className="mt-8 text-xs md:text-sm text-brand-200 relative z-10">
-            &copy; 2024 easyPOS Systems. v1.1.0
+            &copy; 2026 easyPOS Systems. v1.1.0
           </div>
           {/* Decorative Circle */}
           <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-brand-500 rounded-full opacity-50 blur-3xl pointer-events-none"></div>

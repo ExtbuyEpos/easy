@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutGrid, ShoppingCart, Package, BarChart3, LogOut, ScanLine, Settings, MessageCircle, X, History, Wifi, WifiOff, Cloud, RefreshCw } from 'lucide-react';
+import { LayoutGrid, ShoppingCart, Package, BarChart3, LogOut, ScanLine, Settings, MessageCircle, X, History, Wifi, WifiOff, Cloud, RefreshCw, List } from 'lucide-react';
 import { AppView, User, UserRole } from '../types';
 
 interface SidebarProps {
@@ -27,6 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, onL
 
     if (['ADMIN', 'MANAGER', 'STAFF'].includes(role)) {
       items.push({ view: AppView.INVENTORY, label: 'Inventory', icon: Package });
+      items.push({ view: AppView.CATEGORIES, label: 'Category List', icon: List });
       items.push({ view: AppView.STOCK_CHECK, label: 'Stock Check', icon: ScanLine });
     }
 

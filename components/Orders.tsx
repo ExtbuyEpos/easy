@@ -73,7 +73,14 @@ export const Orders: React.FC<OrdersProps> = ({ sales, onProcessReturn, storeSet
     const startCamera = async () => {
         if (isScannerOpen && isActive) {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                // Try environment camera first, fallback to any available
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                } catch (envErr) {
+                    console.warn("Environment camera not found, falling back to default.", envErr);
+                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                }
+
                 if (videoRef.current && isActive) {
                     videoRef.current.srcObject = stream;
                     videoRef.current.setAttribute("playsinline", "true"); 
@@ -83,7 +90,7 @@ export const Orders: React.FC<OrdersProps> = ({ sales, onProcessReturn, storeSet
             } catch (err) {
                 console.error("Error accessing camera", err);
                 if(isActive) {
-                    alert("Could not access camera.");
+                    alert("Could not access camera. Please ensure you have a webcam connected and permissions granted.");
                     setIsScannerOpen(false);
                 }
             }

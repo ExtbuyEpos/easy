@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Product, CartItem, StoreSettings } from '../types';
 import { CURRENCY } from '../constants';
-import { ShoppingCart, CreditCard, Trash2, Plus, Minus, Search, Printer, CheckCircle, MessageCircle, Phone, Image as ImageIcon, Receipt, Edit3, PlusCircle, X, Save, Tag, QrCode, Camera, ChevronLeft, ShoppingBag, Percent, DollarSign, Filter, History } from 'lucide-react';
+import { ShoppingCart, CreditCard, Trash2, Plus, Minus, Search, Printer, CheckCircle, MessageCircle, Phone, Image as ImageIcon, Receipt, Edit3, PlusCircle, X, Save, Tag, QrCode, Camera, ChevronLeft, ShoppingBag, Percent, DollarSign, Filter, History, LayoutGrid } from 'lucide-react';
 import jsQR from 'jsqr';
 import QRCode from 'qrcode';
 
@@ -16,6 +16,7 @@ interface POSProps {
 export const POS: React.FC<POSProps> = ({ products, onCheckout, storeSettings, onViewOrderHistory, onUpdateStoreSettings }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [skuInput, setSkuInput] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [showInvoice, setShowInvoice] = useState(false);
   
   // Sale State
@@ -55,6 +56,9 @@ export const POS: React.FC<POSProps> = ({ products, onCheckout, storeSettings, o
   const [discountType, setDiscountType] = useState<'PERCENTAGE' | 'FIXED'>('PERCENTAGE');
   const [discountValue, setDiscountValue] = useState<string>(''); // string for input handling
 
+  // Derived Categories for Filter Pills
+  const categories = ['All', ...Array.from(new Set(products.map(p => p.category))).sort()];
+
   // Focus scanner input on mount
   useEffect(() => {
     // Only auto-focus on desktop to prevent mobile keyboard popping up annoyingly
@@ -87,17 +91,21 @@ export const POS: React.FC<POSProps> = ({ products, onCheckout, storeSettings, o
   };
 
   // --- DEEP SEARCH FILTERING ---
-  const filteredProducts = skuInput.trim() === '' 
-      ? products 
-      : products.filter(p => {
-          const term = skuInput.toLowerCase();
-          return (
-              p.name.toLowerCase().includes(term) ||
-              p.sku.includes(term) ||
-              p.category.toLowerCase().includes(term) ||
-              (p.tags && p.tags.some(t => t.toLowerCase().includes(term)))
-          );
-      });
+  const filteredProducts = products.filter(p => {
+      const term = skuInput.toLowerCase().trim();
+      
+      // Match Search Term
+      const matchesSearch = term === '' || (
+          p.name.toLowerCase().includes(term) ||
+          p.sku.includes(term) ||
+          (p.tags && p.tags.some(t => t.toLowerCase().includes(term)))
+      );
+
+      // Match Category
+      const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
+
+      return matchesSearch && matchesCategory;
+  });
 
   // --- QR SCANNER LOGIC ---
   useEffect(() => {
@@ -108,7 +116,14 @@ export const POS: React.FC<POSProps> = ({ products, onCheckout, storeSettings, o
     const startCamera = async () => {
         if (isScannerOpen && isActive) {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                // Try environment camera first, fallback to any available video device
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                } catch (envErr) {
+                    console.warn("Environment camera not found, falling back to default video device.", envErr);
+                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                }
+
                 if (videoRef.current && isActive) {
                     videoRef.current.srcObject = stream;
                     videoRef.current.setAttribute("playsinline", "true"); 
@@ -118,7 +133,7 @@ export const POS: React.FC<POSProps> = ({ products, onCheckout, storeSettings, o
             } catch (err) {
                 console.error("Error accessing camera", err);
                 if(isActive) {
-                    alert("Could not access camera. Please ensure you have granted camera permissions.");
+                    alert("Could not access camera. Please ensure you have a camera connected and permissions granted.");
                     setIsScannerOpen(false);
                 }
             }
@@ -384,32 +399,52 @@ Date: {date}
       <div className="flex-1 flex flex-col overflow-hidden h-full order-1 lg:order-1 print:hidden">
         
         {/* Search & Scan Bar */}
-        <div className="bg-white p-3 lg:p-4 shadow-sm flex items-center gap-2 lg:gap-4 shrink-0 z-20 sticky top-0 lg:static">
-          <Search className="text-slate-400 hidden lg:block" />
-          <form onSubmit={handleSkuSubmit} className="flex-1">
-            <input
-              ref={skuInputRef}
-              type="text"
-              value={skuInput}
-              onChange={(e) => setSkuInput(e.target.value)}
-              placeholder="Search by Name, SKU, or Tag..."
-              className="w-full text-base lg:text-lg outline-none bg-slate-100 lg:bg-transparent px-4 py-2.5 rounded-full lg:rounded-none placeholder-slate-400 text-slate-800 focus:bg-white focus:ring-2 focus:ring-brand-500 lg:focus:ring-0 transition-all"
-            />
-          </form>
-          <button 
-             onClick={() => setIsScannerOpen(true)}
-             className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2.5 rounded-full lg:rounded-lg transition-colors font-medium text-sm whitespace-nowrap active:scale-95 transform"
-          >
-             <QrCode size={18} />
-             <span className="hidden md:inline">Scan QR</span>
-          </button>
-          <button 
-             onClick={onViewOrderHistory}
-             className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2.5 rounded-full lg:rounded-lg transition-colors font-medium text-sm whitespace-nowrap active:scale-95 transform"
-          >
-             <History size={18} />
-             <span className="hidden md:inline">Orders</span>
-          </button>
+        <div className="bg-white p-3 lg:p-4 shadow-sm flex flex-col gap-3 shrink-0 z-20 sticky top-0 lg:static">
+          <div className="flex items-center gap-2 lg:gap-4">
+            <Search className="text-slate-400 hidden lg:block" />
+            <form onSubmit={handleSkuSubmit} className="flex-1 relative">
+                <input
+                ref={skuInputRef}
+                type="text"
+                value={skuInput}
+                onChange={(e) => setSkuInput(e.target.value)}
+                placeholder="Search products..."
+                className="w-full text-base lg:text-lg outline-none bg-slate-100 lg:bg-transparent px-4 py-2.5 rounded-xl lg:rounded-none placeholder-slate-400 text-slate-800 focus:bg-white focus:ring-2 focus:ring-brand-500 lg:focus:ring-0 transition-all border border-transparent focus:border-brand-500 lg:border-none"
+                />
+                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 lg:hidden" size={18} />
+            </form>
+            <button 
+                onClick={() => setIsScannerOpen(true)}
+                className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2.5 rounded-xl lg:rounded-lg transition-colors font-medium text-sm whitespace-nowrap active:scale-95 transform"
+            >
+                <QrCode size={20} />
+                <span className="hidden md:inline">Scan</span>
+            </button>
+            <button 
+                onClick={onViewOrderHistory}
+                className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2.5 rounded-xl lg:rounded-lg transition-colors font-medium text-sm whitespace-nowrap active:scale-95 transform"
+            >
+                <History size={20} />
+                <span className="hidden md:inline">History</span>
+            </button>
+          </div>
+
+          {/* Category Filter Pills (Mobile/Desktop Friendly) */}
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+             {categories.map(cat => (
+                 <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold transition-all active:scale-95 ${
+                        selectedCategory === cat 
+                        ? 'bg-brand-600 text-white shadow-md ring-2 ring-brand-100' 
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
+                    }`}
+                 >
+                     {cat}
+                 </button>
+             ))}
+          </div>
         </div>
 
         {/* Scrollable Products */}
@@ -418,6 +453,7 @@ Date: {date}
                 <div className="flex flex-col items-center justify-center h-full text-slate-400">
                     <Search size={48} className="mb-4 opacity-20" />
                     <p>No products found for "{skuInput}"</p>
+                    {selectedCategory !== 'All' && <p className="text-xs mt-1">in category "{selectedCategory}"</p>}
                 </div>
             ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4">
@@ -466,10 +502,10 @@ Date: {date}
       </div>
 
       {/* MOBILE BOTTOM SUMMARY BAR (Hidden when printing) */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-slate-900 text-white p-3 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] safe-area-bottom print:hidden">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-3 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] safe-area-bottom print:hidden">
          <button 
            onClick={() => setIsCartOpen(true)}
-           className="w-full flex items-center justify-between px-4 py-3 active:bg-slate-800 rounded-xl transition-colors"
+           className="w-full bg-slate-900 text-white flex items-center justify-between px-4 py-3 active:bg-slate-800 rounded-xl transition-colors shadow-lg"
          >
              <div className="flex items-center gap-3">
                  <div className="relative">
@@ -478,11 +514,14 @@ Date: {date}
                  </div>
                  <div className="text-left">
                      <div className="text-xs text-slate-400">Current Order</div>
-                     <div className="font-bold text-lg leading-none">View Cart</div>
+                     <div className="font-bold text-lg leading-none">{totalItems} Items</div>
                  </div>
              </div>
-             <div className="bg-brand-600 px-4 py-2 rounded-lg font-bold text-lg shadow-lg">
-                 {CURRENCY}{finalTotal.toFixed(2)}
+             <div className="flex items-center gap-2">
+                 <span className="text-slate-400 text-sm font-medium">Total</span>
+                 <div className="font-bold text-xl">
+                     {CURRENCY}{finalTotal.toFixed(2)}
+                 </div>
              </div>
          </button>
       </div>
@@ -495,7 +534,7 @@ Date: {date}
          print:hidden
       `}>
         {/* Mobile Header for Cart */}
-        <div className="lg:hidden bg-slate-800 text-white p-4 flex justify-between items-center shrink-0 shadow-md">
+        <div className="lg:hidden bg-slate-800 text-white p-4 flex justify-between items-center shrink-0 shadow-md safe-area-top">
              <div className="font-bold flex items-center gap-2 text-lg">
                  <ShoppingCart size={20} /> Current Order
              </div>
@@ -547,9 +586,9 @@ Date: {date}
                        <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-sans font-bold">{item.quantity} x {CURRENCY}{item.sellPrice.toFixed(2)}</span>
                      </div>
                      <div className="flex items-center gap-1">
-                        <button onClick={(e) => { e.stopPropagation(); updateQuantity(item.id, -1); }} className="w-7 h-7 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 bg-slate-100 transition-colors"><Minus size={14}/></button>
-                        <button onClick={(e) => { e.stopPropagation(); updateQuantity(item.id, 1); }} className="w-7 h-7 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 bg-slate-100 transition-colors"><Plus size={14}/></button>
-                        <button onClick={(e) => { e.stopPropagation(); removeFromCart(item.id); }} className="w-7 h-7 flex items-center justify-center hover:bg-red-100 rounded text-red-500 ml-1 bg-red-50 transition-colors"><Trash2 size={14}/></button>
+                        <button onClick={(e) => { e.stopPropagation(); updateQuantity(item.id, -1); }} className="w-8 h-8 flex items-center justify-center hover:bg-slate-200 rounded-lg text-slate-700 bg-slate-100 transition-colors"><Minus size={14}/></button>
+                        <button onClick={(e) => { e.stopPropagation(); updateQuantity(item.id, 1); }} className="w-8 h-8 flex items-center justify-center hover:bg-slate-200 rounded-lg text-slate-700 bg-slate-100 transition-colors"><Plus size={14}/></button>
+                        <button onClick={(e) => { e.stopPropagation(); removeFromCart(item.id); }} className="w-8 h-8 flex items-center justify-center hover:bg-red-100 rounded-lg text-red-500 ml-1 bg-red-50 transition-colors"><Trash2 size={14}/></button>
                      </div>
                   </div>
                 </div>
@@ -673,7 +712,7 @@ Date: {date}
                    <canvas ref={canvasRef} className="hidden"></canvas>
                    <div className="absolute inset-0 border-[40px] border-black/50 flex items-center justify-center">
                        <div className="w-full h-full border-2 border-brand-500 relative rounded-lg">
-                           <div className="absolute left-0 right-0 h-0.5 bg-red-500/80 animate-[scan_2s_ease-in-out_infinite] shadow-[0_0_8px_rgba(239,68,68,0.8)]"></div>
+                           <div className="absolute left-0 right-0 h-0.5 bg-green-500/80 animate-[scan_2s_ease-in-out_infinite] shadow-[0_0_8px_rgba(34,197,94,0.8)]"></div>
                        </div>
                    </div>
               </div>

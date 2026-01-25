@@ -10,12 +10,17 @@ import { BaileysSetup } from './components/BaileysSetup';
 import { Orders } from './components/Orders';
 import { AppView, Product, Sale, CartItem, User, StoreSettings } from './types';
 import { INITIAL_PRODUCTS, INITIAL_USERS } from './constants';
-import { Menu, CloudOff, RefreshCw } from 'lucide-react';
+import { Menu, CloudOff, RefreshCw, AlertTriangle } from 'lucide-react';
+
+// Firebase Imports
+import { db } from './firebase';
+import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [currentView, setCurrentView] = useState<AppView>(AppView.POS);
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   
@@ -25,6 +30,7 @@ const App: React.FC = () => {
   // Network State
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isFirebaseConfigured, setIsFirebaseConfigured] = useState(!!db);
 
   const [storeSettings, setStoreSettings] = useState<StoreSettings>({
     name: 'easyPOS',
@@ -55,190 +61,262 @@ Discount: {discount}
 
   // --- Network Listeners ---
   useEffect(() => {
-    const handleOnline = () => {
-        setIsOnline(true);
-        setIsSyncing(true);
-        // Simulate Sync Process
-        setTimeout(() => {
-            setIsSyncing(false);
-        }, 2500);
-    };
-
-    const handleOffline = () => {
-        setIsOnline(false);
-    };
-
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
     return () => {
         window.removeEventListener('online', handleOnline);
         window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
-  // Initialize Data (Simulate Database) & Pre-load Local Storage
+  // --- DATA LOADING (Hybrid: Firestore or LocalStorage) ---
   useEffect(() => {
-    const savedProducts = localStorage.getItem('easyPOS_products');
-    const savedSales = localStorage.getItem('easyPOS_sales');
-    const savedUsers = localStorage.getItem('easyPOS_users');
-    const savedSettings = localStorage.getItem('easyPOS_storeSettings');
+    if (db) {
+        // --- FIRESTORE MODE ---
+        setIsSyncing(true);
+        const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
+            const data = snapshot.docs.map(doc => doc.data() as Product);
+            setProducts(data);
+            if (data.length === 0 && !snapshot.metadata.fromCache) {
+                 const batch = writeBatch(db);
+                 INITIAL_PRODUCTS.forEach(p => batch.set(doc(db, 'products', p.id), p));
+                 batch.commit();
+            }
+        });
 
-    if (savedProducts) {
-      setProducts(JSON.parse(savedProducts));
+        const unsubCategories = onSnapshot(collection(db, 'categories'), (snapshot) => {
+            const data = snapshot.docs.map(doc => doc.id);
+            setCategories(data.length > 0 ? data : Array.from(new Set(INITIAL_PRODUCTS.map(p => p.category))).sort());
+        });
+
+        const unsubSales = onSnapshot(collection(db, 'sales'), (snapshot) => {
+            const data = snapshot.docs.map(doc => doc.data() as Sale);
+            setSales(data.sort((a,b) => b.timestamp - a.timestamp));
+        });
+
+        const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+            const data = snapshot.docs.map(doc => doc.data() as User);
+            setUsers(data);
+            if (data.length === 0 && !snapshot.metadata.fromCache) {
+                INITIAL_USERS.forEach(u => setDoc(doc(db, 'users', u.id), u));
+            }
+        });
+
+        const unsubSettings = onSnapshot(doc(db, 'settings', 'store'), (docSnap) => {
+            if (docSnap.exists()) {
+                setStoreSettings(docSnap.data() as StoreSettings);
+            }
+            setIsSyncing(false);
+        });
+
+        return () => {
+            unsubProducts();
+            unsubCategories();
+            unsubSales();
+            unsubUsers();
+            unsubSettings();
+        };
     } else {
-      setProducts(INITIAL_PRODUCTS);
-    }
+        // --- LOCAL STORAGE MODE ---
+        const savedProducts = localStorage.getItem('easyPOS_products');
+        const savedCategories = localStorage.getItem('easyPOS_categories');
+        const savedSales = localStorage.getItem('easyPOS_sales');
+        const savedUsers = localStorage.getItem('easyPOS_users');
+        const savedSettings = localStorage.getItem('easyPOS_storeSettings');
 
-    if (savedSales) {
-      setSales(JSON.parse(savedSales));
-    }
-
-    if (savedUsers) {
-      setUsers(JSON.parse(savedUsers));
-    } else {
-      setUsers(INITIAL_USERS);
-    }
-
-    if (savedSettings) {
-      const parsed = JSON.parse(savedSettings);
-      setStoreSettings(prev => ({ 
-          ...prev, // Keep defaults if new keys are missing in localstorage
-          ...parsed,
-          whatsappTemplate: parsed.whatsappTemplate || prev.whatsappTemplate 
-      }));
+        setProducts(savedProducts ? JSON.parse(savedProducts) : INITIAL_PRODUCTS);
+        setCategories(savedCategories ? JSON.parse(savedCategories) : Array.from(new Set(INITIAL_PRODUCTS.map(p => p.category))).sort());
+        setSales(savedSales ? JSON.parse(savedSales) : []);
+        setUsers(savedUsers ? JSON.parse(savedUsers) : INITIAL_USERS);
+        
+        if (savedSettings) {
+            setStoreSettings(prev => ({ ...prev, ...JSON.parse(savedSettings) }));
+        }
     }
   }, []);
 
-  // Persistence Effects (Offline Storage)
+  // --- LOCAL PERSISTENCE (Only if !db) ---
   useEffect(() => {
-    if (products.length > 0) localStorage.setItem('easyPOS_products', JSON.stringify(products));
-  }, [products]);
+      if (!db) {
+          localStorage.setItem('easyPOS_products', JSON.stringify(products));
+          localStorage.setItem('easyPOS_categories', JSON.stringify(categories));
+          localStorage.setItem('easyPOS_sales', JSON.stringify(sales));
+          localStorage.setItem('easyPOS_users', JSON.stringify(users));
+          localStorage.setItem('easyPOS_storeSettings', JSON.stringify(storeSettings));
+      }
+  }, [products, categories, sales, users, storeSettings]);
 
-  useEffect(() => {
-    if (sales.length > 0) localStorage.setItem('easyPOS_sales', JSON.stringify(sales));
-  }, [sales]);
 
-  useEffect(() => {
-     if (users.length > 0) localStorage.setItem('easyPOS_users', JSON.stringify(users));
-  }, [users]);
+  // --- ACTIONS (Switch between DB and Local State) ---
 
-  // Actions
-  const handleAddProduct = (newProduct: Product) => {
-    setProducts([...products, newProduct]);
+  const handleAddProduct = async (newProduct: Product) => {
+    if (db) {
+        await setDoc(doc(db, 'products', newProduct.id), newProduct);
+        if (!categories.includes(newProduct.category)) {
+            await setDoc(doc(db, 'categories', newProduct.category), { name: newProduct.category });
+        }
+    } else {
+        setProducts([...products, newProduct]);
+        if (!categories.includes(newProduct.category)) setCategories([...categories, newProduct.category]);
+    }
   };
 
-  const handleUpdateProduct = (updatedProduct: Product) => {
-    setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+  const handleUpdateProduct = async (updatedProduct: Product) => {
+    if (db) {
+        await setDoc(doc(db, 'products', updatedProduct.id), updatedProduct);
+        if (!categories.includes(updatedProduct.category)) {
+            await setDoc(doc(db, 'categories', updatedProduct.category), { name: updatedProduct.category });
+        }
+    } else {
+        setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+        if (!categories.includes(updatedProduct.category)) setCategories([...categories, updatedProduct.category]);
+    }
   };
 
-  const handleBulkUpdateProduct = (updatedProducts: Product[]) => {
-    const updatesMap = new Map(updatedProducts.map(p => [p.id, p]));
-    setProducts(products.map(p => updatesMap.has(p.id) ? updatesMap.get(p.id)! : p));
+  const handleBulkUpdateProduct = async (updatedProducts: Product[]) => {
+    if (db) {
+        const batch = writeBatch(db);
+        updatedProducts.forEach(p => batch.set(doc(db, 'products', p.id), p));
+        await batch.commit();
+    } else {
+        const updatesMap = new Map(updatedProducts.map(p => [p.id, p]));
+        setProducts(products.map(p => updatesMap.has(p.id) ? updatesMap.get(p.id)! : p));
+    }
   };
 
-  const handleDeleteProduct = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
+  const handleDeleteProduct = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this product?')) return;
+    if (db) {
+      await deleteDoc(doc(db, 'products', id));
+    } else {
       setProducts(products.filter(p => p.id !== id));
     }
   };
 
-  const handleCheckout = (items: CartItem[], total: number, paymentMethod: 'CASH' | 'CARD', subTotal: number, discount: number, tax: number) => {
+  const handleAddCategory = async (category: string) => {
+    if (db) {
+        await setDoc(doc(db, 'categories', category), { name: category });
+    } else {
+        if (!categories.includes(category)) setCategories([...categories, category]);
+    }
+  };
+
+  const handleUpdateCategory = async (oldCategory: string, newCategory: string) => {
+    if (db) {
+        const batch = writeBatch(db);
+        batch.set(doc(db, 'categories', newCategory), { name: newCategory });
+        batch.delete(doc(db, 'categories', oldCategory));
+        products.filter(p => p.category === oldCategory).forEach(p => {
+            batch.update(doc(db, 'products', p.id), { category: newCategory });
+        });
+        await batch.commit();
+    } else {
+        setCategories(categories.map(c => c === oldCategory ? newCategory : c));
+        setProducts(products.map(p => p.category === oldCategory ? { ...p, category: newCategory } : p));
+    }
+  };
+
+  const handleDeleteCategory = async (category: string) => {
+    if (!window.confirm(`Delete category "${category}"?`)) return;
+    if (db) {
+       await deleteDoc(doc(db, 'categories', category));
+    } else {
+       setCategories(categories.filter(c => c !== category));
+    }
+  };
+
+  const handleCheckout = async (items: CartItem[], total: number, paymentMethod: 'CASH' | 'CARD', subTotal: number, discount: number, tax: number) => {
+    const saleId = Date.now().toString();
     const newSale: Sale = {
-      id: Date.now().toString(),
+      id: saleId,
       timestamp: Date.now(),
-      items,
-      subTotal,
-      discount,
-      tax,
-      total,
-      paymentMethod,
-      status: 'COMPLETED'
+      items, subTotal, discount, tax, total, paymentMethod, status: 'COMPLETED'
     };
 
-    setSales([...sales, newSale]);
-
-    // Update Stock
-    const newProducts = products.map(p => {
-      const soldItem = items.find(i => i.id === p.id);
-      if (soldItem) {
-        return { ...p, stock: p.stock - soldItem.quantity };
-      }
-      return p;
-    });
-    setProducts(newProducts);
-  };
-
-  const handleProcessReturn = (saleId: string, returnMap: { [itemId: string]: number }) => {
-    // 1. Update Sales Record
-    const updatedSales = sales.map(sale => {
-      if (sale.id === saleId) {
-        const prevReturns = sale.returnedItems || {};
-        const newReturns = { ...prevReturns };
-        
-        // Merge new returns
-        Object.entries(returnMap).forEach(([itemId, qty]) => {
-          newReturns[itemId] = (newReturns[itemId] || 0) + qty;
-        });
-
-        // Sanity Check: Ensure we don't return more than purchased
-        sale.items.forEach(item => {
-            if (newReturns[item.id] > item.quantity) {
-                newReturns[item.id] = item.quantity;
+    if (db) {
+        const batch = writeBatch(db);
+        batch.set(doc(db, 'sales', saleId), newSale);
+        items.forEach(item => {
+            const currentProduct = products.find(p => p.id === item.id);
+            if (currentProduct) {
+                 batch.update(doc(db, 'products', item.id), { stock: currentProduct.stock - item.quantity });
             }
         });
-
-        // Calculate status
-        let totalOriginalCount = 0;
-        let totalReturnedCount = 0;
-
-        sale.items.forEach(item => {
-            totalOriginalCount += item.quantity;
-            totalReturnedCount += (newReturns[item.id] || 0);
+        await batch.commit();
+    } else {
+        setSales([...sales, newSale]);
+        const newProducts = products.map(p => {
+            const soldItem = items.find(i => i.id === p.id);
+            return soldItem ? { ...p, stock: p.stock - soldItem.quantity } : p;
         });
+        setProducts(newProducts);
+    }
+  };
 
-        // If everything returned, mark REFUNDED, else PARTIAL
-        const status = totalReturnedCount >= totalOriginalCount ? 'REFUNDED' : 'PARTIAL';
+  const handleProcessReturn = async (saleId: string, returnMap: { [itemId: string]: number }) => {
+    // Shared Logic
+    const sale = sales.find(s => s.id === saleId);
+    if (!sale) return;
 
-        return { ...sale, returnedItems: newReturns, status };
-      }
-      return sale;
+    const prevReturns = sale.returnedItems || {};
+    const newReturns = { ...prevReturns };
+    Object.entries(returnMap).forEach(([itemId, qty]) => {
+        newReturns[itemId] = (newReturns[itemId] || 0) + qty;
     });
-    setSales(updatedSales);
 
-    // 2. Update Stock (Restock items)
-    const updatedProducts = products.map(p => {
-       const returnQty = returnMap[p.id];
-       if (returnQty && returnQty > 0) {
-           return { ...p, stock: p.stock + returnQty };
-       }
-       return p;
+    let totalOriginalCount = 0;
+    let totalReturnedCount = 0;
+    sale.items.forEach(item => {
+        totalOriginalCount += item.quantity;
+        totalReturnedCount += (newReturns[item.id] || 0);
     });
-    setProducts(updatedProducts);
+    const status = totalReturnedCount >= totalOriginalCount ? 'REFUNDED' : 'PARTIAL';
+
+    if (db) {
+        const batch = writeBatch(db);
+        batch.update(doc(db, 'sales', saleId), { returnedItems: newReturns, status });
+        Object.entries(returnMap).forEach(([itemId, qty]) => {
+            const product = products.find(p => p.id === itemId);
+            if (product) batch.update(doc(db, 'products', itemId), { stock: product.stock + qty });
+        });
+        await batch.commit();
+    } else {
+        setSales(sales.map(s => s.id === saleId ? { ...s, returnedItems: newReturns, status } : s));
+        setProducts(products.map(p => {
+             const returnQty = returnMap[p.id];
+             return returnQty ? { ...p, stock: p.stock + returnQty } : p;
+        }));
+    }
   };
 
-  const handleStockUpdate = (id: string, newStock: number) => {
-    setProducts(products.map(p => p.id === id ? { ...p, stock: newStock } : p));
+  const handleStockUpdate = async (id: string, newStock: number) => {
+    if (db) {
+        await updateDoc(doc(db, 'products', id), { stock: newStock });
+    } else {
+        setProducts(products.map(p => p.id === id ? { ...p, stock: newStock } : p));
+    }
   };
 
-  // User Management Actions
-  const handleAddUser = (newUser: User) => {
-    setUsers([...users, newUser]);
+  const handleAddUser = async (newUser: User) => {
+    if (db) await setDoc(doc(db, 'users', newUser.id), newUser);
+    else setUsers([...users, newUser]);
   };
 
-  const handleDeleteUser = (id: string) => {
-    setUsers(users.filter(u => u.id !== id));
+  const handleDeleteUser = async (id: string) => {
+    if (db) await deleteDoc(doc(db, 'users', id));
+    else setUsers(users.filter(u => u.id !== id));
   };
 
-  // Settings Actions
-  const handleUpdateStoreSettings = (settings: StoreSettings) => {
-    setStoreSettings(settings);
-    localStorage.setItem('easyPOS_storeSettings', JSON.stringify(settings));
+  const handleUpdateStoreSettings = async (settings: StoreSettings) => {
+    if (db) await setDoc(doc(db, 'settings', 'store'), settings);
+    else setStoreSettings(settings);
   };
 
   const handleViewChange = (view: AppView) => {
       setCurrentView(view);
-      setIsMobileMenuOpen(false); // Close mobile menu on navigation
+      setIsMobileMenuOpen(false);
   };
 
   if (!user) {
@@ -248,7 +326,6 @@ Discount: {discount}
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 font-sans flex-col lg:flex-row">
       
-      {/* Mobile Sidebar Overlay */}
       {isMobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm transition-opacity"
@@ -256,7 +333,6 @@ Discount: {discount}
         />
       )}
 
-      {/* Sidebar - Responsive Container */}
       <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-slate-900 shadow-2xl transform transition-transform duration-300 lg:translate-x-0 lg:static lg:w-64 lg:shadow-none ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <Sidebar 
             currentView={currentView} 
@@ -269,26 +345,24 @@ Discount: {discount}
           />
       </div>
       
-      {/* Main Layout Area */}
       <main className="flex-1 overflow-hidden relative flex flex-col min-w-0">
         
-        {/* Sync/Offline Banner (Top Overlay) */}
+        {/* Alerts / Banners */}
         {!isOnline && (
             <div className="bg-red-500 text-white text-xs font-bold text-center py-1 absolute top-0 left-0 right-0 z-50">
                 <span className="flex items-center justify-center gap-2">
-                    <CloudOff size={14} /> YOU ARE OFFLINE. DATA SAVING LOCALLY.
+                    <CloudOff size={14} /> OFFLINE MODE
                 </span>
             </div>
         )}
-        {isSyncing && (
-             <div className="bg-blue-500 text-white text-xs font-bold text-center py-1 absolute top-0 left-0 right-0 z-50 animate-pulse">
+        {!isFirebaseConfigured && isOnline && (
+            <div className="bg-orange-500 text-white text-xs font-bold text-center py-1 absolute top-0 left-0 right-0 z-50 cursor-pointer hover:bg-orange-600" onClick={() => setCurrentView(AppView.SETTINGS)}>
                 <span className="flex items-center justify-center gap-2">
-                    <RefreshCw size={14} className="animate-spin" /> CONNECTION RESTORED. SYNCING DATA...
+                    <AlertTriangle size={14} /> Local Storage Only. Click to Configure Firebase Sync.
                 </span>
             </div>
         )}
         
-        {/* Mobile Header */}
         <div className="lg:hidden bg-slate-900 text-white p-4 flex items-center justify-between shrink-0 shadow-md z-30">
             <div className="flex items-center gap-3">
                <button onClick={() => setIsMobileMenuOpen(true)} className="p-1 hover:bg-slate-800 rounded">
@@ -303,8 +377,7 @@ Discount: {discount}
             </div>
         </div>
 
-        {/* Content Viewport */}
-        <div className={`flex-1 overflow-hidden relative ${(!isOnline || isSyncing) ? 'pt-6' : ''}`}>
+        <div className={`flex-1 overflow-hidden relative ${(!isOnline || (!isFirebaseConfigured && isOnline)) ? 'pt-6' : ''}`}>
             {currentView === AppView.POS && (
             <POS 
                 products={products} 
@@ -315,13 +388,18 @@ Discount: {discount}
             />
             )}
             
-            {currentView === AppView.INVENTORY && (
+            {(currentView === AppView.INVENTORY || currentView === AppView.CATEGORIES) && (
             <Inventory 
                 products={products} 
+                categories={categories}
                 onAddProduct={handleAddProduct}
                 onUpdateProduct={handleUpdateProduct}
                 onBulkUpdateProduct={handleBulkUpdateProduct}
                 onDeleteProduct={handleDeleteProduct}
+                onAddCategory={handleAddCategory}
+                onUpdateCategory={handleUpdateCategory}
+                onDeleteCategory={handleDeleteCategory}
+                initialTab={currentView === AppView.CATEGORIES ? 'categories' : 'products'}
             />
             )}
             
