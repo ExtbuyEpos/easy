@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Product, User, Language } from '../types';
 import { Plus, Search, Trash2, Edit2, Save, X, Image as ImageIcon, RefreshCw, Upload, Package, AlertCircle, ChevronLeft, TrendingUp, DollarSign, List, Grid, Check } from 'lucide-react';
@@ -121,6 +122,11 @@ export const Inventory: React.FC<InventoryProps> = ({
     }
   };
 
+  const calculateMargin = (cost: number, sell: number) => {
+      if (sell === 0) return 0;
+      return ((sell - cost) / sell) * 100;
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 p-4 lg:p-8 overflow-hidden transition-colors">
       <div className="flex flex-col gap-6 mb-8 shrink-0">
@@ -164,7 +170,7 @@ export const Inventory: React.FC<InventoryProps> = ({
                 </div>
             </div>
             <div className="group bg-white dark:bg-slate-900 p-4 md:p-5 rounded-3xl shadow-sm border border-red-100 dark:border-red-900/20 flex items-center gap-3 transition-all hover:shadow-xl">
-                <div className="bg-red-50 dark:bg-red-900/30 p-2.5 rounded-xl text-red-500 group-hover:bg-red-500 group-hover:text-white transition-all"><AlertCircle size={20}/></div>
+                <div className="bg-red-50 dark:bg-red-950/30 p-2.5 rounded-xl text-red-500 group-hover:bg-red-500 group-hover:text-white transition-all"><AlertCircle size={20}/></div>
                 <div>
                     <div className="text-[8px] font-black text-red-400 uppercase tracking-widest mb-0.5">Alerts</div>
                     <div className="text-lg font-black text-red-900 dark:text-red-100 leading-none">{formatNumber(products.filter(p => p.stock < 10).length, language)}</div>
@@ -196,62 +202,68 @@ export const Inventory: React.FC<InventoryProps> = ({
                 <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 font-black uppercase text-[9px] tracking-[0.2em] sticky top-0 z-10 backdrop-blur-md">
                    <tr>
                       <th className="p-5 md:p-6">{t('productName')}</th>
-                      <th className="p-6 hidden lg:table-cell">{t('category')}</th>
                       <th className="p-6 text-right hidden md:table-cell">{t('cost')}</th>
                       <th className="p-5 md:p-6 text-right">{t('price')}</th>
+                      <th className="p-6 text-center hidden lg:table-cell">Margin %</th>
                       <th className="p-5 md:p-6 text-center">{t('stock')}</th>
                       <th className="p-5 md:p-6 text-right">{t('action')}</th>
                    </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                   {filteredProducts.map(p => (
-                      <tr key={p.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 group transition-all">
-                         <td className="p-5 md:p-6">
-                             <div className="flex items-center gap-4">
-                                 <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-50 dark:border-slate-700 shrink-0">
-                                    {p.image ? (
-                                      <img src={p.image} onError={handleImageError} className="w-full h-full object-cover" alt={p.name} />
-                                    ) : (
-                                      <ImageIcon className="text-slate-300" size={20} />
-                                    )}
-                                 </div>
-                                 <div className="min-w-0">
-                                     <div className="font-black text-slate-900 dark:text-white tracking-tight text-sm md:text-base group-hover:text-brand-600 truncate">{p.name}</div>
-                                     <div className="text-[9px] font-bold font-mono text-slate-400 uppercase tracking-widest mt-0.5 truncate">{formatNumber(p.sku, language)}</div>
-                                 </div>
-                             </div>
-                         </td>
-                         <td className="p-6 hidden lg:table-cell">
-                             <span className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">{p.category}</span>
-                         </td>
-                         <td className="p-6 text-right font-bold text-slate-400 dark:text-slate-500 hidden md:table-cell">
-                            {formatCurrency(p.costPrice, language, CURRENCY)}
-                         </td>
-                         <td className="p-5 md:p-6 text-right font-black text-brand-600 dark:text-brand-400 text-base md:text-lg">
-                            {formatCurrency(p.sellPrice, language, CURRENCY)}
-                         </td>
-                         <td className="p-5 md:p-6 text-center">
-                            <span className={`px-4 py-1.5 rounded-xl text-xs font-black tracking-tight border-2 ${p.stock < 10 ? 'bg-red-50 border-red-100 text-red-600 dark:bg-red-950/20 dark:border-red-900/30' : 'bg-slate-50 border-slate-100 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'}`}>
-                                {formatNumber(p.stock, language)}
-                            </span>
-                         </td>
-                         <td className="p-5 md:p-6 text-right">
-                             <div className="flex justify-end gap-2">
-                                {canEditProduct && (
-                                  <button onClick={() => handleOpenModal(p)} className="p-2.5 bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-600 rounded-xl transition-all border border-slate-100 dark:border-slate-700"><Edit2 size={16}/></button>
-                                )}
-                                {canDeleteProduct && (
-                                  <button onClick={() => onDeleteProduct(p.id)} className="p-2.5 bg-white dark:bg-slate-800 text-slate-400 hover:text-red-500 rounded-xl transition-all border border-slate-100 dark:border-slate-700"><Trash2 size={16}/></button>
-                                )}
-                             </div>
-                         </td>
-                      </tr>
-                   ))}
+                   {filteredProducts.map(p => {
+                      const margin = calculateMargin(p.costPrice, p.sellPrice);
+                      return (
+                        <tr key={p.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 group transition-all">
+                          <td className="p-5 md:p-6">
+                              <div className="flex items-center gap-4">
+                                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-50 dark:border-slate-700 shrink-0">
+                                      {p.image ? (
+                                        <img src={p.image} onError={handleImageError} className="w-full h-full object-cover" alt={p.name} />
+                                      ) : (
+                                        <ImageIcon className="text-slate-300" size={20} />
+                                      )}
+                                  </div>
+                                  <div className="min-w-0">
+                                      <div className="font-black text-slate-900 dark:text-white tracking-tight text-sm md:text-base group-hover:text-brand-600 truncate">{p.name}</div>
+                                      <div className="text-[9px] font-bold font-mono text-slate-400 uppercase tracking-widest mt-0.5 truncate">{formatNumber(p.sku, language)}</div>
+                                  </div>
+                              </div>
+                          </td>
+                          <td className="p-6 text-right font-bold text-slate-400 dark:text-slate-500 hidden md:table-cell">
+                              {formatCurrency(p.costPrice, language, CURRENCY)}
+                          </td>
+                          <td className="p-5 md:p-6 text-right font-black text-brand-600 dark:text-brand-400 text-base md:text-lg">
+                              {formatCurrency(p.sellPrice, language, CURRENCY)}
+                          </td>
+                          <td className="p-6 text-center hidden lg:table-cell">
+                              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${margin > 30 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20' : 'bg-slate-50 text-slate-500 dark:bg-slate-800'}`}>
+                                  {formatNumber(margin, language)}%
+                              </span>
+                          </td>
+                          <td className="p-5 md:p-6 text-center">
+                              <span className={`px-4 py-1.5 rounded-xl text-xs font-black tracking-tight border-2 ${p.stock < 10 ? 'bg-red-50 border-red-100 text-red-600 dark:bg-red-950/20 dark:border-red-900/30' : 'bg-slate-50 border-slate-100 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'}`}>
+                                  {formatNumber(p.stock, language)}
+                              </span>
+                          </td>
+                          <td className="p-5 md:p-6 text-right">
+                              <div className="flex justify-end gap-2">
+                                  {canEditProduct && (
+                                    <button onClick={() => handleOpenModal(p)} className="p-2.5 bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-600 rounded-xl transition-all border border-slate-100 dark:border-slate-700"><Edit2 size={16}/></button>
+                                  )}
+                                  {canDeleteProduct && (
+                                    <button onClick={() => onDeleteProduct(p.id)} className="p-2.5 bg-white dark:bg-slate-800 text-slate-400 hover:text-red-500 rounded-xl transition-all border border-slate-100 dark:border-slate-700"><Trash2 size={16}/></button>
+                                  )}
+                              </div>
+                          </td>
+                        </tr>
+                      );
+                   })}
                 </tbody>
              </table>
           </div>
       </div>
 
+      {/* Modal remains the same */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xl flex items-end md:items-center justify-center z-[70] p-0 md:p-4">
           <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-t-[3rem] md:rounded-[3rem] shadow-2xl overflow-hidden animate-fade-in-up flex flex-col border border-slate-100 dark:border-slate-800 max-h-[92vh]">

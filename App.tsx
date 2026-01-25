@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { POS } from './components/POS';
@@ -111,12 +112,20 @@ const App: React.FC = () => {
 
   const handleAddProduct = async (newProduct: Product) => {
     if (db) await setDoc(doc(db, 'products', newProduct.id), newProduct);
-    else setProducts([...products, newProduct]);
+    else {
+      const updated = [...products, newProduct];
+      setProducts(updated);
+      localStorage.setItem('easyPOS_products', JSON.stringify(updated));
+    }
   };
 
   const handleUpdateProduct = async (updatedProduct: Product) => {
     if (db) await setDoc(doc(db, 'products', updatedProduct.id), updatedProduct);
-    else setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+    else {
+      const updated = products.map(p => p.id === updatedProduct.id ? updatedProduct : p);
+      setProducts(updated);
+      localStorage.setItem('easyPOS_products', JSON.stringify(updated));
+    }
   };
 
   const handleBulkUpdateProduct = async (updatedProducts: Product[]) => {
@@ -126,14 +135,20 @@ const App: React.FC = () => {
         await batch.commit();
     } else {
         const updatesMap = new Map(updatedProducts.map(p => [p.id, p]));
-        setProducts(products.map(p => updatesMap.has(p.id) ? updatesMap.get(p.id)! : p));
+        const updated = products.map(p => updatesMap.has(p.id) ? updatesMap.get(p.id)! : p);
+        setProducts(updated);
+        localStorage.setItem('easyPOS_products', JSON.stringify(updated));
     }
   };
 
   const handleDeleteProduct = async (id: string) => {
     if (!window.confirm('Delete product?')) return;
     if (db) await deleteDoc(doc(db, 'products', id));
-    else setProducts(products.filter(p => p.id !== id));
+    else {
+      const updated = products.filter(p => p.id !== id);
+      setProducts(updated);
+      localStorage.setItem('easyPOS_products', JSON.stringify(updated));
+    }
   };
 
   const handleCheckout = async (items: CartItem[], total: number, paymentMethod: 'CASH' | 'CARD', subTotal: number, discount: number, tax: number) => {
@@ -148,22 +163,81 @@ const App: React.FC = () => {
         });
         await batch.commit();
     } else {
-        setSales([...sales, newSale]);
-        setProducts(products.map(p => {
+        const updatedSales = [newSale, ...sales];
+        setSales(updatedSales);
+        localStorage.setItem('easyPOS_sales', JSON.stringify(updatedSales));
+        
+        const updatedProducts = products.map(p => {
             const soldItem = items.find(i => i.id === p.id);
             return soldItem ? { ...p, stock: p.stock - soldItem.quantity } : p;
-        }));
+        });
+        setProducts(updatedProducts);
+        localStorage.setItem('easyPOS_products', JSON.stringify(updatedProducts));
+    }
+  };
+
+  const handleProcessReturn = async (saleId: string, returns: { [itemId: string]: number }) => {
+    if (db) {
+        const batch = writeBatch(db);
+        const saleRef = doc(db, 'sales', saleId);
+        const sale = sales.find(s => s.id === saleId);
+        if (!sale) return;
+
+        const updatedReturnedItems = { ...(sale.returnedItems || {}) };
+        Object.entries(returns).forEach(([itemId, qty]) => {
+            updatedReturnedItems[itemId] = (updatedReturnedItems[itemId] || 0) + qty;
+            const p = products.find(prod => prod.id === itemId);
+            if (p) batch.update(doc(db, 'products', itemId), { stock: p.stock + qty });
+        });
+
+        const isFullyRefunded = sale.items.every(item => 
+            (updatedReturnedItems[item.id] || 0) >= item.quantity
+        );
+
+        batch.update(saleRef, { 
+            returnedItems: updatedReturnedItems,
+            status: isFullyRefunded ? 'REFUNDED' : 'PARTIAL'
+        });
+        await batch.commit();
+    } else {
+        const updatedSales = sales.map(s => {
+            if (s.id === saleId) {
+                const updatedReturns = { ...(s.returnedItems || {}) };
+                Object.entries(returns).forEach(([itemId, qty]) => {
+                    updatedReturns[itemId] = (updatedReturns[itemId] || 0) + qty;
+                });
+                const isFullyRefunded = s.items.every(item => (updatedReturns[item.id] || 0) >= item.quantity);
+                return { ...s, returnedItems: updatedReturns, status: isFullyRefunded ? 'REFUNDED' : 'PARTIAL' };
+            }
+            return s;
+        }) as Sale[];
+        setSales(updatedSales);
+        localStorage.setItem('easyPOS_sales', JSON.stringify(updatedSales));
+        
+        const updatedProducts = products.map(p => {
+            const returnedQty = returns[p.id];
+            return returnedQty ? { ...p, stock: p.stock + returnedQty } : p;
+        });
+        setProducts(updatedProducts);
+        localStorage.setItem('easyPOS_products', JSON.stringify(updatedProducts));
     }
   };
 
   const handleStockUpdate = async (id: string, newStock: number) => {
     if (db) await updateDoc(doc(db, 'products', id), { stock: newStock });
-    else setProducts(products.map(p => p.id === id ? { ...p, stock: newStock } : p));
+    else {
+      const updated = products.map(p => p.id === id ? { ...p, stock: newStock } : p);
+      setProducts(updated);
+      localStorage.setItem('easyPOS_products', JSON.stringify(updated));
+    }
   };
 
   const handleUpdateStoreSettings = async (settings: StoreSettings) => {
     if (db) await setDoc(doc(db, 'settings', 'store'), settings);
-    else setStoreSettings(settings);
+    else {
+      setStoreSettings(settings);
+      localStorage.setItem('easyPOS_storeSettings', JSON.stringify(settings));
+    }
   };
 
   if (!user) return <Login onLogin={setUser} users={users} t={t} isDarkMode={isDarkMode} toggleTheme={toggleTheme} language={language} toggleLanguage={toggleLanguage} />;
@@ -247,7 +321,7 @@ const App: React.FC = () => {
               <StockCheck products={products} onUpdateStock={handleStockUpdate} onGoBack={() => setCurrentView(AppView.POS)} language={language} />
             )}
             {currentView === AppView.ORDERS && (
-              <Orders sales={sales} onProcessReturn={() => {}} storeSettings={storeSettings} onGoBack={() => setCurrentView(AppView.POS)} language={language} />
+              <Orders sales={sales} onProcessReturn={handleProcessReturn} storeSettings={storeSettings} onGoBack={() => setCurrentView(AppView.POS)} language={language} />
             )}
             {currentView === AppView.REPORTS && (
               <Reports sales={sales} products={products} onGoBack={() => setCurrentView(AppView.POS)} language={language} />
