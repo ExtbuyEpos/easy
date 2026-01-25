@@ -1,3 +1,4 @@
+
 export enum AppView {
   LOGIN = 'LOGIN',
   POS = 'POS',
@@ -11,6 +12,11 @@ export enum AppView {
 }
 
 export type UserRole = 'ADMIN' | 'MANAGER' | 'STAFF' | 'CASHIER';
+export type Language = 'en' | 'ar';
+
+export interface Translations {
+  [key: string]: string;
+}
 
 export interface Product {
   id: string;

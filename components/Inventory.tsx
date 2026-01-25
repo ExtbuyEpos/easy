@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Product } from '../types';
-import { Plus, Search, Trash2, Edit2, Save, X, Image as ImageIcon, RefreshCw, Upload, Tag, Layers, CheckSquare, MoreHorizontal, Filter, List, Package, AlertCircle } from 'lucide-react';
+import { Plus, Search, Trash2, Edit2, Save, X, Image as ImageIcon, RefreshCw, Upload, Tag, Layers, CheckSquare, MoreHorizontal, Filter, List, Package, AlertCircle, ChevronLeft } from 'lucide-react';
 import { CURRENCY } from '../constants';
 
 interface InventoryProps {
@@ -14,6 +14,7 @@ interface InventoryProps {
   onUpdateCategory?: (oldCategory: string, newCategory: string) => void;
   onDeleteCategory?: (category: string) => void;
   initialTab?: 'products' | 'categories';
+  onGoBack?: () => void;
 }
 
 export const Inventory: React.FC<InventoryProps> = ({ 
@@ -26,7 +27,8 @@ export const Inventory: React.FC<InventoryProps> = ({
   onAddCategory,
   onUpdateCategory,
   onDeleteCategory,
-  initialTab = 'products'
+  initialTab = 'products',
+  onGoBack
 }) => {
   const [activeTab, setActiveTab] = useState<'products' | 'categories'>(initialTab);
   
@@ -216,9 +218,19 @@ export const Inventory: React.FC<InventoryProps> = ({
       {/* Top Header & Actions */}
       <div className="flex flex-col gap-4 mb-4 shrink-0">
          <div className="flex flex-wrap justify-between items-center gap-2">
-             <div>
-                <h2 className="text-xl md:text-2xl font-bold text-slate-800">Inventory Management</h2>
-                <p className="text-slate-500 text-xs md:text-sm hidden md:block">Manage stock levels, pricing, images, and categories.</p>
+             <div className="flex items-center gap-3">
+                {onGoBack && (
+                    <button 
+                        onClick={onGoBack} 
+                        className="lg:hidden p-2 -ml-2 rounded-full hover:bg-slate-200 text-slate-600 transition-colors active:bg-slate-300"
+                    >
+                        <ChevronLeft size={24} />
+                    </button>
+                )}
+                <div>
+                    <h2 className="text-xl md:text-2xl font-bold text-slate-800">Inventory Management</h2>
+                    <p className="text-slate-500 text-xs md:text-sm hidden md:block">Manage stock levels, pricing, images, and categories.</p>
+                </div>
             </div>
             {activeTab === 'products' ? (
                 <button

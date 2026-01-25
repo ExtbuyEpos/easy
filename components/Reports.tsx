@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Sale, Product } from '../types';
 import { CURRENCY } from '../constants';
-import { TrendingUp, DollarSign, Package, Calendar, Sparkles, PieChart, FileText, FileSpreadsheet, Filter, X, ArrowRight, Download, CreditCard, Banknote } from 'lucide-react';
+import { TrendingUp, DollarSign, Package, Calendar, Sparkles, PieChart, FileText, FileSpreadsheet, Filter, X, ArrowRight, Download, CreditCard, Banknote, ChevronLeft } from 'lucide-react';
 import { generateBusinessInsight } from '../services/geminiService';
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -10,12 +10,13 @@ import * as XLSX from "xlsx";
 interface ReportsProps {
   sales: Sale[];
   products: Product[];
+  onGoBack?: () => void;
 }
 
 type DateRange = 'today' | 'yesterday' | 'last7' | 'week' | 'month' | 'all' | 'custom';
 type ReportTab = 'dashboard' | 'inventory';
 
-export const Reports: React.FC<ReportsProps> = ({ sales, products }) => {
+export const Reports: React.FC<ReportsProps> = ({ sales, products, onGoBack }) => {
   const [insight, setInsight] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
   
@@ -244,9 +245,16 @@ export const Reports: React.FC<ReportsProps> = ({ sales, products }) => {
   return (
     <div className="flex flex-col h-full bg-slate-50 p-6 overflow-hidden">
       <div className="flex justify-between items-center mb-6 shrink-0">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">Reports & Analytics</h2>
-          <p className="text-slate-500">Track performance and gain AI-powered insights.</p>
+        <div className="flex items-center gap-2">
+            {onGoBack && (
+                <button onClick={onGoBack} className="lg:hidden p-2 -ml-2 rounded-full hover:bg-slate-200 text-slate-600 transition-colors active:bg-slate-300">
+                    <ChevronLeft size={24} />
+                </button>
+            )}
+            <div>
+                <h2 className="text-2xl font-bold text-slate-800">Reports & Analytics</h2>
+                <p className="text-slate-500">Track performance and gain AI-powered insights.</p>
+            </div>
         </div>
         
         <div className="flex bg-white rounded-lg p-1 shadow-sm border border-slate-200">

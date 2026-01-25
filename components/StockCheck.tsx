@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Product } from '../types';
-import { ScanLine, CheckCircle, AlertTriangle, Save, RefreshCw, History as HistoryIcon, Trash2, Plus, Minus, Search, ArrowRight, Download, FileSpreadsheet, Calendar } from 'lucide-react';
+import { ScanLine, CheckCircle, AlertTriangle, Save, RefreshCw, History as HistoryIcon, Trash2, Plus, Minus, Search, ArrowRight, Download, FileSpreadsheet, Calendar, ChevronLeft } from 'lucide-react';
 import * as XLSX from "xlsx";
 import { db } from '../firebase';
 import { collection, addDoc, onSnapshot, deleteDoc, doc, writeBatch } from 'firebase/firestore';
@@ -8,6 +8,7 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, writeBatch } from 'fire
 interface StockCheckProps {
   products: Product[];
   onUpdateStock: (id: string, newStock: number) => void;
+  onGoBack?: () => void;
 }
 
 interface ScannedItem {
@@ -28,7 +29,7 @@ interface StockHistoryItem {
 
 type Tab = 'scan' | 'history';
 
-export const StockCheck: React.FC<StockCheckProps> = ({ products, onUpdateStock }) => {
+export const StockCheck: React.FC<StockCheckProps> = ({ products, onUpdateStock, onGoBack }) => {
   const [activeTab, setActiveTab] = useState<Tab>('scan');
   const [skuInput, setSkuInput] = useState('');
   
@@ -236,11 +237,18 @@ export const StockCheck: React.FC<StockCheckProps> = ({ products, onUpdateStock 
       {/* Header Section */}
       <div className="bg-white p-6 shadow-sm border-b border-slate-200 shrink-0 z-10">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-            <div>
-                <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                    <ScanLine className="text-brand-600" /> Stock Check
-                </h2>
-                <p className="text-slate-500 text-sm">Perform physical inventory counts and track adjustments.</p>
+            <div className="flex items-center gap-2">
+                {onGoBack && (
+                    <button onClick={onGoBack} className="lg:hidden p-2 -ml-2 rounded-full hover:bg-slate-100 text-slate-600 transition-colors active:bg-slate-200">
+                        <ChevronLeft size={24} />
+                    </button>
+                )}
+                <div>
+                    <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                        <ScanLine className="text-brand-600" /> Stock Check
+                    </h2>
+                    <p className="text-slate-500 text-sm">Perform physical inventory counts and track adjustments.</p>
+                </div>
             </div>
             
             {/* View Switcher */}

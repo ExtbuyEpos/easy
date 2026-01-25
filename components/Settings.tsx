@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, UserRole, Product, Sale, StoreSettings } from '../types';
-import { Shield, User as UserIcon, Trash2, Plus, Save, X, Lock, Database, Download, Upload, AlertTriangle, Archive, Receipt, Image as ImageIcon, Printer, Percent, MessageCircle, Cloud, LogOut } from 'lucide-react';
+import { Shield, User as UserIcon, Trash2, Plus, Save, X, Lock, Database, Download, Upload, AlertTriangle, Archive, Receipt, Image as ImageIcon, Printer, Percent, MessageCircle, Cloud, LogOut, ChevronLeft } from 'lucide-react';
 import JSZip from 'jszip';
 import * as XLSX from 'xlsx';
 import { saveFirebaseConfig, clearFirebaseConfig } from '../firebase';
@@ -14,10 +14,11 @@ interface SettingsProps {
   currentUser: User;
   storeSettings: StoreSettings;
   onUpdateStoreSettings: (settings: StoreSettings) => void;
+  onGoBack?: () => void;
 }
 
 export const Settings: React.FC<SettingsProps> = ({ 
-  users, products, sales, onAddUser, onDeleteUser, currentUser, storeSettings, onUpdateStoreSettings 
+  users, products, sales, onAddUser, onDeleteUser, currentUser, storeSettings, onUpdateStoreSettings, onGoBack
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -207,9 +208,16 @@ export const Settings: React.FC<SettingsProps> = ({
   return (
     <div className="flex flex-col h-full bg-slate-50 p-6 overflow-y-auto">
        <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">System Settings</h2>
-          <p className="text-slate-500">Manage users, database, and system backups.</p>
+        <div className="flex items-center gap-2">
+          {onGoBack && (
+            <button onClick={onGoBack} className="lg:hidden p-2 -ml-2 rounded-full hover:bg-slate-200 text-slate-600 transition-colors active:bg-slate-300">
+                <ChevronLeft size={24} />
+            </button>
+           )}
+           <div>
+             <h2 className="text-2xl font-bold text-slate-800">System Settings</h2>
+             <p className="text-slate-500">Manage users, database, and system backups.</p>
+           </div>
         </div>
         <div className="flex gap-2">
             <button

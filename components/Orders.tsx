@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Sale, CartItem, StoreSettings } from '../types';
 import { CURRENCY } from '../constants';
-import { Search, Eye, RotateCcw, AlertCircle, CheckCircle, ArrowRight, X, Printer, Receipt, QrCode } from 'lucide-react';
+import { Search, Eye, RotateCcw, AlertCircle, CheckCircle, ArrowRight, X, Printer, Receipt, QrCode, ChevronLeft } from 'lucide-react';
 import jsQR from 'jsqr';
 import QRCode from 'qrcode';
 
@@ -9,9 +9,10 @@ interface OrdersProps {
   sales: Sale[];
   onProcessReturn: (saleId: string, returns: { [itemId: string]: number }) => void;
   storeSettings?: StoreSettings;
+  onGoBack?: () => void;
 }
 
-export const Orders: React.FC<OrdersProps> = ({ sales, onProcessReturn, storeSettings }) => {
+export const Orders: React.FC<OrdersProps> = ({ sales, onProcessReturn, storeSettings, onGoBack }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   
@@ -233,9 +234,16 @@ export const Orders: React.FC<OrdersProps> = ({ sales, onProcessReturn, storeSet
 
   return (
     <div className="flex flex-col h-full bg-slate-50 p-6 overflow-hidden">
-      <div className="mb-6 print:hidden">
-        <h2 className="text-2xl font-bold text-slate-800">Orders & Returns</h2>
-        <p className="text-slate-500 text-sm">View history, reprint receipts, and process refunds.</p>
+      <div className="mb-6 print:hidden flex items-center gap-2">
+        {onGoBack && (
+            <button onClick={onGoBack} className="lg:hidden p-2 -ml-2 rounded-full hover:bg-slate-200 text-slate-600 transition-colors">
+                <ChevronLeft size={24} />
+            </button>
+        )}
+        <div>
+           <h2 className="text-2xl font-bold text-slate-800">Orders & Returns</h2>
+           <p className="text-slate-500 text-sm">View history, reprint receipts, and process refunds.</p>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex-1 flex flex-col overflow-hidden print:hidden">

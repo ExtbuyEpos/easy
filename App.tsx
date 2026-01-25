@@ -8,8 +8,9 @@ import { StockCheck } from './components/StockCheck';
 import { Settings } from './components/Settings';
 import { BaileysSetup } from './components/BaileysSetup';
 import { Orders } from './components/Orders';
-import { AppView, Product, Sale, CartItem, User, StoreSettings } from './types';
+import { AppView, Product, Sale, CartItem, User, StoreSettings, Language } from './types';
 import { INITIAL_PRODUCTS, INITIAL_USERS } from './constants';
+import { translations } from './translations';
 import { Menu, CloudOff, RefreshCw, AlertTriangle } from 'lucide-react';
 
 // Firebase Imports
@@ -24,6 +25,14 @@ const App: React.FC = () => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   
+  // Theme & Language State
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    return localStorage.getItem('easyPOS_theme') === 'dark';
+  });
+  const [language, setLanguage] = useState<Language>(() => {
+    return (localStorage.getItem('easyPOS_language') as Language) || 'en';
+  });
+
   // Mobile UI State
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -58,6 +67,29 @@ Discount: {discount}
     taxName: 'Tax',
     autoPrint: false
   });
+
+  // --- Theme & Language Effects ---
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('easyPOS_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('easyPOS_theme', 'light');
+    }
+  }, [isDarkMode]);
+
+  useEffect(() => {
+    localStorage.setItem('easyPOS_language', language);
+    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = language;
+  }, [language]);
+
+  const toggleTheme = () => setIsDarkMode(!isDarkMode);
+  const toggleLanguage = () => setLanguage(prev => prev === 'en' ? 'ar' : 'en');
+  
+  // Translation Helper
+  const t = (key: string) => translations[language][key] || key;
 
   // --- Network Listeners ---
   useEffect(() => {
@@ -319,12 +351,17 @@ Discount: {discount}
       setIsMobileMenuOpen(false);
   };
 
+  const handleGoBack = () => setCurrentView(AppView.POS);
+
+  // Common Props for Views
+  const viewProps = { t, isDarkMode };
+
   if (!user) {
-    return <Login onLogin={setUser} users={users} />;
+    return <Login onLogin={setUser} users={users} t={t} isDarkMode={isDarkMode} toggleTheme={toggleTheme} language={language} toggleLanguage={toggleLanguage} />;
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 font-sans flex-col lg:flex-row">
+    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 font-sans flex-col lg:flex-row transition-colors duration-200">
       
       {isMobileMenuOpen && (
         <div 
@@ -333,7 +370,7 @@ Discount: {discount}
         />
       )}
 
-      <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-slate-900 shadow-2xl transform transition-transform duration-300 lg:translate-x-0 lg:static lg:w-64 lg:shadow-none ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className={`fixed inset-y-0 left-0 rtl:left-auto rtl:right-0 z-50 w-72 bg-slate-900 dark:bg-slate-950 shadow-2xl transform transition-transform duration-300 lg:translate-x-0 lg:static lg:w-64 lg:shadow-none ${isMobileMenuOpen ? 'translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'}`}>
           <Sidebar 
             currentView={currentView} 
             onChangeView={handleViewChange} 
@@ -342,16 +379,21 @@ Discount: {discount}
             onCloseMobile={() => setIsMobileMenuOpen(false)}
             isOnline={isOnline}
             isSyncing={isSyncing}
+            isDarkMode={isDarkMode}
+            toggleTheme={toggleTheme}
+            language={language}
+            toggleLanguage={toggleLanguage}
+            t={t}
           />
       </div>
       
-      <main className="flex-1 overflow-hidden relative flex flex-col min-w-0">
+      <main className="flex-1 overflow-hidden relative flex flex-col min-w-0 bg-slate-50 dark:bg-slate-950">
         
         {/* Alerts / Banners */}
         {!isOnline && (
             <div className="bg-red-500 text-white text-xs font-bold text-center py-1 absolute top-0 left-0 right-0 z-50">
                 <span className="flex items-center justify-center gap-2">
-                    <CloudOff size={14} /> OFFLINE MODE
+                    <CloudOff size={14} /> {t('offlineMode')}
                 </span>
             </div>
         )}
@@ -363,7 +405,7 @@ Discount: {discount}
             </div>
         )}
         
-        <div className="lg:hidden bg-slate-900 text-white p-4 flex items-center justify-between shrink-0 shadow-md z-30">
+        <div className="lg:hidden bg-slate-900 dark:bg-slate-950 text-white p-4 flex items-center justify-between shrink-0 shadow-md z-30">
             <div className="flex items-center gap-3">
                <button onClick={() => setIsMobileMenuOpen(true)} className="p-1 hover:bg-slate-800 rounded">
                   <Menu size={24} />
@@ -385,6 +427,7 @@ Discount: {discount}
                 storeSettings={storeSettings}
                 onViewOrderHistory={() => handleViewChange(AppView.ORDERS)}
                 onUpdateStoreSettings={handleUpdateStoreSettings}
+                {...viewProps}
             />
             )}
             
@@ -400,6 +443,8 @@ Discount: {discount}
                 onUpdateCategory={handleUpdateCategory}
                 onDeleteCategory={handleDeleteCategory}
                 initialTab={currentView === AppView.CATEGORIES ? 'categories' : 'products'}
+                onGoBack={handleGoBack}
+                {...viewProps}
             />
             )}
             
@@ -407,6 +452,8 @@ Discount: {discount}
             <StockCheck 
                 products={products}
                 onUpdateStock={handleStockUpdate}
+                onGoBack={handleGoBack}
+                {...viewProps}
             />
             )}
 
@@ -415,11 +462,18 @@ Discount: {discount}
                 sales={sales} 
                 onProcessReturn={handleProcessReturn}
                 storeSettings={storeSettings} 
+                onGoBack={handleGoBack}
+                {...viewProps}
             />
             )}
 
             {currentView === AppView.REPORTS && (
-            <Reports sales={sales} products={products} />
+            <Reports 
+                sales={sales} 
+                products={products} 
+                onGoBack={handleGoBack}
+                {...viewProps}
+            />
             )}
 
             {currentView === AppView.SETTINGS && user.role === 'ADMIN' && (
@@ -432,6 +486,8 @@ Discount: {discount}
                 currentUser={user}
                 storeSettings={storeSettings}
                 onUpdateStoreSettings={handleUpdateStoreSettings}
+                onGoBack={handleGoBack}
+                {...viewProps}
             />
             )}
 
@@ -439,6 +495,8 @@ Discount: {discount}
                 <BaileysSetup 
                 onUpdateStoreSettings={handleUpdateStoreSettings} 
                 settings={storeSettings}
+                onGoBack={handleGoBack}
+                {...viewProps}
                 />
             )}
         </div>

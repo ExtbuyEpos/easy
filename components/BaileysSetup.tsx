@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StoreSettings } from '../types';
-import { MessageCircle, Save, Smartphone, LayoutTemplate, AlertCircle, RefreshCw, QrCode, CheckCircle, Loader2, Wifi, WifiOff, Settings, Link, Info, Server, Globe, Shield, Lock, PlayCircle, Terminal, MoreVertical } from 'lucide-react';
+import { MessageCircle, Save, Smartphone, LayoutTemplate, AlertCircle, RefreshCw, QrCode, CheckCircle, Loader2, Wifi, WifiOff, Settings, Link, Info, Server, Globe, Shield, Lock, PlayCircle, Terminal, MoreVertical, ChevronLeft } from 'lucide-react';
 import QRCode from 'qrcode';
 
 interface BaileysSetupProps {
   onUpdateStoreSettings: (settings: StoreSettings) => void;
   settings?: StoreSettings;
+  onGoBack?: () => void;
 }
 
 const DEFAULT_TEMPLATE = `🧾 *{store_name}*
@@ -35,7 +36,7 @@ interface ConnectionConfig {
     proxyPass: string;
 }
 
-export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSettings, settings }) => {
+export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSettings, settings, onGoBack }) => {
   const [activeTab, setActiveTab] = useState<Tab>('connect');
   const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
   
@@ -262,6 +263,11 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
         {/* Header Section */}
        <div className="bg-[#00a884] text-white px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 shadow-md z-10">
            <div className="flex items-center gap-3">
+                {onGoBack && (
+                    <button onClick={onGoBack} className="lg:hidden p-1 rounded-full hover:bg-white/20 text-white transition-colors active:bg-white/30">
+                        <ChevronLeft size={24} />
+                    </button>
+                )}
                 <div className="bg-white/20 p-2 rounded-lg">
                     <MessageCircle size={24} />
                 </div>
