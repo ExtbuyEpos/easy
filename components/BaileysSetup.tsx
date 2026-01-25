@@ -105,7 +105,7 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
                     <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-10">Active Device: {phoneNumber}</p>
                     
                     <div className="flex flex-col md:flex-row gap-4 justify-center">
-                      <button onClick={() => { localStorage.removeItem('easyPOS_whatsappSession'); setStatus('disconnected'); addLog('Session terminated by user.'); }} className="px-10 py-5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-black rounded-2xl uppercase text-xs tracking-widest active:scale-95 transition-all">Terminate Link</button>
+                      <button onClick={() => { localStorage.removeItem('easyPOS_whatsappSession'); setStatus('disconnected'); addLog('Session terminated by user.'); }} className="px-10 py-5 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 font-black rounded-2xl uppercase text-xs tracking-widest active:scale-95 transition-all">Terminate Link</button>
                       <button onClick={() => addLog('Heartbeat signal sent to device.')} className="px-10 py-5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-black rounded-2xl uppercase text-xs tracking-widest active:scale-95 transition-all">Test Pulse</button>
                     </div>
                   </div>
@@ -149,7 +149,7 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
                         <div className="space-y-4 text-left max-w-md mx-auto">
                           <div className="flex gap-4 items-start">
                              <div className="w-6 h-6 rounded-full bg-[#00a884] text-white flex items-center justify-center font-black text-[10px] shrink-0 mt-0.5">1</div>
-                             <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Open WhatsApp > Linked Devices</p>
+                             <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">{"Open WhatsApp > Linked Devices"}</p>
                           </div>
                           <div className="flex gap-4 items-start">
                              <div className="w-6 h-6 rounded-full bg-[#00a884] text-white flex items-center justify-center font-black text-[10px] shrink-0 mt-0.5">2</div>
