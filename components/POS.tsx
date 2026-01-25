@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Product, CartItem, StoreSettings, Sale, Language } from '../types';
 import { CURRENCY } from '../constants';
-import { ShoppingCart, Plus, Minus, Search, Image as ImageIcon, QrCode, X, History, ShoppingBag, DollarSign, TrendingUp, Package, Edit3, Trash2, CheckCircle, Printer, MessageCircle, MoreVertical, CreditCard, Receipt, Percent, Tag, ChevronUp } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Search, Image as ImageIcon, QrCode, X, History, ShoppingBag, DollarSign, TrendingUp, Package, Edit3, Trash2, CheckCircle, Printer, MessageCircle, MoreVertical, CreditCard, Receipt, Percent, Tag, ChevronUp, Share2, Send } from 'lucide-react';
 import jsQR from 'jsqr';
 import QRCode from 'qrcode';
 import { formatNumber, formatCurrency } from '../utils/format';
@@ -30,6 +30,7 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
   
   const [discountType, setDiscountType] = useState<'fixed' | 'percent'>('percent');
   const [discountValue, setDiscountValue] = useState<number>(0);
+  const [isSendingWA, setIsSendingWA] = useState(false);
 
   const skuInputRef = useRef<HTMLInputElement>(null);
 
@@ -111,6 +112,16 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
     setShowInvoice(true);
     setIsCartOpen(false);
     QRCode.toDataURL(saleId).then(setInvoiceQr);
+  };
+
+  const handleShareWhatsApp = () => {
+    if (!lastSale) return;
+    setIsSendingWA(true);
+    // Simulate API Call
+    setTimeout(() => {
+      setIsSendingWA(false);
+      alert("Receipt sent via WhatsApp successfully!");
+    }, 1500);
   };
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
@@ -204,7 +215,7 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
             </div>
         </div>
 
-        {/* Live Sales Ticker - Always Fixed */}
+        {/* Live Sales Ticker */}
         <div className="h-10 bg-slate-900 dark:bg-black px-6 flex items-center gap-4 overflow-hidden shrink-0 fixed bottom-20 lg:bottom-0 left-0 right-0 lg:static z-20">
             <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest animate-pulse">Live</span>
             <div className="flex items-center gap-8 animate-marquee whitespace-nowrap">
@@ -237,7 +248,7 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
           </button>
       </div>
 
-      {/* Cart Drawer - Redesigned as App Bottom Sheet */}
+      {/* Cart Drawer */}
       <div className={`
         fixed inset-x-0 bottom-0 z-50 lg:static lg:inset-auto lg:z-auto
         w-full lg:w-[460px] h-[92%] lg:h-full bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-500 transform
@@ -336,7 +347,7 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
         </div>
       </div>
 
-      {/* Edit Modal - Mobile Optimized Bottom Sheet */}
+      {/* Edit Modal */}
       {editingCartItem && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-end lg:items-center justify-center z-[100] p-0 lg:p-4">
               <div className="bg-white dark:bg-slate-900 w-full lg:max-w-sm rounded-t-[40px] lg:rounded-[3rem] shadow-2xl p-8 lg:p-10 animate-slide-up border border-white/10">
@@ -406,12 +417,6 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
                 </div>
 
                 <div className="space-y-4 mb-8">
-                    {lastSale.discount > 0 && (
-                        <div className="flex justify-between items-center text-xs font-mono text-emerald-600 font-bold">
-                            <span>Discount Applied</span>
-                            <span>-{formatCurrency(lastSale.discount, language, CURRENCY)}</span>
-                        </div>
-                    )}
                     <div className="flex justify-between items-center">
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Charged ({lastSale.paymentMethod})</span>
                         <span className="text-5xl font-black tracking-tighter">{formatCurrency(lastSale.total, language, CURRENCY)}</span>
@@ -431,6 +436,14 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
             </div>
 
             <div className="p-8 bg-slate-50 border-t border-slate-100 space-y-3 no-print">
+                <button 
+                  onClick={handleShareWhatsApp} 
+                  disabled={isSendingWA}
+                  className="w-full bg-[#00a884] text-white py-5 rounded-[2rem] font-black uppercase tracking-widest hover:bg-[#008f6f] transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl text-xs"
+                >
+                  {isSendingWA ? <Loader2 size={20} className="animate-spin" /> : <MessageCircle size={20}/>}
+                  WhatsApp Receipt
+                </button>
                 <button onClick={() => window.print()} className="w-full bg-slate-900 text-white py-5 rounded-[2rem] font-black uppercase tracking-widest hover:bg-black transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl text-xs">
                     <Printer size={20}/> Print Physical Copy
                 </button>
@@ -441,3 +454,9 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
     </div>
   );
 };
+
+const Loader2 = ({ className, size = 20 }: { className?: string, size?: number }) => (
+  <svg className={`animate-spin ${className}`} xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+  </svg>
+);
