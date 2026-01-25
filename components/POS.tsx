@@ -1,9 +1,8 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Product, CartItem, StoreSettings, Sale, Language } from '../types';
+import { Product, CartItem, StoreSettings, Sale, Language, User } from '../types';
 import { CURRENCY } from '../constants';
-import { ShoppingCart, Plus, Minus, Search, Image as ImageIcon, QrCode, X, History, ShoppingBag, DollarSign, TrendingUp, Package, Edit3, Trash2, CheckCircle, Printer, MessageCircle, MoreVertical, CreditCard, Receipt, Percent, Tag, ChevronUp, Share2, Send, Loader2, Camera, ChevronDown } from 'lucide-react';
-import jsQR from 'jsqr';
+import { ShoppingCart, Plus, Minus, Search, Image as ImageIcon, X, History, ShoppingBag, DollarSign, CheckCircle, Printer, MessageCircle, CreditCard, Receipt, Eye, ChevronLeft, Calendar, User as UserIcon } from 'lucide-react';
 import QRCode from 'qrcode';
 import { formatNumber, formatCurrency } from '../utils/format';
 
@@ -16,25 +15,36 @@ interface POSProps {
   onUpdateStoreSettings: (settings: StoreSettings) => void;
   t?: (key: string) => string;
   language: Language;
+  currentUser: User;
+  onGoBack?: () => void;
 }
 
-export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSettings, onViewOrderHistory, onUpdateStoreSettings, t = (k) => k, language }) => {
+export const POS: React.FC<POSProps> = ({ 
+  products, 
+  sales, 
+  onCheckout, 
+  storeSettings, 
+  onViewOrderHistory, 
+  onUpdateStoreSettings, 
+  t = (k) => k, 
+  language, 
+  currentUser,
+  onGoBack
+}) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [skuInput, setSkuInput] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showInvoice, setShowInvoice] = useState(false);
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [invoiceQr, setInvoiceQr] = useState<string>('');
+  const [showLivePreview, setShowLivePreview] = useState(false);
   
   const [discountType, setDiscountType] = useState<'fixed' | 'percent'>('percent');
   const [discountValue, setDiscountValue] = useState<number>(0);
   const [isSendingWA, setIsSendingWA] = useState(false);
 
   const skuInputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const categories = useMemo(() => ['All', ...Array.from(new Set(products.map(p => p.category))).sort()], [products]);
 
@@ -85,7 +95,8 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
       id: saleId, 
       paymentMethod: method, 
       timestamp: Date.now(), 
-      status: 'COMPLETED' 
+      status: 'COMPLETED',
+      processedBy: currentUser.id
     };
     setLastSale(saleData);
     onCheckout(cart, finalTotal, method, cartSubtotal, totalDiscountAmount, taxAmount, discountType);
@@ -104,25 +115,30 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
 
   const handleShareWhatsApp = () => {
     if (!lastSale) return;
-    if (localStorage.getItem('easyPOS_whatsappSession') !== 'active') return alert("WhatsApp Bridge not linked!");
     const customerPhone = prompt("Customer Phone (e.g. 971500000000):");
     if (!customerPhone) return;
     setIsSendingWA(true);
     setTimeout(() => {
       setIsSendingWA(false);
-      const msg = `Order #${lastSale.id.slice(-5)} from ${storeSettings.name}. Total: ${formatCurrency(lastSale.total, language, CURRENCY)}. Receipt: https://easypos.io/r/${lastSale.id}`;
+      const msg = `Order #${lastSale.id.slice(-5)} from ${storeSettings.name}. Total: ${formatCurrency(lastSale.total, language, CURRENCY)}.`;
       window.open(`https://wa.me/${customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
     }, 1200);
   };
 
   return (
     <div className="flex h-full bg-[#f1f5f9] dark:bg-slate-950 flex-col lg:flex-row overflow-hidden transition-all duration-300">
+      {/* Product Browser */}
       <div className="flex-1 flex flex-col overflow-hidden h-full border-r border-slate-200 dark:border-slate-800 pb-20 lg:pb-0">
         <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 lg:px-8 lg:py-6 shrink-0 z-30 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-            <div className="flex-1 relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-              <input type="text" value={skuInput} onChange={(e) => setSkuInput(e.target.value)} placeholder={t('searchProducts')} className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none font-bold dark:text-white" />
+            <div className="flex items-center gap-4 flex-1">
+              <button onClick={onGoBack} className="p-3 -ml-3 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-500 hover:text-brand-600 transition-all active:scale-90" title="Go Back">
+                  <ChevronLeft size={24} className="rtl:rotate-180" />
+              </button>
+              <div className="relative flex-1 group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                <input type="text" value={skuInput} onChange={(e) => setSkuInput(e.target.value)} placeholder={t('searchProducts')} className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none font-bold dark:text-white" />
+              </div>
             </div>
             <div className="flex gap-2 shrink-0">
                <button onClick={onViewOrderHistory} className="flex items-center gap-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-white px-5 py-3.5 border border-slate-200 dark:border-slate-700 rounded-2xl transition-all font-black text-xs uppercase shadow-sm active:scale-95"><History size={18} /> {t('history')}</button>
@@ -157,53 +173,124 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
         </div>
       </div>
 
-      {/* Cart Panel */}
+      {/* Cart & Real-Time Receipt Preview Section */}
       <div className={`fixed inset-x-0 bottom-0 z-50 lg:static lg:inset-auto lg:z-auto w-full lg:w-[480px] h-[92%] lg:h-full bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-500 transform rounded-t-[40px] lg:rounded-none overflow-hidden flex flex-col ${isCartOpen ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}>
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
              <div className="bg-brand-600 p-2.5 rounded-xl text-white shadow-lg"><Receipt size={22} /></div>
              <h2 className="text-xl font-black uppercase tracking-tight dark:text-white italic">Current Invoice</h2>
           </div>
-          <button onClick={() => setIsCartOpen(false)} className="lg:hidden p-2 bg-slate-50 dark:bg-slate-800 rounded-full text-slate-400"><X size={24}/></button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setShowLivePreview(!showLivePreview)}
+              className={`p-2.5 rounded-xl transition-all ${showLivePreview ? 'bg-brand-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-800 text-slate-400'}`}
+              title="Toggle Live Preview"
+            >
+              <Eye size={20} />
+            </button>
+            <button onClick={() => setIsCartOpen(false)} className="lg:hidden p-2 bg-slate-50 dark:bg-slate-800 rounded-full text-slate-400"><X size={24}/></button>
+          </div>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar bg-slate-50/30 dark:bg-slate-900/50 space-y-4">
-           {cart.length === 0 ? (
-             <div className="h-full flex flex-col items-center justify-center opacity-20 text-slate-400 space-y-4">
-               <ShoppingBag size={80} strokeWidth={1} />
-               <p className="font-black text-[10px] uppercase tracking-[0.4em]">Register Empty</p>
+        <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50/30 dark:bg-slate-900/50">
+           {showLivePreview && cart.length > 0 ? (
+             /* REAL-TIME INVOICE PREVIEW */
+             <div className="p-8 animate-fade-in-up">
+                <div className="bg-white text-slate-900 p-8 rounded-[1rem] shadow-2xl relative font-mono text-xs border-t-[10px] border-brand-500 overflow-hidden">
+                   {/* Thermal Paper "Torn" bottom effect */}
+                   <div className="absolute inset-x-0 -bottom-3 h-4 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iMTAiIHZpZXdCb3g9IjAgMCA0MCAxMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMCAwbDEwIDEwbDEwLTEwbDEwIDEwbDEwLTEwdjEwaC00MHoiIGZpbGw9IndoaXRlIi8+PC9zdmc+')] bg-repeat-x"></div>
+                   
+                   <div className="text-center mb-6">
+                      <p className="font-black text-xl uppercase tracking-tighter">{storeSettings.name}</p>
+                      <p className="opacity-60 text-[9px] uppercase tracking-widest leading-relaxed mt-1">{storeSettings.address}</p>
+                      <div className="border-b border-dashed border-slate-300 my-4"></div>
+                      <p className="text-[10px] font-black uppercase tracking-widest">Digital Audit Preview</p>
+                   </div>
+
+                   <div className="space-y-3 mb-6">
+                      {cart.map((item, idx) => (
+                         <div key={idx} className="flex justify-between items-start">
+                            <span className="flex-1 pr-4">
+                               {item.name.toUpperCase()}
+                               <span className="block opacity-60 text-[9px] mt-0.5">{formatNumber(item.quantity, language)} X {formatCurrency(item.sellPrice, language, CURRENCY)}</span>
+                            </span>
+                            <span className="font-bold">{formatCurrency(item.sellPrice * item.quantity, language, CURRENCY)}</span>
+                         </div>
+                      ))}
+                   </div>
+
+                   <div className="border-t border-dashed border-slate-300 pt-4 space-y-2">
+                      <div className="flex justify-between font-bold">
+                          <span>SUBTOTAL:</span>
+                          <span>{formatCurrency(cartSubtotal, language, CURRENCY)}</span>
+                      </div>
+                      {totalDiscountAmount > 0 && (
+                        <div className="flex justify-between text-emerald-600 font-bold">
+                            <span>DISCOUNT ({discountType === 'percent' ? `${discountValue}%` : 'FIXED'}):</span>
+                            <span>-{formatCurrency(totalDiscountAmount, language, CURRENCY)}</span>
+                        </div>
+                      )}
+                      {storeSettings.taxEnabled && (
+                        <div className="flex justify-between opacity-70">
+                            <span>{storeSettings.taxName.toUpperCase()} ({storeSettings.taxRate}%):</span>
+                            <span>+{formatCurrency(taxAmount, language, CURRENCY)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-black text-base pt-2 mt-2 border-t border-slate-900">
+                          <span>TOTAL DUE:</span>
+                          <span>{formatCurrency(finalTotal, language, CURRENCY)}</span>
+                      </div>
+                   </div>
+
+                   <div className="mt-8 text-center opacity-40 text-[9px] space-y-1">
+                      <p className="flex items-center justify-center gap-1"><UserIcon size={10}/> OPERATOR: {currentUser.name.toUpperCase()}</p>
+                      <p className="flex items-center justify-center gap-1"><Calendar size={10}/> {new Date().toLocaleString()}</p>
+                   </div>
+                </div>
+                <p className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest mt-6 italic flex items-center justify-center gap-2">
+                   <CheckCircle size={14} className="text-brand-500" /> Auto-syncing ledger
+                </p>
              </div>
            ) : (
-             <div className="space-y-4 animate-fade-in">
-                {cart.map((item) => (
-                    <div key={item.id} className="bg-white dark:bg-slate-800 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center overflow-hidden shrink-0">
-                            {item.image ? <img src={item.image} className="w-full h-full object-cover" /> : <ImageIcon size={20} className="text-slate-300" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="font-black text-slate-800 dark:text-slate-100 text-sm truncate">{item.name}</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{formatCurrency(item.sellPrice, language, CURRENCY)}</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <button onClick={() => updateQuantity(item.id, -1)} className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-red-500 active:scale-90 transition-all"><Minus size={14}/></button>
-                            <span className="font-black text-sm dark:text-white w-4 text-center">{item.quantity}</span>
-                            <button onClick={() => updateQuantity(item.id, 1)} className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-brand-600 active:scale-90 transition-all"><Plus size={14}/></button>
-                        </div>
-                        <button onClick={() => removeFromCart(item.id)} className="p-2 text-slate-300 hover:text-red-500"><X size={18}/></button>
-                    </div>
-                ))}
+             /* STANDARD CART LIST */
+             <div className="p-4 md:p-6 space-y-4">
+                {cart.length === 0 ? (
+                  <div className="h-full py-20 flex flex-col items-center justify-center opacity-20 text-slate-400 space-y-4">
+                    <ShoppingBag size={80} strokeWidth={1} />
+                    <p className="font-black text-[10px] uppercase tracking-[0.4em]">Register Standby</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4 animate-fade-in">
+                      {cart.map((item) => (
+                          <div key={item.id} className="bg-white dark:bg-slate-800 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center overflow-hidden shrink-0">
+                                  {item.image ? <img src={item.image} className="w-full h-full object-cover" /> : <ImageIcon size={20} className="text-slate-300" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                  <p className="font-black text-slate-800 dark:text-slate-100 text-sm truncate">{item.name}</p>
+                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{formatCurrency(item.sellPrice, language, CURRENCY)}</p>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                  <button onClick={() => updateQuantity(item.id, -1)} className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-red-500 active:scale-90 transition-all"><Minus size={14}/></button>
+                                  <span className="font-black text-sm dark:text-white w-4 text-center">{item.quantity}</span>
+                                  <button onClick={() => updateQuantity(item.id, 1)} className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-brand-600 active:scale-90 transition-all"><Plus size={14}/></button>
+                              </div>
+                              <button onClick={() => removeFromCart(item.id)} className="p-2 text-slate-300 hover:text-red-500"><X size={18}/></button>
+                          </div>
+                      ))}
+                  </div>
+                )}
              </div>
            )}
         </div>
 
-        {/* Totals & Discounts Section */}
+        {/* Financial Actions */}
         <div className="p-8 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 space-y-6 shrink-0 shadow-[0_-20px_40px_-10px_rgba(0,0,0,0.05)]">
           {cart.length > 0 && (
             <div className="space-y-6 animate-fade-in-up">
-              {/* Discount Entry */}
               <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Adjustment / Discount</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Apply Ledger Adjustment</label>
                     <div className="flex bg-slate-50 dark:bg-slate-800 p-1 rounded-xl border border-slate-100 dark:border-slate-700">
                         <button onClick={() => setDiscountType('percent')} className={`px-4 py-1.5 rounded-lg text-[9px] font-black transition-all ${discountType === 'percent' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-400'}`}>% Percent</button>
                         <button onClick={() => setDiscountType('fixed')} className={`px-4 py-1.5 rounded-lg text-[9px] font-black transition-all ${discountType === 'fixed' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-400'}`}>$ Fixed</button>
@@ -215,13 +302,12 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
                         value={discountValue || ''} 
                         onChange={e => setDiscountValue(Math.max(0, parseFloat(e.target.value) || 0))} 
                         className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl outline-none focus:border-brand-500 font-black text-center text-xl dark:text-white"
-                        placeholder={`Enter ${discountType === 'percent' ? 'percentage' : 'fixed amount'}...`}
+                        placeholder={`Adjustment amount...`}
                       />
                       <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-black">{discountType === 'percent' ? '%' : CURRENCY}</div>
                   </div>
               </div>
 
-              {/* Financial Summary */}
               <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-[2.5rem] space-y-3 border border-slate-100 dark:border-slate-700">
                   <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
                       <span>Subtotal</span>
@@ -229,7 +315,7 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
                   </div>
                   {totalDiscountAmount > 0 && (
                     <div className="flex justify-between text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em]">
-                        <span>Discount ({discountType === 'percent' ? `${discountValue}%` : 'Fixed'})</span>
+                        <span>Reduction</span>
                         <span>-{formatCurrency(totalDiscountAmount, language, CURRENCY)}</span>
                     </div>
                   )}
@@ -240,7 +326,7 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
                     </div>
                   )}
                   <div className="pt-4 mt-2 border-t border-slate-200 dark:border-slate-700 flex justify-between items-end">
-                      <span className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-[0.3em] pb-1 italic">Total Due</span>
+                      <span className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-[0.3em] pb-1 italic">Grand Total</span>
                       <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{formatCurrency(finalTotal, language, CURRENCY)}</span>
                   </div>
               </div>
@@ -258,14 +344,14 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
         </div>
       </div>
 
-      {/* Modern Invoice Modal */}
+      {/* Post-Checkout Invoice Modal */}
       {showInvoice && lastSale && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-3xl flex items-center justify-center z-[110] p-4 print:p-0">
           <div className="bg-white rounded-[3.5rem] w-full max-w-md relative animate-fade-in-up shadow-2xl overflow-hidden flex flex-col">
             <div className="p-8 pb-4 flex justify-between items-center no-print">
                  <div className="flex items-center gap-3 text-emerald-600">
                     <CheckCircle size={24} />
-                    <span className="font-black text-[10px] uppercase tracking-widest">Payment Success</span>
+                    <span className="font-black text-[10px] uppercase tracking-widest">Sale Authorized</span>
                  </div>
                  <button onClick={() => setShowInvoice(false)} className="p-2 bg-slate-100 rounded-full text-slate-800"><X size={20}/></button>
             </div>
@@ -277,37 +363,37 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
                    <p className="text-[9px] text-slate-400 uppercase tracking-widest font-bold mt-3 leading-relaxed">{storeSettings.address}</p>
                 </div>
 
-                <div className="space-y-4 mb-10 border-t-2 border-dashed border-slate-100 pt-8">
+                <div className="space-y-4 mb-10 border-t-2 border-dashed border-slate-100 pt-8 font-mono">
                    {lastSale.items.map((item: any) => (
                      <div key={item.id} className="flex justify-between items-start text-sm">
-                        <span className="flex-1 pr-6 font-medium text-slate-700">
-                            {item.name} 
-                            <span className="text-[10px] text-slate-400 block mt-1 uppercase font-black">QTY: {formatNumber(item.quantity, language)} @ {formatCurrency(item.sellPrice, language, CURRENCY)}</span>
+                        <span className="flex-1 pr-6">
+                            {item.name.toUpperCase()} 
+                            <span className="text-[10px] opacity-50 block mt-1">QTY: {formatNumber(item.quantity, language)} @ {formatCurrency(item.sellPrice, language, CURRENCY)}</span>
                         </span>
-                        <span className="font-black text-slate-900">{formatCurrency(item.sellPrice * item.quantity, language, CURRENCY)}</span>
+                        <span className="font-black">{formatCurrency(item.sellPrice * item.quantity, language, CURRENCY)}</span>
                      </div>
                    ))}
                 </div>
 
-                <div className="bg-slate-50 p-8 rounded-[2.5rem] space-y-3 mb-10 border border-slate-100">
-                    <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        <span>Invoice Total</span>
+                <div className="bg-slate-50 p-8 rounded-[2.5rem] space-y-3 mb-10 border border-slate-100 font-mono">
+                    <div className="flex justify-between text-[10px] font-black opacity-40 uppercase">
+                        <span>Invoice Base</span>
                         <span>{formatCurrency(lastSale.subTotal, language, CURRENCY)}</span>
                     </div>
                     {lastSale.discount > 0 && (
-                        <div className="flex justify-between text-[10px] font-black text-emerald-600 uppercase tracking-widest">
-                            <span>Discount ({lastSale.discountType === 'percent' ? 'Promo' : 'Fixed'})</span>
+                        <div className="flex justify-between text-[10px] font-black text-emerald-600 uppercase">
+                            <span>Markdown</span>
                             <span>-{formatCurrency(lastSale.discount, language, CURRENCY)}</span>
                         </div>
                     )}
                     {lastSale.tax > 0 && (
-                        <div className="flex justify-between text-[10px] font-black text-orange-500 uppercase tracking-widest">
-                            <span>Vat ({lastSale.taxRate}%)</span>
+                        <div className="flex justify-between text-[10px] font-black text-orange-500 uppercase">
+                            <span>Vat {lastSale.taxRate}%</span>
                             <span>+{formatCurrency(lastSale.tax, language, CURRENCY)}</span>
                         </div>
                     )}
                     <div className="flex justify-between items-center pt-4 mt-4 border-t border-slate-200">
-                        <span className="text-[11px] font-black uppercase tracking-widest text-slate-900">Paid Amount</span>
+                        <span className="text-[11px] font-black uppercase tracking-widest text-slate-900">Paid Total</span>
                         <span className="text-4xl font-black tracking-tighter text-slate-900">{formatCurrency(lastSale.total, language, CURRENCY)}</span>
                     </div>
                 </div>
@@ -320,18 +406,17 @@ export const POS: React.FC<POSProps> = ({ products, sales, onCheckout, storeSett
                 )}
                 
                 <div className="text-center text-[9px] text-slate-400 font-black uppercase tracking-[0.3em] italic leading-relaxed">
-                    {storeSettings.footerMessage || "Thank you for choosing easyPOS Terminal."}
+                    {storeSettings.footerMessage || "Transaction logged successfully."}
                 </div>
             </div>
 
             <div className="p-10 bg-slate-50 border-t border-slate-100 grid grid-cols-2 gap-4 no-print shrink-0">
                 <button onClick={handleShareWhatsApp} disabled={isSendingWA} className="flex items-center justify-center gap-3 bg-[#00a884] text-white py-5 rounded-[2rem] font-black uppercase tracking-widest text-[10px] shadow-xl active:scale-95 transition-all">
-                  {isSendingWA ? <Loader2 size={18} className="animate-spin" /> : <MessageCircle size={18}/>} WhatsApp
+                  <MessageCircle size={18}/> WhatsApp
                 </button>
                 <button onClick={() => window.print()} className="flex items-center justify-center gap-3 bg-slate-900 text-white py-5 rounded-[2rem] font-black uppercase tracking-widest text-[10px] shadow-xl active:scale-95 transition-all">
                   <Printer size={18}/> Print
                 </button>
-                <button onClick={() => setShowInvoice(false)} className="col-span-2 py-4 text-slate-400 font-black uppercase tracking-widest text-[10px] hover:text-slate-900 transition-all">Dismiss Window</button>
             </div>
           </div>
         </div>

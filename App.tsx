@@ -345,7 +345,7 @@ const App: React.FC = () => {
 
         <div className="flex-1 overflow-hidden relative">
             {currentView === AppView.POS && (
-              <POS products={products} sales={sales} onCheckout={handleCheckout} storeSettings={storeSettings} onViewOrderHistory={() => setCurrentView(AppView.ORDERS)} onUpdateStoreSettings={handleUpdateStoreSettings} t={t} language={language} />
+              <POS products={products} sales={sales} onCheckout={handleCheckout} storeSettings={storeSettings} onViewOrderHistory={() => setCurrentView(AppView.ORDERS)} onUpdateStoreSettings={handleUpdateStoreSettings} t={t} language={language} currentUser={user} onGoBack={() => setCurrentView(AppView.REPORTS)} />
             )}
             {(currentView === AppView.INVENTORY || currentView === AppView.CATEGORIES) && (
               <Inventory products={products} categories={categories} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} onBulkUpdateProduct={handleBulkUpdateProduct} onDeleteProduct={handleDeleteProduct} initialTab={currentView === AppView.CATEGORIES ? 'categories' : 'products'} onGoBack={() => setCurrentView(AppView.POS)} t={t} currentUser={user} language={language} />
