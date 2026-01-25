@@ -206,7 +206,7 @@ export const Settings: React.FC<SettingsProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 p-6 overflow-y-auto">
+    <div className="flex flex-col h-full bg-slate-50 p-6 overflow-y-auto transition-colors">
        <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
           {onGoBack && (
@@ -530,19 +530,19 @@ export const Settings: React.FC<SettingsProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div className="p-3 rounded-lg bg-purple-50 border border-purple-100">
                         <span className="font-bold text-purple-700 block mb-1">ADMIN</span>
-                        <span className="text-slate-600">Full Access: Settings, Reports, Inventory, POS, Stock Check.</span>
+                        <span className="text-slate-600 text-xs">Full Access: Settings, Reports, Inventory, POS, Stock Check. Complete control over system configuration.</span>
                     </div>
                     <div className="p-3 rounded-lg bg-blue-50 border border-blue-100">
                         <span className="font-bold text-blue-700 block mb-1">MANAGER</span>
-                        <span className="text-slate-600">Access: Reports, Inventory, POS, Stock Check.</span>
+                        <span className="text-slate-600 text-xs">Access: Reports, Inventory (Edit Only), POS, Stock Check. Managers can set prices but cannot add new product entries.</span>
                     </div>
                     <div className="p-3 rounded-lg bg-green-50 border border-green-100">
                         <span className="font-bold text-green-700 block mb-1">STAFF</span>
-                        <span className="text-slate-600">Access: Inventory, POS, Stock Check. Restricted from Reports & Settings.</span>
+                        <span className="text-slate-600 text-xs">Access: Inventory (View/Stock Edit), POS, Stock Check. Restricted from Reports and System Settings.</span>
                     </div>
                     <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
                         <span className="font-bold text-slate-700 block mb-1">CASHIER</span>
-                        <span className="text-slate-600">Access: POS Terminal Only. Restricted from sensitive data.</span>
+                        <span className="text-slate-600 text-xs">Access: POS Terminal Only. Highly restricted role focused solely on sales processing and receipt generation.</span>
                     </div>
                 </div>
             </div>

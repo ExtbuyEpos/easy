@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Product } from '../types';
+import { Product, User } from '../types';
 import { Plus, Search, Trash2, Edit2, Save, X, Image as ImageIcon, RefreshCw, Upload, Package, AlertCircle, ChevronLeft, TrendingUp, DollarSign, List, Grid } from 'lucide-react';
 import { CURRENCY } from '../constants';
 
@@ -16,11 +16,13 @@ interface InventoryProps {
   initialTab?: 'products' | 'categories';
   onGoBack?: () => void;
   t?: (key: string) => string;
+  currentUser?: User;
 }
 
 export const Inventory: React.FC<InventoryProps> = ({ 
   products, categories = [], onAddProduct, onUpdateProduct, onBulkUpdateProduct, onDeleteProduct,
-  onAddCategory, onUpdateCategory, onDeleteCategory, initialTab = 'products', onGoBack, t = (k) => k
+  onAddCategory, onUpdateCategory, onDeleteCategory, initialTab = 'products', onGoBack, t = (k) => k,
+  currentUser
 }) => {
   const [activeTab, setActiveTab] = useState<'products' | 'categories'>(initialTab);
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,6 +34,10 @@ export const Inventory: React.FC<InventoryProps> = ({
   const [formData, setFormData] = useState<Partial<Product>>({
     name: '', sku: '', costPrice: 0, sellPrice: 0, stock: 0, category: 'General', image: ''
   });
+
+  const canAddProduct = currentUser?.role === 'ADMIN';
+  const canDeleteProduct = currentUser?.role === 'ADMIN';
+  const canEditProduct = ['ADMIN', 'MANAGER', 'STAFF'].includes(currentUser?.role || '');
 
   const totalInvCost = products.reduce((acc, p) => acc + (p.costPrice * p.stock), 0);
   const totalInvValue = products.reduce((acc, p) => acc + (p.sellPrice * p.stock), 0);
@@ -105,9 +111,11 @@ export const Inventory: React.FC<InventoryProps> = ({
                     <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mt-1">Real-Time Stock Audit & Control</p>
                 </div>
             </div>
-            <button onClick={() => handleOpenModal()} className="bg-brand-600 hover:bg-brand-500 text-white px-8 py-4 rounded-[2rem] flex items-center gap-3 shadow-2xl shadow-brand-500/20 transition-all active:scale-95 font-black text-xs uppercase tracking-widest border border-brand-400/20">
-                <Plus size={20} strokeWidth={3} /> New Product
-            </button>
+            {canAddProduct && (
+              <button onClick={() => handleOpenModal()} className="bg-brand-600 hover:bg-brand-500 text-white px-8 py-4 rounded-[2rem] flex items-center gap-3 shadow-2xl shadow-brand-500/20 transition-all active:scale-95 font-black text-xs uppercase tracking-widest border border-brand-400/20">
+                  <Plus size={20} strokeWidth={3} /> New Product
+              </button>
+            )}
          </div>
 
          {/* Stats Cards */}
@@ -211,8 +219,12 @@ export const Inventory: React.FC<InventoryProps> = ({
                          </td>
                          <td className="p-6 text-right">
                              <div className="flex justify-end gap-3">
-                                <button onClick={() => handleOpenModal(p)} className="p-3 bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-600 hover:shadow-lg rounded-[1.2rem] transition-all border border-slate-100 dark:border-slate-700"><Edit2 size={18}/></button>
-                                <button onClick={() => onDeleteProduct(p.id)} className="p-3 bg-white dark:bg-slate-800 text-slate-400 hover:text-red-500 hover:shadow-lg rounded-[1.2rem] transition-all border border-slate-100 dark:border-slate-700"><Trash2 size={18}/></button>
+                                {canEditProduct && (
+                                  <button onClick={() => handleOpenModal(p)} className="p-3 bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-600 hover:shadow-lg rounded-[1.2rem] transition-all border border-slate-100 dark:border-slate-700"><Edit2 size={18}/></button>
+                                )}
+                                {canDeleteProduct && (
+                                  <button onClick={() => onDeleteProduct(p.id)} className="p-3 bg-white dark:bg-slate-800 text-slate-400 hover:text-red-500 hover:shadow-lg rounded-[1.2rem] transition-all border border-slate-100 dark:border-slate-700"><Trash2 size={18}/></button>
+                                )}
                              </div>
                          </td>
                       </tr>

@@ -27,6 +27,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       { view: AppView.POS, label: t('posTerminal'), icon: ShoppingCart },
     ];
     
+    // CASHIER: Restricted to POS Only
+    if (role === 'CASHIER') return items;
+
+    // STAFF & ABOVE
     if (['ADMIN', 'MANAGER', 'STAFF'].includes(role)) {
        items.push({ view: AppView.ORDERS, label: t('ordersReturns'), icon: History });
     }
@@ -37,10 +41,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       items.push({ view: AppView.STOCK_CHECK, label: t('stockCheck'), icon: ScanLine });
     }
 
+    // MANAGER & ADMIN (Managers can see reports, as requested)
     if (['ADMIN', 'MANAGER'].includes(role)) {
       items.push({ view: AppView.REPORTS, label: t('reportsAi'), icon: BarChart3 });
     }
 
+    // ADMIN ONLY
     if (role === 'ADMIN') {
       items.push({ view: AppView.SETTINGS, label: t('settings'), icon: Settings });
       items.push({ view: AppView.BAILEYS_SETUP, label: t('whatsappSetup'), icon: MessageCircle });
