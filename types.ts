@@ -48,6 +48,8 @@ export interface Sale {
   status?: 'COMPLETED' | 'REFUNDED' | 'PARTIAL';
   returnedItems?: { [itemId: string]: number };
   processedBy?: string; // User ID
+  customerName?: string;
+  customerPhone?: string;
 }
 
 export interface User {

@@ -151,7 +151,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleCheckout = async (items: CartItem[], total: number, paymentMethod: 'CASH' | 'CARD', subTotal: number, discount: number, tax: number, discountType: 'percent' | 'fixed') => {
+  const handleCheckout = async (items: CartItem[], total: number, paymentMethod: 'CASH' | 'CARD', subTotal: number, discount: number, tax: number, discountType: 'percent' | 'fixed', customerName?: string, customerPhone?: string) => {
     const saleId = Date.now().toString();
     const newSale: Sale = { 
       id: saleId, 
@@ -165,7 +165,9 @@ const App: React.FC = () => {
       total, 
       paymentMethod, 
       status: 'COMPLETED',
-      processedBy: user?.id 
+      processedBy: user?.id,
+      customerName,
+      customerPhone
     };
     
     if (db) {
@@ -363,7 +365,7 @@ const App: React.FC = () => {
               <Orders sales={sales} onProcessReturn={handleProcessReturn} storeSettings={storeSettings} onGoBack={() => setCurrentView(AppView.POS)} language={language} />
             )}
             {currentView === AppView.REPORTS && (
-              <Reports sales={sales} products={products} onGoBack={() => setCurrentView(AppView.POS)} language={language} />
+              <Reports sales={sales} products={products} users={users} onGoBack={() => setCurrentView(AppView.POS)} language={language} />
             )}
             {currentView === AppView.SETTINGS && (
               <Settings users={users} products={products} sales={sales} onAddUser={handleAddUser} onDeleteUser={handleDeleteUser} currentUser={user} storeSettings={storeSettings} onUpdateStoreSettings={handleUpdateStoreSettings} onGoBack={() => setCurrentView(AppView.POS)} language={language} toggleLanguage={toggleLanguage} t={t} />

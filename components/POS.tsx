@@ -2,14 +2,14 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Product, CartItem, StoreSettings, Sale, Language, User } from '../types';
 import { CURRENCY } from '../constants';
-import { ShoppingCart, Plus, Minus, Search, Image as ImageIcon, X, History, ShoppingBag, DollarSign, CheckCircle, Printer, MessageCircle, CreditCard, Receipt, Eye, ChevronLeft, Calendar, User as UserIcon, Tag, Percent } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Search, Image as ImageIcon, X, History, ShoppingBag, DollarSign, CheckCircle, Printer, MessageCircle, CreditCard, Receipt, Eye, ChevronLeft, Calendar, User as UserIcon, Tag, Percent, Contact } from 'lucide-react';
 import QRCode from 'qrcode';
 import { formatNumber, formatCurrency } from '../utils/format';
 
 interface POSProps {
   products: Product[];
   sales: Sale[];
-  onCheckout: (items: CartItem[], total: number, paymentMethod: 'CASH' | 'CARD', subTotal: number, discount: number, tax: number, discountType: 'fixed' | 'percent') => void;
+  onCheckout: (items: CartItem[], total: number, paymentMethod: 'CASH' | 'CARD', subTotal: number, discount: number, tax: number, discountType: 'fixed' | 'percent', customerName?: string, customerPhone?: string) => void;
   storeSettings: StoreSettings;
   onViewOrderHistory: () => void;
   onUpdateStoreSettings: (settings: StoreSettings) => void;
@@ -40,9 +40,12 @@ export const POS: React.FC<POSProps> = ({
   const [invoiceQr, setInvoiceQr] = useState<string>('');
   const [showLivePreview, setShowLivePreview] = useState(false);
   
+  // Customer Info
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+
   const [discountType, setDiscountType] = useState<'fixed' | 'percent'>('percent');
   const [discountValue, setDiscountValue] = useState<number>(0);
-  const [isSendingWA, setIsSendingWA] = useState(false);
 
   const skuInputRef = useRef<HTMLInputElement>(null);
 
@@ -96,12 +99,19 @@ export const POS: React.FC<POSProps> = ({
       paymentMethod: method, 
       timestamp: Date.now(), 
       status: 'COMPLETED',
-      processedBy: currentUser.id
+      processedBy: currentUser.id,
+      customerName: customerName || undefined,
+      customerPhone: customerPhone || undefined
     };
     setLastSale(saleData);
-    onCheckout(cart, finalTotal, method, cartSubtotal, totalDiscountAmount, taxAmount, discountType);
+    onCheckout(cart, finalTotal, method, cartSubtotal, totalDiscountAmount, taxAmount, discountType, customerName, customerPhone);
+    
+    // Clear Session
     setCart([]);
     setDiscountValue(0);
+    setCustomerName('');
+    setCustomerPhone('');
+    
     setShowInvoice(true);
     setIsCartOpen(false);
     
@@ -206,14 +216,8 @@ export const POS: React.FC<POSProps> = ({
                       <div className="flex justify-between font-bold"><span>SUBTOTAL:</span><span>{formatCurrency(cartSubtotal, language, CURRENCY)}</span></div>
                       {totalDiscountAmount > 0 && (
                         <div className="flex justify-between text-emerald-600 font-bold">
-                            <span>DISCOUNT ({discountType === 'percent' ? `${discountValue}%` : 'FIXED'}):</span>
+                            <span>DISCOUNT:</span>
                             <span>-{formatCurrency(totalDiscountAmount, language, CURRENCY)}</span>
-                        </div>
-                      )}
-                      {storeSettings.taxEnabled && (
-                        <div className="flex justify-between opacity-70">
-                            <span>{storeSettings.taxName.toUpperCase()} ({storeSettings.taxRate}%):</span>
-                            <span>+{formatCurrency(taxAmount, language, CURRENCY)}</span>
                         </div>
                       )}
                       <div className="flex justify-between font-black text-base pt-2 mt-2 border-t border-slate-900">
@@ -223,7 +227,7 @@ export const POS: React.FC<POSProps> = ({
                    </div>
                    <div className="mt-8 text-center opacity-40 text-[9px] space-y-1">
                       <p className="flex items-center justify-center gap-1"><UserIcon size={10}/> OPERATOR: {currentUser.name.toUpperCase()}</p>
-                      <p className="flex items-center justify-center gap-1"><Calendar size={10}/> {new Date().toLocaleString()}</p>
+                      {customerName && <p className="flex items-center justify-center gap-1 uppercase"><Contact size={10}/> CLIENT: {customerName}</p>}
                    </div>
                 </div>
              </div>
@@ -236,6 +240,15 @@ export const POS: React.FC<POSProps> = ({
                   </div>
                 ) : (
                   <div className="space-y-4 animate-fade-in">
+                      {/* Customer Context Section */}
+                      <div className="bg-brand-50/30 dark:bg-brand-900/10 p-5 rounded-[2.5rem] border border-brand-100 dark:border-brand-900/30 space-y-3">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-brand-600 flex items-center gap-2"><Contact size={12}/> Customer Record (Optional)</p>
+                          <div className="grid grid-cols-2 gap-3">
+                              <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Full Name" className="w-full bg-white dark:bg-slate-800 p-3 rounded-xl text-xs font-bold outline-none border border-slate-100 dark:border-slate-700" />
+                              <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="Phone" className="w-full bg-white dark:bg-slate-800 p-3 rounded-xl text-xs font-bold outline-none border border-slate-100 dark:border-slate-700" />
+                          </div>
+                      </div>
+
                       {cart.map((item) => (
                           <div key={item.id} className="bg-white dark:bg-slate-800 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-4">
                               <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center overflow-hidden shrink-0">
@@ -313,6 +326,13 @@ export const POS: React.FC<POSProps> = ({
                    <h1 className="text-3xl font-black uppercase tracking-tighter italic leading-none">{storeSettings.name}</h1>
                    <p className="text-[9px] text-slate-400 uppercase tracking-widest font-bold mt-3 leading-relaxed">{storeSettings.address}</p>
                 </div>
+                {lastSale.customerName && (
+                    <div className="mb-6 bg-slate-50 p-4 rounded-2xl border-2 border-dashed border-slate-200">
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Customer Record</p>
+                        <p className="text-sm font-black text-slate-900">{lastSale.customerName.toUpperCase()}</p>
+                        {lastSale.customerPhone && <p className="text-[10px] font-bold text-slate-500">{lastSale.customerPhone}</p>}
+                    </div>
+                )}
                 <div className="space-y-4 mb-10 border-t-2 border-dashed border-slate-100 pt-8 font-mono">
                    {lastSale.items.map((item: any) => (
                      <div key={item.id} className="flex justify-between items-start text-sm">
