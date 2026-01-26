@@ -22,7 +22,8 @@
     "@vitejs/plugin-react": "^5.1.2",
     "qrcode": "1.5.3",
     "vite-plugin-pwa": "^1.2.0",
-    "firebase": "^12.8.0"
+    "firebase": "^12.8.0",
+    "@vercel/analytics": "^1.4.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

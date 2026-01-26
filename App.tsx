@@ -14,6 +14,7 @@ import { AppView, Product, Sale, CartItem, User, StoreSettings, Language } from 
 import { INITIAL_PRODUCTS, INITIAL_USERS } from './constants';
 import { translations } from './translations';
 import { Menu, CloudOff, AlertTriangle, PanelLeftOpen } from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
 
 import { db } from './firebase';
 import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
@@ -379,6 +380,7 @@ const App: React.FC = () => {
             )}
         </div>
       </main>
+      <Analytics />
     </div>
   );
 };
