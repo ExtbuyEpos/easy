@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Product, CartItem, StoreSettings, Sale, Language, User } from '../types';
 import { CURRENCY } from '../constants';
-import { ShoppingCart, Plus, Minus, Search, Image as ImageIcon, X, History, ShoppingBag, DollarSign, CheckCircle, Printer, MessageCircle, CreditCard, Receipt, Eye, ChevronLeft, Calendar, User as UserIcon, Tag } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Search, Image as ImageIcon, X, History, ShoppingBag, DollarSign, CheckCircle, Printer, MessageCircle, CreditCard, Receipt, Eye, ChevronLeft, Calendar, User as UserIcon, Tag, Percent } from 'lucide-react';
 import QRCode from 'qrcode';
 import { formatNumber, formatCurrency } from '../utils/format';
 
@@ -109,18 +109,18 @@ export const POS: React.FC<POSProps> = ({
         const qr = await QRCode.toDataURL(saleId, { margin: 1, width: 240 });
         setInvoiceQr(qr);
     } catch (e) {
-        console.error("QR Fail", e);
+        console.error("QR Generation Failed", e);
     }
   };
 
   return (
     <div className="flex h-full bg-[#f1f5f9] dark:bg-slate-950 flex-col lg:flex-row overflow-hidden transition-all duration-300">
-      {/* Product Browsing Column */}
+      {/* Product Selection Panel */}
       <div className="flex-1 flex flex-col overflow-hidden h-full border-r border-slate-200 dark:border-slate-800 pb-20 lg:pb-0">
         <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 lg:px-8 lg:py-6 shrink-0 z-30 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-4 flex-1">
-              <button onClick={onGoBack} className="p-3 -ml-3 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-500 hover:text-brand-600 transition-all active:scale-90" title="Go to Reports">
+              <button onClick={onGoBack} className="p-3 -ml-3 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-500 hover:text-brand-600 transition-all active:scale-90" title="Return to Dashboard">
                   <ChevronLeft size={24} className="rtl:rotate-180" />
               </button>
               <div className="relative flex-1 group">
@@ -161,18 +161,18 @@ export const POS: React.FC<POSProps> = ({
         </div>
       </div>
 
-      {/* Cart & Real-Time Preview Column */}
+      {/* Checkout Side Panel */}
       <div className={`fixed inset-x-0 bottom-0 z-50 lg:static lg:inset-auto lg:z-auto w-full lg:w-[480px] h-[92%] lg:h-full bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-500 transform rounded-t-[40px] lg:rounded-none overflow-hidden flex flex-col ${isCartOpen ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}>
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
              <div className="bg-brand-600 p-2.5 rounded-xl text-white shadow-lg"><Receipt size={22} /></div>
-             <h2 className="text-xl font-black uppercase tracking-tight dark:text-white italic">Billing Ledger</h2>
+             <h2 className="text-xl font-black uppercase tracking-tight dark:text-white italic">Current Checkout</h2>
           </div>
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setShowLivePreview(!showLivePreview)}
               className={`p-2.5 rounded-xl transition-all ${showLivePreview ? 'bg-brand-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-800 text-slate-400'}`}
-              title="Toggle Live Invoice Preview"
+              title="Toggle Live Digital Receipt"
             >
               <Eye size={20} />
             </button>
@@ -183,13 +183,13 @@ export const POS: React.FC<POSProps> = ({
         <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50/30 dark:bg-slate-900/50">
            {showLivePreview && cart.length > 0 ? (
              <div className="p-8 animate-fade-in-up">
-                <div className="bg-white text-slate-900 p-8 rounded-[1rem] shadow-2xl relative font-mono text-xs border-t-[10px] border-brand-500 overflow-hidden">
+                <div className="bg-white text-slate-900 p-8 rounded-[1rem] shadow-2xl relative font-mono text-xs border-t-[12px] border-brand-500 overflow-hidden">
                    <div className="absolute inset-x-0 -bottom-3 h-4 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iMTAiIHZpZXdCb3g9IjAgMCA0MCAxMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMCAwbDEwIDEwbDEwLTEwbDEwIDEwbDEwLTEwdjEwaC00MHoiIGZpbGw9IndoaXRlIi8+PC9zdmc+')] bg-repeat-x"></div>
                    <div className="text-center mb-6">
                       <p className="font-black text-xl uppercase tracking-tighter">{storeSettings.name}</p>
                       <p className="opacity-60 text-[9px] uppercase tracking-widest leading-relaxed mt-1">{storeSettings.address}</p>
                       <div className="border-b border-dashed border-slate-300 my-4"></div>
-                      <p className="text-[10px] font-black uppercase tracking-widest">Real-Time Receipt Draft</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest italic">Live Order Draft</p>
                    </div>
                    <div className="space-y-3 mb-6">
                       {cart.map((item, idx) => (
@@ -222,8 +222,8 @@ export const POS: React.FC<POSProps> = ({
                       </div>
                    </div>
                    <div className="mt-8 text-center opacity-40 text-[9px] space-y-1">
-                      <p>OPERATOR ID: {currentUser.employeeId || currentUser.id}</p>
-                      <p>{new Date().toLocaleString()}</p>
+                      <p className="flex items-center justify-center gap-1"><UserIcon size={10}/> OPERATOR: {currentUser.name.toUpperCase()}</p>
+                      <p className="flex items-center justify-center gap-1"><Calendar size={10}/> {new Date().toLocaleString()}</p>
                    </div>
                 </div>
              </div>
@@ -232,7 +232,7 @@ export const POS: React.FC<POSProps> = ({
                 {cart.length === 0 ? (
                   <div className="h-full py-20 flex flex-col items-center justify-center opacity-20 text-slate-400 space-y-4">
                     <ShoppingBag size={80} strokeWidth={1} />
-                    <p className="font-black text-[10px] uppercase tracking-[0.4em]">Terminal Idle</p>
+                    <p className="font-black text-[10px] uppercase tracking-[0.4em]">Ready for Orders</p>
                   </div>
                 ) : (
                   <div className="space-y-4 animate-fade-in">
@@ -264,27 +264,30 @@ export const POS: React.FC<POSProps> = ({
             <div className="space-y-6 animate-fade-in-up">
               <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Tag size={12}/> Adjustment / Discount</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Tag size={12}/> Adjustment / Ledger Discount</label>
                     <div className="flex bg-slate-50 dark:bg-slate-800 p-1 rounded-xl border border-slate-100 dark:border-slate-700">
-                        <button onClick={() => setDiscountType('percent')} className={`px-4 py-1.5 rounded-lg text-[9px] font-black transition-all ${discountType === 'percent' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-400'}`}>% Percent</button>
-                        <button onClick={() => setDiscountType('fixed')} className={`px-4 py-1.5 rounded-lg text-[9px] font-black transition-all ${discountType === 'fixed' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-400'}`}>$ Fixed</button>
+                        <button onClick={() => setDiscountType('percent')} className={`px-4 py-1.5 rounded-lg text-[9px] font-black transition-all ${discountType === 'percent' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-400'}`}>% Ratio</button>
+                        <button onClick={() => setDiscountType('fixed')} className={`px-4 py-1.5 rounded-lg text-[9px] font-black transition-all ${discountType === 'fixed' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-400'}`}>$ Flat</button>
                     </div>
                   </div>
-                  <input 
-                    type="number" 
-                    value={discountValue || ''} 
-                    onChange={e => setDiscountValue(Math.max(0, parseFloat(e.target.value) || 0))} 
-                    className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl outline-none focus:border-brand-500 font-black text-center text-xl dark:text-white"
-                    placeholder={`Enter value...`}
-                  />
+                  <div className="relative">
+                    <input 
+                        type="number" 
+                        value={discountValue || ''} 
+                        onChange={e => setDiscountValue(Math.max(0, parseFloat(e.target.value) || 0))} 
+                        className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl outline-none focus:border-brand-500 font-black text-center text-xl dark:text-white"
+                        placeholder={`Adjustment amount...`}
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-black">{discountType === 'percent' ? '%' : CURRENCY}</div>
+                  </div>
               </div>
 
               <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-[2.5rem] space-y-3 border border-slate-100 dark:border-slate-700">
-                  <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]"><span>Subtotal</span><span>{formatCurrency(cartSubtotal, language, CURRENCY)}</span></div>
-                  {totalDiscountAmount > 0 && <div className="flex justify-between text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em]"><span>Discount</span><span>-{formatCurrency(totalDiscountAmount, language, CURRENCY)}</span></div>}
+                  <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]"><span>Gross Subtotal</span><span>{formatCurrency(cartSubtotal, language, CURRENCY)}</span></div>
+                  {totalDiscountAmount > 0 && <div className="flex justify-between text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em]"><span>Discount Applied</span><span>-{formatCurrency(totalDiscountAmount, language, CURRENCY)}</span></div>}
                   {storeSettings.taxEnabled && <div className="flex justify-between text-[10px] font-black text-orange-500 uppercase tracking-[0.2em]"><span>{storeSettings.taxName} ({storeSettings.taxRate}%)</span><span>+{formatCurrency(taxAmount, language, CURRENCY)}</span></div>}
                   <div className="pt-4 mt-2 border-t border-slate-200 dark:border-slate-700 flex justify-between items-end">
-                      <span className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-[0.3em] pb-1 italic">Grand Total</span>
+                      <span className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-[0.3em] pb-1 italic">Total Payable</span>
                       <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{formatCurrency(finalTotal, language, CURRENCY)}</span>
                   </div>
               </div>
@@ -302,12 +305,12 @@ export const POS: React.FC<POSProps> = ({
         <div className="fixed inset-0 bg-black/90 backdrop-blur-3xl flex items-center justify-center z-[110] p-4 print:p-0">
           <div className="bg-white rounded-[3.5rem] w-full max-w-md relative animate-fade-in-up shadow-2xl overflow-hidden flex flex-col">
             <div className="p-8 pb-4 flex justify-between items-center no-print">
-                 <div className="flex items-center gap-3 text-emerald-600"><CheckCircle size={24} /><span className="font-black text-[10px] uppercase tracking-widest">Authorized</span></div>
+                 <div className="flex items-center gap-3 text-emerald-600"><CheckCircle size={24} /><span className="font-black text-[10px] uppercase tracking-widest">Sale Authorized</span></div>
                  <button onClick={() => setShowInvoice(false)} className="p-2 bg-slate-100 rounded-full text-slate-800"><X size={20}/></button>
             </div>
             <div className="p-10 flex-1 overflow-y-auto print:p-0">
                 <div className="text-center mb-10">
-                   <h1 className="text-3xl font-black uppercase tracking-tighter italic">{storeSettings.name}</h1>
+                   <h1 className="text-3xl font-black uppercase tracking-tighter italic leading-none">{storeSettings.name}</h1>
                    <p className="text-[9px] text-slate-400 uppercase tracking-widest font-bold mt-3 leading-relaxed">{storeSettings.address}</p>
                 </div>
                 <div className="space-y-4 mb-10 border-t-2 border-dashed border-slate-100 pt-8 font-mono">
@@ -319,16 +322,16 @@ export const POS: React.FC<POSProps> = ({
                    ))}
                 </div>
                 <div className="bg-slate-50 p-8 rounded-[2.5rem] space-y-3 mb-10 border border-slate-100 font-mono text-xs">
-                    <div className="flex justify-between opacity-50"><span>BASE</span><span>{formatCurrency(lastSale.subTotal, language, CURRENCY)}</span></div>
-                    {lastSale.discount > 0 && <div className="flex justify-between text-emerald-600"><span>DISCOUNT</span><span>-{formatCurrency(lastSale.discount, language, CURRENCY)}</span></div>}
+                    <div className="flex justify-between opacity-50"><span>INVOICE TOTAL</span><span>{formatCurrency(lastSale.subTotal, language, CURRENCY)}</span></div>
+                    {lastSale.discount > 0 && <div className="flex justify-between text-emerald-600"><span>MARKDOWN</span><span>-{formatCurrency(lastSale.discount, language, CURRENCY)}</span></div>}
                     {lastSale.tax > 0 && <div className="flex justify-between text-orange-500"><span>TAX {lastSale.taxRate}%</span><span>+{formatCurrency(lastSale.tax, language, CURRENCY)}</span></div>}
-                    <div className="flex justify-between items-center pt-4 mt-4 border-t border-slate-200 text-base font-black"><span>PAID TOTAL</span><span>{formatCurrency(lastSale.total, language, CURRENCY)}</span></div>
+                    <div className="flex justify-between items-center pt-4 mt-4 border-t border-slate-200 text-lg font-black text-slate-900"><span>PAID TOTAL</span><span>{formatCurrency(lastSale.total, language, CURRENCY)}</span></div>
                 </div>
                 {invoiceQr && <div className="flex flex-col items-center justify-center mb-10"><img src={invoiceQr} className="w-32 h-32" /><p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mt-6">ORD-{lastSale.id.slice(-6)}</p></div>}
                 <div className="text-center text-[9px] text-slate-400 font-black uppercase tracking-widest italic">{storeSettings.footerMessage || "Transaction logged successfully."}</div>
             </div>
             <div className="p-10 bg-slate-50 border-t border-slate-100 grid grid-cols-2 gap-4 no-print shrink-0">
-                <button onClick={() => window.print()} className="col-span-2 flex items-center justify-center gap-3 bg-slate-900 text-white py-5 rounded-[2rem] font-black uppercase tracking-widest text-[10px] shadow-xl active:scale-95 transition-all"><Printer size={18}/> Print Receipt</button>
+                <button onClick={() => window.print()} className="col-span-2 flex items-center justify-center gap-3 bg-slate-900 text-white py-5 rounded-[2rem] font-black uppercase tracking-widest text-[10px] shadow-xl active:scale-95 transition-all"><Printer size={18}/> Print Official Receipt</button>
             </div>
           </div>
         </div>
