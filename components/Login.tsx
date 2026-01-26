@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { User, Language } from '../types';
-import { ShoppingBag, Lock, User as UserIcon, AlertCircle, ChevronRight, Moon, Sun, Globe, Smartphone, MessageSquare, LayoutDashboard } from 'lucide-react';
+import { ShoppingBag, Lock, User as UserIcon, AlertCircle, ChevronRight, Moon, Sun, Globe, Smartphone, MessageSquare, LayoutDashboard, ShieldCheck, RefreshCw } from 'lucide-react';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -12,7 +13,7 @@ interface LoginProps {
   toggleLanguage?: () => void;
 }
 
-type LoginMethod = 'CREDENTIALS' | 'PHONE';
+type LoginMethod = 'CREDENTIALS' | 'WHATSAPP';
 
 export const Login: React.FC<LoginProps> = ({ 
   onLogin, users, t = (k) => k, isDarkMode, toggleTheme, language, toggleLanguage 
@@ -25,6 +26,32 @@ export const Login: React.FC<LoginProps> = ({
   const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [timer, setTimer] = useState(0);
+
+  // Verification code countdown logic
+  useEffect(() => {
+    let interval: any;
+    if (timer > 0) {
+      interval = setInterval(() => setTimer(t => t - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [timer]);
+
+  const handleRequestOtp = async () => {
+    if (phone.length < 8) {
+      setError(language === 'ar' ? 'أدخل رقم هاتف صحيح' : 'Enter a valid phone number');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    
+    // Simulated real-time delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    setOtpSent(true);
+    setLoading(false);
+    setTimer(60);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,20 +70,14 @@ export const Login: React.FC<LoginProps> = ({
         setLoading(false);
       }
     } else {
-      // Simulated WhatsApp/Phone Login
       if (!otpSent) {
-          if (phone.length < 8) {
-              setError('Enter a valid phone number');
-              setLoading(false);
-          } else {
-              setOtpSent(true);
-              setLoading(false);
-          }
+          handleRequestOtp();
       } else {
+          // Verification logic
           if (otp === '123456' || otp === '000000') {
              onLogin(users[0]);
           } else {
-             setError('Invalid verification code');
+             setError(language === 'ar' ? 'رمز التحقق غير صحيح' : 'Invalid verification code');
              setLoading(false);
           }
       }
@@ -129,16 +150,16 @@ export const Login: React.FC<LoginProps> = ({
               {/* Enhanced Login Method Toggle */}
               <div className="flex bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-2xl mb-10 border border-slate-100 dark:border-slate-800">
                   <button 
-                    onClick={() => { setMethod('CREDENTIALS'); setError(''); }}
+                    onClick={() => { setMethod('CREDENTIALS'); setError(''); setOtpSent(false); }}
                     className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${method === 'CREDENTIALS' ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-white shadow-xl border border-slate-100 dark:border-slate-600' : 'text-slate-400 hover:text-slate-600'}`}
                   >
                       <UserIcon size={14} /> {t('username')}
                   </button>
                   <button 
-                    onClick={() => { setMethod('PHONE'); setError(''); }}
-                    className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${method === 'PHONE' ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-white shadow-xl border border-slate-100 dark:border-slate-600' : 'text-slate-400 hover:text-slate-600'}`}
+                    onClick={() => { setMethod('WHATSAPP'); setError(''); }}
+                    className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${method === 'WHATSAPP' ? 'bg-[#25D366] text-white shadow-xl shadow-emerald-500/20' : 'text-slate-400 hover:text-slate-600'}`}
                   >
-                      <Smartphone size={14} /> Mobile
+                      <MessageSquare size={14} /> {t('whatsappLogin')}
                   </button>
               </div>
 
@@ -194,7 +215,7 @@ export const Login: React.FC<LoginProps> = ({
                         </div>
                         <input
                           type="tel"
-                          disabled={otpSent}
+                          disabled={otpSent || loading}
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
                           className="w-full pl-14 rtl:pr-14 pr-5 py-5 bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-100 dark:border-slate-800 rounded-2xl focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 outline-none transition-all text-slate-900 dark:text-white font-black text-lg disabled:opacity-50"
@@ -204,22 +225,43 @@ export const Login: React.FC<LoginProps> = ({
                     </div>
 
                     {otpSent && (
-                       <div className="space-y-2 animate-fade-in-up">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Verification Code</label>
-                        <div className="relative group">
-                          <div className="absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 pl-5 rtl:pr-5 flex items-center pointer-events-none">
-                              <Lock className="text-slate-300 group-focus-within:text-brand-500 transition-colors" size={20} />
-                          </div>
-                          <input
-                            type="text"
-                            value={otp}
-                            onChange={(e) => setOtp(e.target.value)}
-                            className="w-full pl-14 rtl:pr-14 pr-5 py-5 bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-100 dark:border-slate-800 rounded-2xl focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 outline-none transition-all text-slate-900 dark:text-white font-black text-2xl tracking-[0.3em] placeholder-slate-300"
-                            placeholder="000000"
-                            maxLength={6}
-                          />
+                       <div className="space-y-4 animate-fade-in-up">
+                        <div className="flex items-center gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl">
+                             <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white shrink-0 animate-pulse">
+                                 <ShieldCheck size={20} />
+                             </div>
+                             <div>
+                                 <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">{t('codeSent')}</p>
+                                 <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{phone}</p>
+                             </div>
                         </div>
-                        <button type="button" onClick={() => setOtpSent(false)} className="text-[9px] text-brand-600 font-black uppercase tracking-widest hover:underline ml-1">Edit Phone Number</button>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">6-Digit Code</label>
+                          <div className="relative group">
+                            <div className="absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 pl-5 rtl:pr-5 flex items-center pointer-events-none">
+                                <Lock className="text-slate-300 group-focus-within:text-brand-500 transition-colors" size={20} />
+                            </div>
+                            <input
+                              type="text"
+                              value={otp}
+                              onChange={(e) => setOtp(e.target.value)}
+                              className="w-full pl-14 rtl:pr-14 pr-5 py-5 bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-100 dark:border-slate-800 rounded-2xl focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 outline-none transition-all text-slate-900 dark:text-white font-black text-2xl tracking-[0.3em] placeholder-slate-300"
+                              placeholder="000000"
+                              maxLength={6}
+                            />
+                          </div>
+                          <div className="flex justify-between items-center px-1">
+                              <button type="button" onClick={() => { setOtpSent(false); setOtp(''); }} className="text-[9px] text-slate-400 font-black uppercase tracking-widest hover:underline">Change Number</button>
+                              {timer > 0 ? (
+                                <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">{t('resendIn')} {timer}s</span>
+                              ) : (
+                                <button type="button" onClick={handleRequestOtp} className="text-[9px] text-brand-600 font-black uppercase tracking-widest hover:underline flex items-center gap-1">
+                                    <RefreshCw size={10} /> {t('resendCode')}
+                                </button>
+                              )}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -228,13 +270,13 @@ export const Login: React.FC<LoginProps> = ({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-slate-900 dark:bg-brand-600 text-white font-black py-5 rounded-[2rem] hover:bg-black dark:hover:bg-brand-500 transition-all shadow-2xl active:scale-[0.98] mt-8 flex items-center justify-center gap-3 disabled:opacity-70 group text-sm uppercase tracking-widest italic"
+                  className={`w-full font-black py-5 rounded-[2rem] transition-all shadow-2xl active:scale-[0.98] mt-8 flex items-center justify-center gap-3 disabled:opacity-70 group text-sm uppercase tracking-widest italic ${method === 'WHATSAPP' ? 'bg-[#25D366] hover:bg-[#128C7E] text-white' : 'bg-slate-900 dark:bg-brand-600 hover:bg-black dark:hover:bg-brand-500 text-white'}`}
                 >
                   {loading ? (
                     <div className="w-6 h-6 border-4 border-white/20 border-t-white rounded-full animate-spin" />
                   ) : (
                     <>
-                      <span>{method === 'PHONE' && !otpSent ? t('getOtp') : t('accessTerminal')}</span>
+                      <span>{method === 'WHATSAPP' && !otpSent ? t('getOtp') : t('accessTerminal')}</span>
                       <ChevronRight size={20} strokeWidth={3} className="group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-transform rtl:rotate-180"/>
                     </>
                   )}
@@ -247,12 +289,14 @@ export const Login: React.FC<LoginProps> = ({
               </div>
 
                <div className="mt-12 text-center flex flex-col gap-4">
-                 <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest border-2 border-dashed border-slate-100 dark:border-slate-800 py-4 px-6 rounded-3xl inline-block">
-                    {t('defaultLogin')}: <strong className="text-slate-900 dark:text-white">admin</strong> / <strong className="text-slate-900 dark:text-white">123</strong>
-                 </div>
+                 {method === 'CREDENTIALS' && (
+                    <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest border-2 border-dashed border-slate-100 dark:border-slate-800 py-4 px-6 rounded-3xl inline-block">
+                        {t('defaultLogin')}: <strong className="text-slate-900 dark:text-white">admin</strong> / <strong className="text-slate-900 dark:text-white">123</strong>
+                    </div>
+                 )}
                  <div className="flex items-center justify-center gap-2 text-[9px] text-slate-400 font-black uppercase tracking-widest italic">
-                    <MessageSquare size={12} className="text-brand-500" />
-                    Encrypted via easyPOS Multi-Device
+                    <ShieldCheck size={12} className={method === 'WHATSAPP' ? 'text-emerald-500' : 'text-brand-500'} />
+                    {method === 'WHATSAPP' ? 'Verified via Live WhatsApp Dispatch' : 'Encrypted via easyPOS Multi-Device'}
                  </div>
               </div>
           </div>

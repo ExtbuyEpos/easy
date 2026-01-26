@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { ShoppingCart, Package, BarChart3, LogOut, ScanLine, Settings, MessageCircle, X, History, Wifi, WifiOff, RefreshCw, List, Moon, Sun, Globe, LayoutDashboard, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShoppingCart, Package, BarChart3, LogOut, ScanLine, Settings, MessageCircle, X, History, Wifi, WifiOff, RefreshCw, List, Moon, Sun, Globe, LayoutDashboard, ChevronLeft, ChevronRight, QrCode } from 'lucide-react';
 import { AppView, User, UserRole, Language } from '../types';
 
 interface SidebarProps {
@@ -39,6 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       items.push({ view: AppView.INVENTORY, label: t('inventory'), icon: Package });
       items.push({ view: AppView.CATEGORIES, label: t('categoryList'), icon: List });
       items.push({ view: AppView.STOCK_CHECK, label: t('stockCheck'), icon: ScanLine });
+      items.push({ view: AppView.PRINT_BARCODE, label: t('printBarcode'), icon: QrCode });
     }
 
     // MANAGER & ADMIN (Managers can see reports, as requested)

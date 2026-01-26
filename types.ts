@@ -8,7 +8,8 @@ export enum AppView {
   STOCK_CHECK = 'STOCK_CHECK',
   SETTINGS = 'SETTINGS',
   BAILEYS_SETUP = 'BAILEYS_SETUP',
-  ORDERS = 'ORDERS'
+  ORDERS = 'ORDERS',
+  PRINT_BARCODE = 'PRINT_BARCODE'
 }
 
 export type UserRole = 'ADMIN' | 'MANAGER' | 'STAFF' | 'CASHIER';

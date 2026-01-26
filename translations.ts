@@ -18,8 +18,12 @@ export const translations: Record<Language, Translations> = {
     'loginWithPhone': 'Login with Phone Number',
     'loginWithCredentials': 'Login with Username',
     'phoneNumber': 'Phone Number',
-    'getOtp': 'Get Verification Code',
+    'getOtp': 'Request Verification Code',
     'verify': 'Verify & Enter',
+    'whatsappLogin': 'WhatsApp Login',
+    'resendIn': 'Resend in',
+    'resendCode': 'Resend Code',
+    'codeSent': 'Verification code sent to',
 
     // Sidebar
     'posTerminal': 'POS Terminal',
@@ -30,6 +34,7 @@ export const translations: Record<Language, Translations> = {
     'reportsAi': 'Reports & AI',
     'settings': 'Settings',
     'whatsappSetup': 'WhatsApp Setup',
+    'printBarcode': 'Print Labels',
     'onlineMode': 'ONLINE MODE',
     'offlineMode': 'OFFLINE MODE',
     'syncing': 'SYNCING DATA...',
@@ -91,6 +96,14 @@ export const translations: Record<Language, Translations> = {
     'processRefund': 'Process Refund',
     'originalOrder': 'Original Order',
     
+    // Barcode Printing
+    'printBarcodeTitle': 'Label Generator',
+    'barcodeSubtitle': 'Physical inventory labeling',
+    'printQueue': 'Print Queue',
+    'labelQuantity': 'Labels',
+    'generateLabels': 'Execute Print',
+    'clearQueue': 'Clear Queue',
+    
     // WhatsApp Integration
     'linkWithQr': 'Link with QR Code',
     'linkWithPhone': 'Link with Phone Number',
@@ -130,6 +143,10 @@ export const translations: Record<Language, Translations> = {
     'phoneNumber': 'رقم الهاتف',
     'getOtp': 'طلب رمز التحقق',
     'verify': 'التحقق والدخول',
+    'whatsappLogin': 'دخول واتساب',
+    'resendIn': 'إعادة الإرسال خلال',
+    'resendCode': 'إعادة إرسال الرمز',
+    'codeSent': 'تم إرسال الرمز إلى',
 
     // Sidebar
     'posTerminal': 'نقطة البيع',
@@ -140,6 +157,7 @@ export const translations: Record<Language, Translations> = {
     'reportsAi': 'التقارير والذكاء الاصطناعي',
     'settings': 'الإعدادات',
     'whatsappSetup': 'إعدادات واتساب',
+    'printBarcode': 'طباعة الملصقات',
     'onlineMode': 'متصل بالإنترنت',
     'offlineMode': 'وضع غير متصل',
     'syncing': 'جاري المزامنة...',
@@ -200,6 +218,14 @@ export const translations: Record<Language, Translations> = {
     'refundAmount': 'مبلغ الاسترجاع',
     'processRefund': 'إتمام الاسترجاع',
     'originalOrder': 'الطلب الأصلي',
+
+    // Barcode Printing
+    'printBarcodeTitle': 'منشئ الملصقات',
+    'barcodeSubtitle': 'تسمية المخزون المادي',
+    'printQueue': 'قائمة الطباعة',
+    'labelQuantity': 'ملصقات',
+    'generateLabels': 'تنفيذ الطباعة',
+    'clearQueue': 'تفريغ القائمة',
 
     // WhatsApp Integration
     'linkWithQr': 'ربط عبر رمز QR',

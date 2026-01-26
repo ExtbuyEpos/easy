@@ -9,6 +9,7 @@ import { StockCheck } from './components/StockCheck';
 import { Settings } from './components/Settings';
 import { BaileysSetup } from './components/BaileysSetup';
 import { Orders } from './components/Orders';
+import { PrintBarcode } from './components/PrintBarcode';
 import { AppView, Product, Sale, CartItem, User, StoreSettings, Language } from './types';
 import { INITIAL_PRODUCTS, INITIAL_USERS } from './constants';
 import { translations } from './translations';
@@ -372,6 +373,9 @@ const App: React.FC = () => {
             )}
             {currentView === AppView.BAILEYS_SETUP && (
               <BaileysSetup onUpdateStoreSettings={handleUpdateStoreSettings} settings={storeSettings} onGoBack={() => setCurrentView(AppView.POS)} t={t} />
+            )}
+            {currentView === AppView.PRINT_BARCODE && (
+              <PrintBarcode products={products} storeSettings={storeSettings} onGoBack={() => setCurrentView(AppView.POS)} language={language} t={t} />
             )}
         </div>
       </main>
