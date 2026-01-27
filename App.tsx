@@ -218,6 +218,39 @@ const App: React.FC = () => {
     }
   };
 
+  // Category Management Handlers
+  const handleAddCategory = async (category: string) => {
+    if (db) await setDoc(doc(db, 'categories', category), {});
+    else {
+      const updated = Array.from(new Set([...categories, category])).sort();
+      setCategories(updated);
+      localStorage.setItem('easyPOS_categories', JSON.stringify(updated));
+    }
+  };
+
+  const handleUpdateCategory = async (oldCategory: string, newCategory: string) => {
+    if (db) {
+      const batch = writeBatch(db);
+      batch.delete(doc(db, 'categories', oldCategory));
+      batch.set(doc(db, 'categories', newCategory), {});
+      await batch.commit();
+    } else {
+      const updated = categories.map(c => c === oldCategory ? newCategory : c).sort();
+      setCategories(updated);
+      localStorage.setItem('easyPOS_categories', JSON.stringify(updated));
+    }
+  };
+
+  const handleDeleteCategory = async (category: string) => {
+    if (!window.confirm(`Delete category "${category}"?`)) return;
+    if (db) await deleteDoc(doc(db, 'categories', category));
+    else {
+      const updated = categories.filter(c => c !== category);
+      setCategories(updated);
+      localStorage.setItem('easyPOS_categories', JSON.stringify(updated));
+    }
+  };
+
   // Booking Handlers
   const handleAddBooking = async (b: Booking) => {
     if (db) await setDoc(doc(db, 'bookings', b.id), b);
@@ -469,7 +502,7 @@ const App: React.FC = () => {
   const isSidebarShown = !isCustomer && (isMobileMenuOpen || (isSidebarVisible && window.innerWidth >= 1024));
 
   return (
-    <div className="flex h-[100svh] overflow-hidden bg-[#111827] dark:bg-slate-950 font-sans flex-col lg:flex-row transition-colors">
+    <div className="flex ltr:h-[100svh] rtl:h-[100svh] overflow-hidden bg-[#111827] dark:bg-slate-950 font-sans flex-col lg:flex-row transition-colors">
       
       {isMobileMenuOpen && !isCustomer && (
         <div className="fixed inset-0 bg-black/70 z-[60] lg:hidden backdrop-blur-md" onClick={() => setIsMobileMenuOpen(false)} />
@@ -477,7 +510,7 @@ const App: React.FC = () => {
 
       {!isCustomer && (
         <div className={`
-          fixed inset-y-0 left-0 rtl:left-auto rtl:right-0 z-[70] w-72 transform transition-all duration-500 ease-out 
+          fixed inset-y-0 ltr:left-0 rtl:right-0 z-[70] w-72 transform transition-all duration-500 ltr:ease-out rtl:ease-out
           lg:static lg:w-72 lg:translate-x-0
           ${isSidebarShown ? 'translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'}
           ${!isSidebarVisible && window.innerWidth >= 1024 ? 'lg:hidden' : ''}
@@ -504,11 +537,11 @@ const App: React.FC = () => {
 
       <main className={`
         flex-1 overflow-hidden relative flex flex-col min-w-0 bg-[#f8fafc] dark:bg-slate-950 transition-all duration-500
-        ${!isCustomer && isSidebarVisible && window.innerWidth >= 1024 ? 'lg:rounded-l-[44px] rtl:lg:rounded-r-[44px] shadow-2xl' : 'rounded-none'}
+        ${!isCustomer && isSidebarVisible && window.innerWidth >= 1024 ? 'ltr:lg:rounded-l-[44px] rtl:lg:rounded-r-[44px] shadow-2xl' : 'rounded-none'}
       `}>
         
         {!isCustomer && (
-          <div className="absolute top-0 left-0 right-0 z-50 pointer-events-none flex justify-center">
+          <div className="absolute ltr:top-0 rtl:top-0 ltr:left-0 rtl:right-0 ltr:right-0 rtl:left-0 z-50 pointer-events-none flex justify-center">
               {!isOnline && (
                 <div className="bg-red-600 text-white text-[9px] font-black px-6 py-1 rounded-b-xl shadow-lg flex items-center gap-2 animate-bounce pointer-events-auto">
                   <CloudOff size={12} /> {t('offlineMode')}
@@ -523,7 +556,7 @@ const App: React.FC = () => {
         )}
 
         {!isCustomer && !isSidebarVisible && (
-            <div className="hidden lg:block absolute top-6 left-6 z-[60] no-print">
+            <div className="hidden lg:block absolute ltr:top-6 rtl:top-6 ltr:left-6 rtl:right-6 z-[60] no-print">
                 <button onClick={() => setIsSidebarVisible(true)} className="p-3 bg-white dark:bg-slate-900 text-slate-800 dark:text-white rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 hover:scale-105 active:scale-95 transition-all">
                     <PanelLeftOpen size={24} className="text-brand-500" />
                 </button>
@@ -531,10 +564,10 @@ const App: React.FC = () => {
         )}
 
         {!isCustomer && (
-          <div className="lg:hidden bg-slate-900 text-white p-5 flex items-center justify-between shrink-0 shadow-lg z-30">
+          <div className="lg:hidden bg-slate-900 text-white p-5 flex items-center ltr:justify-between rtl:justify-between shrink-0 shadow-lg z-30">
               <div className="flex items-center gap-4">
                   <button onClick={() => setIsMobileMenuOpen(true)} className="p-2.5 bg-slate-800 rounded-xl active:scale-95 transition-transform"><Menu size={24} /></button>
-                  <h1 className="font-black text-xl italic uppercase tracking-tighter">easyPOS</h1>
+                  <h1 className="font-black text-xl italic uppercase ltr:tracking-tighter rtl:tracking-tighter">easyPOS</h1>
               </div>
               <div className="w-10 h-10 rounded-2xl bg-brand-600 flex items-center justify-center font-black text-white">{user?.name.charAt(0).toUpperCase()}</div>
           </div>
@@ -566,7 +599,10 @@ const App: React.FC = () => {
                 onAddProduct={handleAddProduct} 
                 onUpdateProduct={handleUpdateProduct} 
                 onBulkUpdateProduct={handleBulkUpdateProduct} 
-                onDeleteProduct={handleDeleteProduct} 
+                onDeleteProduct={handleDeleteProduct}
+                onAddCategory={handleAddCategory}
+                onUpdateCategory={handleUpdateCategory}
+                onDeleteCategory={handleDeleteCategory}
                 initialTab={currentView === AppView.CATEGORIES ? 'categories' : 'products'} 
                 onGoBack={() => setCurrentView(AppView.POS)} 
                 t={t} 
