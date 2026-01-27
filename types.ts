@@ -11,10 +11,11 @@ export enum AppView {
   ORDERS = 'ORDERS',
   PRINT_BARCODE = 'PRINT_BARCODE',
   CUSTOMER_PORTAL = 'CUSTOMER_PORTAL',
-  BOOKINGS = 'BOOKINGS'
+  BOOKINGS = 'BOOKINGS',
+  VENDOR_PANEL = 'VENDOR_PANEL'
 }
 
-export type UserRole = 'ADMIN' | 'MANAGER' | 'STAFF' | 'CASHIER' | 'CUSTOMER';
+export type UserRole = 'ADMIN' | 'MANAGER' | 'STAFF' | 'CASHIER' | 'CUSTOMER' | 'VENDOR' | 'VENDOR_STAFF';
 export type Language = 'en' | 'ar' | 'hi';
 
 export interface Translations {
@@ -41,6 +42,7 @@ export interface Product {
   color?: string;
   hasVariants?: boolean;
   variants?: ProductVariant[];
+  vendorId?: string; // Links product to a specific vendor
 }
 
 export interface CartItem extends Product {
@@ -90,6 +92,8 @@ export interface User {
   avatar?: string;
   customerAvatar?: string; // The "Real Avatar" image for try-ons
   tryOnCache?: Record<string, string>; // Maps ProductID -> GeneratedResultBase64
+  vendorId?: string; // For Vendor/Vendor Staff accounts
+  vendorStaffLimit?: number; // Quota set by Admin
 }
 
 export interface StoreSettings {

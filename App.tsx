@@ -13,6 +13,7 @@ import { PrintBarcode } from './components/PrintBarcode';
 import { ClawdBot } from './components/ClawdBot';
 import { CustomerPortal } from './components/CustomerPortal';
 import { Bookings } from './components/Bookings';
+import { VendorPanel } from './components/VendorPanel';
 import { AppView, Product, Sale, CartItem, User, StoreSettings, Language, Booking } from './types';
 import { INITIAL_PRODUCTS, INITIAL_USERS } from './constants';
 import { translations } from './translations';
@@ -51,11 +52,9 @@ const App: React.FC = () => {
     visitorAccessCode: '2026'
   });
 
-  // System Owner Identification
   const SYSTEM_OWNER_EMAIL = 'zahratalsawsen1@gmail.com';
   const isSystemOwner = user?.email?.toLowerCase() === SYSTEM_OWNER_EMAIL || user?.id === 'admin_1';
 
-  // Navigation Logic
   const navigateTo = useCallback((view: AppView) => {
     if (view === currentView) return;
     setNavigationHistory(prev => [...prev, currentView]);
@@ -70,12 +69,13 @@ const App: React.FC = () => {
       setNavigationHistory(prev);
       setCurrentView(lastView!);
     } else {
-      // Default fallback
-      setCurrentView(user?.role === 'CUSTOMER' ? AppView.CUSTOMER_PORTAL : AppView.POS);
+      let defaultView = AppView.POS;
+      if (user?.role === 'CUSTOMER') defaultView = AppView.CUSTOMER_PORTAL;
+      if (user?.role === 'VENDOR' || user?.role === 'VENDOR_STAFF') defaultView = AppView.VENDOR_PANEL;
+      setCurrentView(defaultView);
     }
   }, [navigationHistory, user]);
 
-  // Track Page Views
   useEffect(() => {
     logPageView(currentView);
   }, [currentView]);
@@ -92,7 +92,6 @@ const App: React.FC = () => {
     document.documentElement.lang = language;
   }, [language]);
 
-  // Firebase Auth Observer
   useEffect(() => {
     if (!auth) {
         setIsAuthChecking(false);
@@ -101,9 +100,8 @@ const App: React.FC = () => {
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
       if (fbUser) {
         const adminEmails = ['zahratalsawsen1@gmail.com', 'extbuy.om@gmail.com'];
-        const adminUids = ['bFNTudFaGscUVu30Mcswqp0D5Yj1', 'rZB128VtiNYx92BpG3fCU62l7Kr1'];
         const userEmail = fbUser.email?.toLowerCase() || '';
-        const isSystemAdmin = adminEmails.includes(userEmail) || adminUids.includes(fbUser.uid);
+        const isSystemAdmin = adminEmails.includes(userEmail);
         
         const restoredUser: User = {
           id: fbUser.uid,
@@ -122,7 +120,6 @@ const App: React.FC = () => {
   }, []);
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
-  
   const toggleLanguage = () => {
     setLanguage(prev => {
         if (prev === 'en') return 'ar';
@@ -168,8 +165,7 @@ const App: React.FC = () => {
         const unsubUsers = onSnapshot(collection(db, 'users'), async (snapshot) => {
             const data = snapshot.docs.map(doc => doc.data() as User);
             setUsers(data);
-            const adminReqExists = data.some(u => u.username === 'Admin' || u.id === 'admin_req_1');
-            if (!adminReqExists && !snapshot.metadata.fromCache) {
+            if (data.length === 0 && !snapshot.metadata.fromCache) {
                 INITIAL_USERS.forEach(async (u) => {
                     await setDoc(doc(db!, 'users', u.id), u, { merge: true });
                 });
@@ -426,16 +422,12 @@ const App: React.FC = () => {
       const targetUser = users.find(u => u.id === id);
       if (!targetUser) return;
       if (targetUser.role === 'ADMIN' && !isSystemOwner) {
-          alert("SECURITY ALERT: Only the System Owner (zahratalsawsen1@gmail.com) can remove Admin nodes.");
+          alert("SECURITY ALERT: Only the System Owner can remove Admin nodes.");
           return;
       }
-      if (id === 'admin_1' || id === 'bFNTudFaGscUVu30Mcswqp0D5Yj1') {
-          alert("SECURITY ALERT: Primary System Admin nodes are immutable.");
-          return;
-      }
-      if (!window.confirm('PERMANENT ACTION: Delete operator access? This cannot be undone.')) return;
+      if (!window.confirm('PERMANENT ACTION: Delete operator access?')) return;
       if (db) {
-          try { await deleteDoc(doc(db, 'users', id)); } catch (e) { alert("Error deleting user from cloud."); }
+          try { await deleteDoc(doc(db, 'users', id)); } catch (e) { alert("Error deleting user."); }
       } else {
           const updated = users.filter(u => u.id !== id);
           setUsers(updated);
@@ -483,7 +475,10 @@ const App: React.FC = () => {
       <Login 
         onLogin={(u) => { 
           setUser(u); 
-          setCurrentView(u.role === 'CUSTOMER' ? AppView.CUSTOMER_PORTAL : AppView.POS);
+          let landingView = AppView.POS;
+          if (u.role === 'CUSTOMER') landingView = AppView.CUSTOMER_PORTAL;
+          else if (u.role === 'VENDOR' || u.role === 'VENDOR_STAFF') landingView = AppView.VENDOR_PANEL;
+          setCurrentView(landingView);
           logUserLogin('CREDENTIALS');
         }} 
         users={users} 
@@ -549,33 +544,28 @@ const App: React.FC = () => {
                   <CloudOff size={12} /> {t('offlineMode')}
                 </div>
               )}
-              {!isFirebaseConfigured && isOnline && (
-                <div className="bg-orange-500 text-white text-[9px] font-black px-6 py-1 rounded-b-xl shadow-lg cursor-pointer flex items-center gap-2 animate-pulse pointer-events-auto" onClick={() => navigateTo(AppView.SETTINGS)}>
-                  <AlertTriangle size={12} /> SYNC REQUIRED (TAP)
-                </div>
-              )}
-          </div>
-        )}
-
-        {!isCustomer && !isSidebarVisible && (
-            <div className="hidden lg:block absolute ltr:top-6 rtl:top-6 ltr:left-6 rtl:right-6 z-[60] no-print">
-                <button onClick={() => setIsSidebarVisible(true)} className="p-3 bg-white dark:bg-slate-900 text-slate-800 dark:text-white rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 hover:scale-105 active:scale-95 transition-all">
-                    <PanelLeftOpen size={24} className="text-brand-500" />
-                </button>
-            </div>
-        )}
-
-        {!isCustomer && (
-          <div className="lg:hidden bg-slate-900 text-white p-5 flex items-center ltr:justify-between rtl:justify-between shrink-0 shadow-lg z-30">
-              <div className="flex items-center gap-4">
-                  <button onClick={() => setIsMobileMenuOpen(true)} className="p-2.5 bg-slate-800 rounded-xl active:scale-95 transition-transform"><Menu size={24} /></button>
-                  <h1 className="font-black text-xl italic uppercase ltr:tracking-tighter rtl:tracking-tighter">easyPOS</h1>
-              </div>
-              <div className="w-10 h-10 rounded-2xl bg-brand-600 flex items-center justify-center font-black text-white">{user?.name.charAt(0).toUpperCase()}</div>
           </div>
         )}
 
         <div className="flex-1 overflow-hidden relative">
+            {currentView === AppView.VENDOR_PANEL && user && (
+              <VendorPanel 
+                products={products}
+                sales={sales}
+                users={users}
+                currentUser={user}
+                onAddProduct={handleAddProduct}
+                onUpdateProduct={handleUpdateProduct}
+                onDeleteProduct={handleDeleteProduct}
+                onBulkUpdateProduct={handleBulkUpdateProduct}
+                onAddUser={handleAddUser}
+                onUpdateUser={handleUpdateUser}
+                onDeleteUser={handleDeleteUser}
+                language={language}
+                t={t}
+                onGoBack={handleGoBack}
+              />
+            )}
             {currentView === AppView.CUSTOMER_PORTAL && (
               <CustomerPortal 
                 products={products} 
@@ -653,29 +643,9 @@ const App: React.FC = () => {
             {currentView === AppView.PRINT_BARCODE && (
               <PrintBarcode products={products} storeSettings={storeSettings} onGoBack={handleGoBack} language={language} t={t} />
             )}
-            {currentView === AppView.LOGIN && !user && (
-              <Login 
-                onLogin={(u) => { 
-                  setUser(u); 
-                  setCurrentView(u.role === 'CUSTOMER' ? AppView.CUSTOMER_PORTAL : AppView.POS); 
-                  logUserLogin('CREDENTIALS');
-                }} 
-                users={users} 
-                t={t} 
-                isDarkMode={isDarkMode} 
-                toggleTheme={toggleTheme} 
-                language={language} 
-                toggleLanguage={toggleLanguage}
-                onEnterAsGuest={() => {
-                  navigateTo(AppView.CUSTOMER_PORTAL);
-                  logUserLogin('GUEST');
-                }}
-                storeSettings={storeSettings}
-              />
-            )}
         </div>
 
-        {user && !isCustomer && (
+        {user && !isCustomer && user.role !== 'VENDOR' && user.role !== 'VENDOR_STAFF' && (
             <ClawdBot 
                 products={products} 
                 sales={sales} 

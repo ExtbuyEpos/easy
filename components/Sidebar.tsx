@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ShoppingCart, Package, BarChart3, LogOut, ScanLine, Settings, MessageCircle, X, History, Wifi, WifiOff, RefreshCw, List, Moon, Sun, Globe, LayoutDashboard, ChevronLeft, ChevronRight, QrCode, CalendarDays } from 'lucide-react';
+import { ShoppingCart, Package, BarChart3, LogOut, ScanLine, Settings, MessageCircle, X, History, Wifi, WifiOff, RefreshCw, List, Moon, Sun, Globe, LayoutDashboard, ChevronLeft, ChevronRight, QrCode, CalendarDays, Store } from 'lucide-react';
 import { AppView, User, UserRole, Language } from '../types';
 
 interface SidebarProps {
@@ -24,6 +24,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   
   const getNavItems = (role: UserRole) => {
+    // VENDOR / VENDOR_STAFF: Only show Vendor Panel and Basic Logins
+    if (role === 'VENDOR' || role === 'VENDOR_STAFF') {
+      return [
+        { view: AppView.VENDOR_PANEL, label: t('vendorPanel'), icon: Store },
+      ];
+    }
+
     const items = [
       { view: AppView.POS, label: t('posTerminal'), icon: ShoppingCart },
       { view: AppView.BOOKINGS, label: t('bookings'), icon: CalendarDays },
@@ -44,7 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       items.push({ view: AppView.PRINT_BARCODE, label: t('printBarcode'), icon: QrCode });
     }
 
-    // MANAGER & ADMIN (Managers can see reports, as requested)
+    // MANAGER & ADMIN
     if (['ADMIN', 'MANAGER'].includes(role)) {
       items.push({ view: AppView.REPORTS, label: t('reportsAi'), icon: BarChart3 });
     }
@@ -79,7 +86,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
            </div>
         </div>
         
-        {/* Toggle / Close Button for both Mobile and Desktop */}
         {onClose && (
             <button 
                 onClick={onClose} 
@@ -143,7 +149,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Footer System Actions */}
       <div className="p-4 pt-6 border-t border-slate-800/50 dark:border-slate-900 space-y-4">
         
-        {/* Toggle Utility Buttons */}
         <div className="grid grid-cols-2 gap-3">
             <button 
                 onClick={toggleTheme}
@@ -163,7 +168,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
         </div>
 
-        {/* Dynamic Sync Status Card */}
         <div className={`p-4 rounded-[24px] transition-all border shadow-lg ${isOnline ? 'bg-emerald-950/10 border-emerald-900/30 text-emerald-400' : 'bg-red-950/10 border-red-900/30 text-red-400'}`}>
              <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-xl ${isOnline ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
@@ -185,7 +189,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
              </div>
         </div>
 
-        {/* Enhanced Logout Button */}
         <button
           onClick={onLogout}
           className="w-full flex items-center justify-center gap-3 px-6 py-4.5 rounded-[24px] text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all font-black text-xs uppercase tracking-[0.15em] border border-transparent hover:border-red-500/20 group"

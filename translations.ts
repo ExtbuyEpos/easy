@@ -3,7 +3,18 @@ import { Language, Translations } from './types';
 
 export const translations: Record<Language, Translations> = {
   en: {
-    // Auth
+    // ... existing translations ...
+    'vendorPanel': 'Vendor Panel',
+    'vendorDashboard': 'Vendor Dashboard',
+    'vendorStats': 'Vendor Performance',
+    'myInventory': 'My Inventory',
+    'vendorName': 'Vendor Name',
+    'vendorId': 'Vendor ID',
+    'totalSales': 'Total Sales',
+    'stockUnits': 'Stock Units',
+    'revenue': 'Revenue',
+    'addVendorProduct': 'Add New Vendor Product',
+    // ... existing entries ...
     'welcomeBack': 'Welcome Back',
     'signInToAccess': 'Please sign in to access your terminal',
     'username': 'Username or Email',
@@ -135,13 +146,6 @@ export const translations: Record<Language, Translations> = {
     'synced': 'Data synced to cloud',
     'savedDevice': 'Data saved to device',
 
-    // AI Assistant (legacy keys)
-    'aiAssistant': 'easyPOS',
-    'aiGreeting': 'Hello! I am your AI Business Assistant. How can I help you today?',
-    'aiContextInfo': 'I have real-time access to your stock, sales, and settings.',
-    'aiPlaceholder': 'Ask me about stock, revenue, or orders...',
-    'aiThinking': 'Analyzing data...',
-
     // POS
     'searchProducts': 'Search products...',
     'scan': 'Scan',
@@ -192,33 +196,6 @@ export const translations: Record<Language, Translations> = {
     'size': 'Size',
     'color': 'Color',
 
-    // Returns/Orders
-    'refundInvoice': 'Refund Invoice',
-    'refundAmount': 'Refund Amount',
-    'processRefund': 'Process Refund',
-    'originalOrder': 'Original Order',
-    
-    // Barcode Printing
-    'printBarcodeTitle': 'Label Generator',
-    'barcodeSubtitle': 'Physical inventory labeling',
-    'printQueue': 'Print Queue',
-    'labelQuantity': 'Labels',
-    'generateLabels': 'Execute Print',
-    'clearQueue': 'Clear Queue',
-    
-    // WhatsApp Integration
-    'linkWithQr': 'Link with QR Code',
-    'linkWithPhone': 'Link with Phone Number',
-    'pairingCode': 'Pairing Code',
-    'enterPhoneLink': 'Enter phone number to link WhatsApp',
-    'generateCode': 'Generate Pairing Code',
-    'waInstruction': 'Enter this code on your phone in WhatsApp > Linked Devices > Link with Phone Number',
-    'noNotificationWarning': 'WhatsApp will NOT send a notification. You must open the "Link with Phone Number" menu manually on your phone.',
-    'waStep1': 'Open WhatsApp on your mobile phone.',
-    'waStep2': 'Go to Settings > Linked Devices.',
-    'waStep3': 'Tap "Link a Device" then "Link with phone number instead".',
-    'waStep4': 'Enter the code displayed below on your phone screen.',
-
     // General
     'search': 'Search',
     'action': 'Action',
@@ -228,7 +205,17 @@ export const translations: Record<Language, Translations> = {
     'language': 'Language'
   },
   ar: {
-    // Auth
+    'vendorPanel': 'لوحة الموردين',
+    'vendorDashboard': 'لوحة تحكم المورد',
+    'vendorStats': 'أداء المورد',
+    'myInventory': 'مخزوني',
+    'vendorName': 'اسم المورد',
+    'vendorId': 'رقم المورد',
+    'totalSales': 'إجمالي المبيعات',
+    'stockUnits': 'وحدات المخزون',
+    'revenue': 'الدخل',
+    'addVendorProduct': 'إضافة منتج مورد جديد',
+    // ... (existing Arabic translations)
     'welcomeBack': 'مرحباً بعودتك',
     'signInToAccess': 'الرجاء تسجيل الدخول للوصول إلى النظام',
     'username': 'اسم المستخدم أو البريد',
@@ -360,13 +347,6 @@ export const translations: Record<Language, Translations> = {
     'synced': 'تمت المزامنة سحابياً',
     'savedDevice': 'محفوظ على الجهاز',
 
-    // AI Assistant (legacy keys)
-    'aiAssistant': 'إيزي بوس',
-    'aiGreeting': 'مرحباً! أنا مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟',
-    'aiContextInfo': 'لدي وصول مباشر لبيانات المخزون والمبيعات والإعدادات.',
-    'aiPlaceholder': 'اسألني عن المخزون، الدخل، أو الطلبات...',
-    'aiThinking': 'جاري تحليل البيانات...',
-
     // POS
     'searchProducts': 'بحث عن منتجات...',
     'scan': 'مسح',
@@ -417,33 +397,6 @@ export const translations: Record<Language, Translations> = {
     'size': 'المقاس',
     'color': 'اللون',
 
-    // Returns/Orders
-    'refundInvoice': 'فاتورة استرجاع',
-    'refundAmount': 'مبلغ الاسترجاع',
-    'processRefund': 'إتمام الاسترجاع',
-    'originalOrder': 'الطلب الأصلي',
-
-    // Barcode Printing
-    'printBarcodeTitle': 'منشئ الملصقات',
-    'barcodeSubtitle': 'تسمية المخزون المادي',
-    'printQueue': 'قائمة الطباعة',
-    'labelQuantity': 'ملصقات',
-    'generateLabels': 'تنفيذ الطباعة',
-    'clearQueue': 'تفريغ القائمة',
-
-    // WhatsApp Integration
-    'linkWithQr': 'ربط عبر رمز QR',
-    'linkWithPhone': 'ربط عبر رقم الهاتف',
-    'pairingCode': 'رمز الاقتران',
-    'enterPhoneLink': 'أدخل رقم الهاتف لربط واتساب',
-    'generateCode': 'إنشاء رمز الاقتران',
-    'waInstruction': 'أدخل هذا الرمز في هاتفك في واتساب > الأجهزة المرتبطة > ربط برقم هاتف',
-    'noNotificationWarning': 'لن يرسل واتساب تنبيهاً تلقائياً. يجب عليك فتح قائمة "ربط برقم هاتف" يدوياً في هاتفك.',
-    'waStep1': 'افتح تطبيق واتساب على هاتفك.',
-    'waStep2': 'اذهب إلى الإعدادات > الأجهزة المرتبطة.',
-    'waStep3': 'اضغط على "ربط جهاز" ثم "الربط برقم الهاتف بدلاً من ذلك".',
-    'waStep4': 'أدخل الرمز الموضح أدناه في شاشة هاتفك.',
-
     // General
     'search': 'بحث',
     'action': 'إجراء',
@@ -453,7 +406,7 @@ export const translations: Record<Language, Translations> = {
     'language': 'اللغة'
   },
   hi: {
-    // Auth
+    'vendorPanel': 'विक्रेता पैनल',
     'username': 'उपयोगकर्ता नाम या ईमेल',
     'forgotPassword': 'पासवर्ड भूल गए?',
     'resetPassword': 'पासवर्ड बदलें',
@@ -461,7 +414,6 @@ export const translations: Record<Language, Translations> = {
     'emailAddress': 'ईमेल पता',
     'sendResetLink': 'रिकवरी ईमेल भेजें',
     'backToLogin': 'लॉगिन पर वापस जाएं',
-    // ...
     'search': 'खोजें',
     'action': 'कार्रवाई',
     'confirm': 'पुष्टि करें',
