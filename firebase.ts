@@ -1,15 +1,15 @@
 
-import { initializeApp, FirebaseApp, getApps } from 'firebase/app';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { 
   getFirestore, 
-  Firestore, 
-  initializeFirestore, 
-  persistentLocalCache, 
-  persistentMultipleTabManager 
+  Firestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  initializeFirestore
 } from 'firebase/firestore';
 
-let app: FirebaseApp | undefined;
-let db: Firestore | undefined;
+let app: FirebaseApp;
+let db: Firestore;
 
 // Use the provided Firebase configuration
 const firebaseConfig = {
@@ -25,35 +25,40 @@ const savedConfigStr = localStorage.getItem('easyPOS_firebaseConfig');
 const finalConfig = savedConfigStr ? JSON.parse(savedConfigStr) : firebaseConfig;
 
 try {
-  // Check if an app is already initialized to avoid "duplicate app" errors
+  // Ensure the app is initialized only once
   if (!getApps().length) {
     app = initializeApp(finalConfig);
   } else {
-    app = getApps()[0];
+    app = getApp();
   }
 
-  // Initialize Firestore with modernized persistent cache settings
-  // This replaces enableIndexedDbPersistence for a more robust multi-tab experience
-  db = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager()
-    })
-  });
-} catch (e) {
-  console.error("CRITICAL: Failed to initialize Firebase or Firestore:", e);
-  // Fallback to basic firestore if initialization fails (e.g. storage quota exceeded)
+  /**
+   * The error "Component firestore has not been registered yet" often happens 
+   * when Firestore functions are called before the service registers with the app hub.
+   * In modular SDK v9+, just calling getFirestore(app) is the correct way to register.
+   */
   try {
-    if (app) db = getFirestore(app);
-  } catch (fallbackError) {
-    console.error("CRITICAL: Firebase fallback initialization also failed:", fallbackError);
+    // Attempt to initialize with modern persistence first
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      })
+    });
+  } catch (initError) {
+    // Fallback if initializeFirestore has already been called or fails
+    db = getFirestore(app);
   }
+} catch (e) {
+  console.error("CRITICAL: Failed to initialize Firebase:", e);
+  // Fallback db to prevent app-wide crashes
+  // @ts-ignore
+  db = null;
 }
 
 export { db, app };
 
 export const saveFirebaseConfig = (configStr: string) => {
   try {
-    // Validate JSON
     JSON.parse(configStr);
     localStorage.setItem('easyPOS_firebaseConfig', configStr);
     return true;

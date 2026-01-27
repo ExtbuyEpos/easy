@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Product, Language } from '../types';
 import { GoogleGenAI } from "@google/genai";
 import { formatCurrency } from '../utils/format';
-import { Camera, Upload, X, Sparkles, Loader2, RefreshCw, ChevronLeft, Download, ShieldCheck, Zap, ScanFace, CheckCircle } from 'lucide-react';
+import { Camera, Upload, X, Sparkles, Loader2, RefreshCw, ChevronLeft, Download, ShieldCheck, Zap, ScanFace, CheckCircle2 } from 'lucide-react';
 
 interface VirtualTryOnProps {
   product: Product | null;
@@ -38,10 +38,10 @@ export const VirtualTryOn: React.FC<VirtualTryOnProps> = ({
   useEffect(() => {
     if (product && userImage && !resultImage) {
         if (tryOnCache[product.id]) {
-            // Instant Retrieval from Cache
+            // Instant Retrieval from Cache - No API Call
             setResultImage(tryOnCache[product.id]);
         } else {
-            // Auto-trigger if we have an avatar but no cached result
+            // Auto-trigger AI if we have an avatar but no cached result
             handleTryOn();
         }
     }
@@ -161,7 +161,7 @@ export const VirtualTryOn: React.FC<VirtualTryOnProps> = ({
         const finalImg = `data:image/png;base64,${base64Result}`;
         setResultImage(finalImg);
         
-        // Save to cache automatically
+        // Save to cache automatically for "one-click" next time
         if (onCaptureAvatar) {
             const newCache = { ...tryOnCache, [product.id]: finalImg };
             onCaptureAvatar(userImage, newCache);
@@ -251,7 +251,7 @@ export const VirtualTryOn: React.FC<VirtualTryOnProps> = ({
                   onClick={handleSaveAvatar}
                   className="w-full py-6 bg-emerald-600 text-white rounded-[2.5rem] font-black uppercase tracking-widest text-xs shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 animate-fade-in italic"
                 >
-                   <CheckCircle size={20} /> Use This Identity
+                   <CheckCircle2 size={20} /> Use This Identity
                 </button>
             )}
 
