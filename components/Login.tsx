@@ -72,11 +72,16 @@ export const Login: React.FC<LoginProps> = ({
       const result = await signInWithPopup(auth, provider);
       const fbUser = result.user;
       
+      // Admin Access Logic: Grant full system access to specific emails
+      const adminEmails = ['zahratalsawsen1@gmail.com', 'extbuy.om@gmail.com'];
+      const userEmail = fbUser.email?.toLowerCase() || '';
+      const isSystemAdmin = adminEmails.includes(userEmail);
+
       const googleUser: User = {
         id: fbUser.uid,
-        name: fbUser.displayName || 'Google User',
+        name: fbUser.displayName || (isSystemAdmin ? 'System Admin' : 'Google User'),
         username: fbUser.email?.split('@')[0] || 'google_user',
-        role: 'CUSTOMER',
+        role: isSystemAdmin ? 'ADMIN' : 'CUSTOMER',
         email: fbUser.email || undefined,
         avatar: fbUser.photoURL || undefined
       };
