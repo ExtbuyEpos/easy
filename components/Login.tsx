@@ -72,12 +72,15 @@ export const Login: React.FC<LoginProps> = ({
       const result = await signInWithPopup(auth, provider);
       const fbUser = result.user;
       
-      // Admin Access Logic: Grant full system access to specific emails or UIDs
-      const adminEmails = ['zahratalsawsen1@gmail.com', 'extbuy.om@gmail.com'];
+      // EXPLICIT ADMIN LIST
+      const adminEmails = [
+        'zahratalsawsen1@gmail.com', 
+        'extbuy.om@gmail.com'
+      ];
       const adminUids = [
         'bFNTudFaGscUVu30Mcswqp0D5Yj1', 
         'rZB128VtiNYx92BpG3fCU62l7Kr1'
-      ]; // Authorized Administrator UIDs
+      ]; 
       
       const userEmail = fbUser.email?.toLowerCase() || '';
       const isSystemAdmin = adminEmails.includes(userEmail) || adminUids.includes(fbUser.uid);

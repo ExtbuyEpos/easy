@@ -225,10 +225,12 @@ export const CustomerBot: React.FC<CustomerBotProps> = ({
     setInput('');
     setIsTyping(true);
     try {
+      // Create a new instance right before use to ensure updated API Key
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+        // Use string for contents to follow guidelines
+        contents: userMessage,
         config: { systemInstruction: getSystemInstruction(), temperature: 0.8 }
       });
       const aiText = response.text || "Sorry, I couldn't process your request.";
@@ -325,7 +327,7 @@ export const CustomerBot: React.FC<CustomerBotProps> = ({
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="p-6 bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-white/5 shrink-0">
+          <div className="p-6 bg-white dark:bg-slate-955 border-t border-slate-100 dark:border-white/5 shrink-0">
               {!isVoiceActive && (
                   <div className="space-y-4">
                     <form onSubmit={handleSendMessage} className="flex gap-3">

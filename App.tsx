@@ -16,14 +16,16 @@ import { Bookings } from './components/Bookings';
 import { AppView, Product, Sale, CartItem, User, StoreSettings, Language, Booking } from './types';
 import { INITIAL_PRODUCTS, INITIAL_USERS } from './constants';
 import { translations } from './translations';
-import { Menu, CloudOff, AlertTriangle, PanelLeftOpen } from 'lucide-react';
+import { Menu, CloudOff, AlertTriangle, PanelLeftOpen, Loader2 } from 'lucide-react';
 import { logPageView, logPurchase, logUserLogin } from './services/analyticsService';
 
-import { db } from './firebase';
+import { db, auth } from './firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, writeBatch, getDoc } from 'firebase/firestore';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [currentView, setCurrentView] = useState<AppView>(AppView.POS);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -63,6 +65,36 @@ const App: React.FC = () => {
     document.documentElement.dir = (language === 'ar') ? 'rtl' : 'ltr';
     document.documentElement.lang = language;
   }, [language]);
+
+  // Firebase Auth Observer for session persistence
+  useEffect(() => {
+    if (!auth) {
+        setIsAuthChecking(false);
+        return;
+    }
+    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+      if (fbUser) {
+        // Recover Admin state from explicit list
+        const adminEmails = ['zahratalsawsen1@gmail.com', 'extbuy.om@gmail.com'];
+        const adminUids = ['bFNTudFaGscUVu30Mcswqp0D5Yj1', 'rZB128VtiNYx92BpG3fCU62l7Kr1'];
+        const userEmail = fbUser.email?.toLowerCase() || '';
+        const isSystemAdmin = adminEmails.includes(userEmail) || adminUids.includes(fbUser.uid);
+        
+        const restoredUser: User = {
+          id: fbUser.uid,
+          name: fbUser.displayName || (isSystemAdmin ? 'System Admin' : 'Google User'),
+          username: fbUser.email?.split('@')[0] || 'google_user',
+          role: isSystemAdmin ? 'ADMIN' : 'CUSTOMER',
+          email: fbUser.email || undefined,
+          avatar: fbUser.photoURL || undefined
+        };
+        setUser(restoredUser);
+        if (restoredUser.role === 'CUSTOMER') setCurrentView(AppView.CUSTOMER_PORTAL);
+      }
+      setIsAuthChecking(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
   
@@ -328,6 +360,15 @@ const App: React.FC = () => {
       }
   };
 
+  const handleUpdateUser = async (updatedUser: User) => {
+      if (db) await setDoc(doc(db, 'users', updatedUser.id), updatedUser, { merge: true });
+      else {
+          const updated = users.map(u => u.id === updatedUser.id ? updatedUser : u);
+          setUsers(updated);
+          localStorage.setItem('easyPOS_users', JSON.stringify(updated));
+      }
+  };
+
   const handleDeleteUser = async (id: string) => {
       if (!window.confirm('Delete operator access?')) return;
       if (db) await deleteDoc(doc(db, 'users', id));
@@ -360,12 +401,21 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (auth) await signOut(auth);
     setUser(null);
     setCurrentView(AppView.LOGIN);
   };
 
   const isCustomer = user?.role === 'CUSTOMER';
+
+  if (isAuthChecking) {
+      return (
+          <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+              <Loader2 className="animate-spin text-brand-500" size={48} />
+          </div>
+      );
+  }
 
   if (!user && currentView !== AppView.CUSTOMER_PORTAL) {
     return (
@@ -520,6 +570,7 @@ const App: React.FC = () => {
                 products={products} 
                 sales={sales} 
                 onAddUser={handleAddUser} 
+                onUpdateUser={handleUpdateUser}
                 onDeleteUser={handleDeleteUser} 
                 onLogout={handleLogout}
                 currentUser={user!} 

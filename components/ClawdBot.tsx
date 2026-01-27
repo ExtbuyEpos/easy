@@ -255,10 +255,12 @@ export const ClawdBot: React.FC<ClawdBotProps> = ({
     setIsTyping(true);
 
     try {
+      // Create a new instance right before use to ensure updated API Key
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+        // Use string for contents to follow guidelines
+        contents: userMessage,
         config: {
             systemInstruction: getSystemInstruction(),
             temperature: 0.8,

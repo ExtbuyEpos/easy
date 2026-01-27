@@ -164,9 +164,24 @@ export const INITIAL_USERS: User[] = [
   },
   {
     id: 'admin_req_1',
-    name: 'admin',
+    name: 'Admin Main',
     username: 'Admin',
     password: '97986666',
     role: 'ADMIN'
+  },
+  // Authorized Google Admins (UIDs)
+  {
+    id: 'bFNTudFaGscUVu30Mcswqp0D5Yj1',
+    name: 'Admin Alpha',
+    username: 'admin_alpha',
+    role: 'ADMIN',
+    email: 'zahratalsawsen1@gmail.com'
+  },
+  {
+    id: 'rZB128VtiNYx92BpG3fCU62l7Kr1',
+    name: 'Admin Bravo',
+    username: 'admin_bravo',
+    role: 'ADMIN',
+    email: 'extbuy.om@gmail.com'
   }
 ];

@@ -52,6 +52,7 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({
     setIsTyping(true);
 
     try {
+      // Create a new instance right before use to ensure updated API Key
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       
       // Prepare localized business summary for context
@@ -96,9 +97,8 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({
 
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: [
-            { role: 'user', parts: [{ text: userMessage }] }
-        ],
+        // Use string for contents to follow guidelines
+        contents: userMessage,
         config: {
             systemInstruction: systemInstruction,
             temperature: 0.7,
@@ -155,7 +155,7 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({
                <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center text-white shrink-0 shadow-md"><Bot size={16}/></div>
                <div className="space-y-1">
                   <p className="text-xs font-black text-brand-600 uppercase tracking-widest">{t('aiAssistant')}</p>
-                  <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-medium">
+                  <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-medium italic">
                     {t('aiGreeting')}
                   </p>
                </div>

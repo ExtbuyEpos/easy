@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { User, UserRole, Product, Sale, StoreSettings, Language, AppView } from '../types';
-import { Trash2, Plus, X, Receipt, ChevronLeft, Users, Zap, Globe, Heart, Database, Cloud, Bell, ShieldCheck, Share2, Clipboard, BarChart, MessageSquare, ExternalLink, RefreshCw, CheckCircle2, Upload, Image as ImageIcon, Key, LogOut, ShieldEllipsis, ShieldAlert } from 'lucide-react';
+import { Trash2, Plus, X, Receipt, ChevronLeft, Users, Zap, Globe, Heart, Database, Cloud, Bell, ShieldCheck, Share2, Clipboard, BarChart, MessageSquare, ExternalLink, RefreshCw, CheckCircle2, Upload, Image as ImageIcon, Key, LogOut, ShieldEllipsis, ShieldAlert, Edit2 } from 'lucide-react';
 import { formatNumber } from '../utils/format';
 import { requestNotificationPermission } from '../services/notificationService';
 
@@ -10,6 +10,7 @@ interface SettingsProps {
   products: Product[];
   sales: Sale[];
   onAddUser: (u: User) => void;
+  onUpdateUser: (u: User) => void;
   onDeleteUser: (id: string) => void;
   onLogout: () => void;
   currentUser: User;
@@ -23,30 +24,65 @@ interface SettingsProps {
 }
 
 export const Settings: React.FC<SettingsProps> = ({ 
-  users, onAddUser, onDeleteUser, onLogout, currentUser, storeSettings, onUpdateStoreSettings, onGoBack,
+  users, onAddUser, onUpdateUser, onDeleteUser, onLogout, currentUser, storeSettings, onUpdateStoreSettings, onGoBack,
   language, toggleLanguage, t = (k) => k, onNavigate
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [storeForm, setStoreForm] = useState<StoreSettings>(storeSettings);
   const [activeSettingsTab, setActiveSettingsTab] = useState<'GENERAL' | 'OPERATORS'>('GENERAL');
+  
+  const [editingOperatorId, setEditingOperatorId] = useState<string | null>(null);
   const [userFormData, setUserFormData] = useState<Partial<User>>({ name: '', username: '', password: '', role: 'CASHIER', employeeId: '' });
-  const [fcmToken, setFcmToken] = useState<string | null>(null);
-  const [isWaConnected, setIsWaConnected] = useState(localStorage.getItem('easyPOS_whatsappSession') === 'active');
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleAddUserSubmit = () => {
-      if(!userFormData.name || !userFormData.username || !userFormData.password) return alert("Required fields missing.");
-      const newUser: User = {
-          id: Date.now().toString(),
-          name: userFormData.name,
-          username: userFormData.username,
-          password: userFormData.password,
-          role: userFormData.role as UserRole,
-          employeeId: userFormData.employeeId || `EMP-${Math.floor(Math.random() * 9000) + 1000}`
-      };
-      onAddUser(newUser);
+  const handleOpenOperatorModal = (user?: User) => {
+      if (user) {
+          setEditingOperatorId(user.id);
+          setUserFormData({
+              name: user.name,
+              username: user.username,
+              password: user.password || '',
+              role: user.role,
+              employeeId: user.employeeId || ''
+          });
+      } else {
+          setEditingOperatorId(null);
+          setUserFormData({ name: '', username: '', password: '', role: 'CASHIER', employeeId: '' });
+      }
+      setIsModalOpen(true);
+  };
+
+  const handleUserSubmit = () => {
+      if(!userFormData.name || !userFormData.username || (!editingOperatorId && !userFormData.password)) {
+          return alert("Required fields missing.");
+      }
+
+      if (editingOperatorId) {
+          const updatedUser: User = {
+              ...users.find(u => u.id === editingOperatorId)!,
+              name: userFormData.name!,
+              username: userFormData.username!,
+              password: userFormData.password,
+              role: userFormData.role as UserRole,
+              employeeId: userFormData.employeeId
+          };
+          onUpdateUser(updatedUser);
+      } else {
+          const newUser: User = {
+              id: Date.now().toString(),
+              name: userFormData.name!,
+              username: userFormData.username!,
+              password: userFormData.password!,
+              role: userFormData.role as UserRole,
+              employeeId: userFormData.employeeId || `EMP-${Math.floor(Math.random() * 9000) + 1000}`
+          };
+          onAddUser(newUser);
+      }
+      
       setIsModalOpen(false);
       setUserFormData({ name: '', username: '', password: '', role: 'CASHIER', employeeId: '' });
+      setEditingOperatorId(null);
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -182,7 +218,7 @@ export const Settings: React.FC<SettingsProps> = ({
         <div className="bg-white dark:bg-slate-900 rounded-[3.5rem] shadow-xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-fade-in">
             <div className="p-10 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/30 dark:bg-slate-900/10">
                 <h4 className="text-2xl font-black italic uppercase tracking-tighter dark:text-white">{t('activeOperators')}</h4>
-                <button onClick={() => setIsModalOpen(true)} className="px-8 py-4 bg-brand-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 flex items-center gap-3"><Plus size={18} /> {t('addNewOperator')}</button>
+                <button onClick={() => handleOpenOperatorModal()} className="px-8 py-4 bg-brand-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 flex items-center gap-3"><Plus size={18} /> {t('addNewOperator')}</button>
             </div>
             <table className="w-full text-left">
                 <thead className="bg-slate-50 dark:bg-slate-800 text-slate-400 font-black uppercase text-[9px] tracking-widest"><tr>
@@ -194,7 +230,12 @@ export const Settings: React.FC<SettingsProps> = ({
                             <td className="p-10 font-mono text-xs text-slate-400 font-black">{u.employeeId ? formatNumber(u.employeeId.split('-')[1], language) : '٠'}</td>
                             <td className="p-10 font-black text-slate-900 dark:text-white">{u.name} <span className="block text-[9px] text-slate-400 uppercase tracking-widest mt-1">@{u.username}</span></td>
                             <td className="p-10"><span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border-2 ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-600 border-purple-200' : 'bg-brand-100 text-brand-600 border-brand-200'}`}>{u.role}</span></td>
-                            <td className="p-10 text-right">{u.id !== currentUser.id && <button onClick={() => onDeleteUser(u.id)} className="p-3 text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={20}/></button>}</td>
+                            <td className="p-10 text-right">
+                                <div className="flex justify-end gap-2">
+                                    <button onClick={() => handleOpenOperatorModal(u)} className="p-3 text-slate-300 hover:text-brand-500 transition-colors"><Edit2 size={20}/></button>
+                                    {u.id !== currentUser.id && <button onClick={() => onDeleteUser(u.id)} className="p-3 text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={20}/></button>}
+                                </div>
+                            </td>
                         </tr>
                     ))}
                 </tbody>
@@ -204,18 +245,31 @@ export const Settings: React.FC<SettingsProps> = ({
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-2xl flex items-center justify-center z-[120] p-4">
-            <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[4rem] shadow-2xl overflow-hidden animate-fade-in-up border border-slate-100 dark:border-slate-800">
-                <div className="p-10 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50"><h3 className="text-3xl font-black text-slate-900 dark:text-white italic uppercase tracking-tighter">{t('newOperator')}</h3><button onClick={() => setIsModalOpen(false)} className="p-3 bg-white dark:bg-slate-800 text-slate-400 rounded-2xl hover:text-red-500 transition-all"><X size={24}/></button></div>
-                <div className="p-10 space-y-6">
+            <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[4rem] shadow-2xl overflow-hidden animate-fade-in-up border border-slate-100 dark:border-slate-800 flex flex-col">
+                <div className="p-10 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+                    <h3 className="text-3xl font-black text-slate-900 dark:text-white italic uppercase tracking-tighter">
+                        {editingOperatorId ? 'Update Operator' : t('newOperator')}
+                    </h3>
+                    <button onClick={() => setIsModalOpen(false)} className="p-3 bg-white dark:bg-slate-800 text-slate-400 rounded-2xl hover:text-red-500 transition-all"><X size={24}/></button>
+                </div>
+                <div className="p-10 space-y-6 overflow-y-auto max-h-[70vh] custom-scrollbar">
                     <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('fullLegalName')}</label><input type="text" value={userFormData.name} onChange={e => setUserFormData({...userFormData, name: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white" placeholder={t('name')} /></div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('username')}</label><input type="text" value={userFormData.username} onChange={e => setUserFormData({...userFormData, username: e.target.value.toLowerCase()})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black dark:text-white" placeholder="username" /></div>
-                        <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('securityRole')}</label><select value={userFormData.role} onChange={e => setUserFormData({...userFormData, role: e.target.value as UserRole})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black dark:text-white text-[10px] uppercase tracking-widest"><option value="CASHIER">Cashier</option><option value="MANAGER">Manager</option><option value="STAFF">Inventory Staff</option></select></div>
+                        <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('securityRole')}</label><select value={userFormData.role} onChange={e => setUserFormData({...userFormData, role: e.target.value as UserRole})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black dark:text-white text-[10px] uppercase tracking-widest"><option value="CASHIER">Cashier</option><option value="MANAGER">Manager</option><option value="STAFF">Inventory Staff</option><option value="ADMIN">Admin</option></select></div>
                     </div>
                     <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('employeeId')} (Optional)</label><input type="text" value={userFormData.employeeId} onChange={e => setUserFormData({...userFormData, employeeId: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white" placeholder="E.g. EMP-101" /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('accessPassword')}</label><input type="password" value={userFormData.password} onChange={e => setUserFormData({...userFormData, password: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white" placeholder="••••••••" /></div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('accessPassword')} {editingOperatorId && '(Optional)'}</label>
+                        <input type="password" value={userFormData.password} onChange={e => setUserFormData({...userFormData, password: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white" placeholder="••••••••" />
+                    </div>
                 </div>
-                <div className="p-10 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 flex gap-4"><button onClick={() => setIsModalOpen(false)} className="flex-1 py-5 text-slate-500 font-black uppercase tracking-widest text-[10px]">{t('cancel')}</button><button onClick={handleAddUserSubmit} className="flex-[2] py-5 bg-brand-600 text-white font-black uppercase tracking-widest text-[10px] rounded-[2rem] shadow-xl hover:bg-brand-500 transition-all">{t('authorizeOperator')}</button></div>
+                <div className="p-10 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 flex gap-4">
+                    <button onClick={() => setIsModalOpen(false)} className="flex-1 py-5 text-slate-500 font-black uppercase tracking-widest text-[10px]">{t('cancel')}</button>
+                    <button onClick={handleUserSubmit} className="flex-[2] py-5 bg-brand-600 text-white font-black uppercase tracking-widest text-[10px] rounded-[2rem] shadow-xl hover:bg-brand-500 transition-all">
+                        {editingOperatorId ? 'Update Identity' : t('authorizeOperator')}
+                    </button>
+                </div>
             </div>
         </div>
       )}
