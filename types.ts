@@ -80,6 +80,8 @@ export interface StoreSettings {
   taxRate: number;
   taxName: string;
   autoPrint: boolean;
+  cloudflareAiUrl?: string; // Endpoint for Cloudflare Workers AI
+  hackClubAiUrl?: string; // Endpoint for Hack Club AI
 }
 
 export interface StockAdjustment {

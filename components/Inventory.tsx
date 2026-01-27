@@ -1,9 +1,11 @@
 
 import React, { useState, useRef } from 'react';
-import { Product, User, Language } from '../types';
-import { Plus, Search, Trash2, Edit2, Save, X, Image as ImageIcon, RefreshCw, Upload, Package, AlertCircle, ChevronLeft, TrendingUp, DollarSign, List, Grid, Check, ArrowRightLeft } from 'lucide-react';
+import { Product, User, Language, StoreSettings } from '../types';
+import { Plus, Search, Trash2, Edit2, Save, X, Image as ImageIcon, RefreshCw, Upload, Package, AlertCircle, ChevronLeft, TrendingUp, DollarSign, List, Grid, Check, ArrowRightLeft, Sparkles, Loader2, Heart } from 'lucide-react';
 import { CURRENCY } from '../constants';
 import { formatNumber, formatCurrency } from '../utils/format';
+import { generateImageWithCloudflare } from '../services/cloudflareAiService';
+import { generateImageWithHackClub } from '../services/hackClubAiService';
 
 interface InventoryProps {
   products: Product[];
@@ -20,12 +22,13 @@ interface InventoryProps {
   t?: (key: string) => string;
   currentUser?: User;
   language: Language;
+  storeSettings?: StoreSettings;
 }
 
 export const Inventory: React.FC<InventoryProps> = ({ 
   products, categories = [], onAddProduct, onUpdateProduct, onDeleteProduct,
   onAddCategory, initialTab = 'products', onGoBack, t = (k) => k,
-  currentUser, language
+  currentUser, language, storeSettings
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -33,6 +36,8 @@ export const Inventory: React.FC<InventoryProps> = ({
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [isGeneratingAiImage, setIsGeneratingAiImage] = useState(false);
+  const [aiEngine, setAiEngine] = useState<'CLOUDFLARE' | 'HACKCLUB'>('CLOUDFLARE');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<Partial<Product>>({
@@ -82,6 +87,36 @@ export const Inventory: React.FC<InventoryProps> = ({
 
   const generateBarcode = () => {
     setFormData(prev => ({ ...prev, sku: `880${Date.now().toString().slice(-10)}` }));
+  };
+
+  const handleGenerateAiImage = async (engine: 'CLOUDFLARE' | 'HACKCLUB') => {
+    if (!formData.name) {
+      alert("Please enter a product name first to use as an AI prompt.");
+      return;
+    }
+    
+    const configUrl = engine === 'CLOUDFLARE' ? storeSettings?.cloudflareAiUrl : storeSettings?.hackClubAiUrl;
+    
+    if (!configUrl) {
+      alert(`${engine} URL not configured in Settings.`);
+      return;
+    }
+
+    setIsGeneratingAiImage(true);
+    setAiEngine(engine);
+    try {
+      let generatedImage = '';
+      if (engine === 'CLOUDFLARE') {
+        generatedImage = await generateImageWithCloudflare(configUrl, formData.name);
+      } else {
+        generatedImage = await generateImageWithHackClub(configUrl, formData.name);
+      }
+      setFormData(prev => ({ ...prev, image: generatedImage }));
+    } catch (err) {
+      alert("AI Generation failed. Check your Gateway URL.");
+    } finally {
+      setIsGeneratingAiImage(false);
+    }
   };
 
   const handleSave = () => {
@@ -209,7 +244,7 @@ export const Inventory: React.FC<InventoryProps> = ({
                    {filteredProducts.map(p => {
                       const margin = calculateMargin(p.costPrice, p.sellPrice);
                       return (
-                        <tr key={p.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 group transition-all">
+                        <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 group transition-all">
                           <td className="p-6 md:p-8">
                               <div className="flex items-center gap-5">
                                   <div className="w-14 h-14 md:w-20 md:h-20 rounded-[1.8rem] bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-50 dark:border-slate-700 shrink-0 shadow-sm">
@@ -340,7 +375,9 @@ export const Inventory: React.FC<InventoryProps> = ({
                                     {formData.image ? (
                                         <>
                                             <img src={formData.image} onError={handleImageError} className="w-full h-full object-contain p-6" alt="Preview" />
-                                            <button onClick={() => setFormData({...formData, image: ''})} className="absolute top-4 right-4 p-3 bg-red-500 text-white rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity shadow-xl"><Trash2 size={20}/></button>
+                                            <div className="absolute top-4 right-4 flex gap-2">
+                                              <button onClick={() => setFormData({...formData, image: ''})} className="p-3 bg-red-500 text-white rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity shadow-xl"><Trash2 size={20}/></button>
+                                            </div>
                                         </>
                                     ) : (
                                         <div className="flex flex-col items-center gap-3 opacity-20">
@@ -348,16 +385,47 @@ export const Inventory: React.FC<InventoryProps> = ({
                                             <span className="text-[10px] font-black uppercase tracking-[0.3em]">Drop Media Layer</span>
                                         </div>
                                     )}
+                                    {isGeneratingAiImage && (
+                                      <div className={`absolute inset-0 ${aiEngine === 'CLOUDFLARE' ? 'bg-brand-600/80' : 'bg-rose-600/80'} backdrop-blur-md flex flex-col items-center justify-center text-white z-20`}>
+                                          <Loader2 size={48} className="animate-spin mb-4" />
+                                          <p className="font-black uppercase tracking-widest text-[10px] animate-pulse">{t('aiGeneratingImage')}</p>
+                                      </div>
+                                    )}
                                 </div>
-                                <div className="flex gap-3">
+                                <div className="flex flex-wrap gap-3">
                                     <input 
                                         type="text" 
                                         value={formData.image && !formData.image.startsWith('data:') ? formData.image : ''} 
                                         onChange={e => setFormData({ ...formData, image: e.target.value })} 
                                         placeholder="Paste Public Image URL..." 
-                                        className="flex-1 p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-[11px] font-mono dark:text-white shadow-inner"
+                                        className="flex-1 min-w-[200px] p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-[11px] font-mono dark:text-white shadow-inner"
                                     />
-                                    <button onClick={() => fileInputRef.current?.click()} className="p-4 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl text-slate-400 hover:text-brand-600 active:scale-90 transition-all shadow-lg"><Upload size={24}/></button>
+                                    
+                                    <div className="flex gap-2">
+                                        {storeSettings?.cloudflareAiUrl && (
+                                          <button 
+                                            onClick={() => handleGenerateAiImage('CLOUDFLARE')}
+                                            disabled={isGeneratingAiImage}
+                                            title={t('useCloudflare')}
+                                            className="p-4 bg-brand-600 text-white rounded-2xl shadow-xl hover:bg-brand-500 transition-all active:scale-95 disabled:opacity-50"
+                                          >
+                                            <Sparkles size={24} />
+                                          </button>
+                                        )}
+                                        
+                                        {storeSettings?.hackClubAiUrl && (
+                                          <button 
+                                            onClick={() => handleGenerateAiImage('HACKCLUB')}
+                                            disabled={isGeneratingAiImage}
+                                            title={t('useHackClub')}
+                                            className="p-4 bg-rose-600 text-white rounded-2xl shadow-xl hover:bg-rose-500 transition-all active:scale-95 disabled:opacity-50"
+                                          >
+                                            <Heart size={24} className="fill-white" />
+                                          </button>
+                                        )}
+
+                                        <button onClick={() => fileInputRef.current?.click()} className="p-4 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl text-slate-400 hover:text-brand-600 active:scale-90 transition-all shadow-lg"><Upload size={24}/></button>
+                                    </div>
                                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
                                 </div>
                             </div>

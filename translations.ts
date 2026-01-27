@@ -27,6 +27,16 @@ export const translations: Record<Language, Translations> = {
     'loginWithGoogle': 'Sign in with Google',
     'continueAsGuest': 'Continue as Guest',
 
+    // AI Engines
+    'generateAiImage': 'AI Generate Image',
+    'aiGeneratingImage': 'AI generating...',
+    'cfAiUrl': 'Cloudflare AI Gateway URL',
+    'cfAiPlaceholder': 'https://your-worker.workers.dev',
+    'hcAiUrl': 'Hack Club AI Gateway URL',
+    'hcAiPlaceholder': 'https://hc-ai.yourproxy.com',
+    'useHackClub': 'Use Hack Club AI (Unlimited)',
+    'useCloudflare': 'Use Cloudflare AI',
+
     // Customer Portal
     'customerPortal': 'Shop',
     'virtualTryOn': 'Virtual Try-On',
@@ -171,6 +181,16 @@ export const translations: Record<Language, Translations> = {
     'codeSent': 'تم إرسال الرمز إلى',
     'loginWithGoogle': 'تسجيل الدخول بواسطة جوجل',
     'continueAsGuest': 'المتابعة كضيف',
+
+    // AI Engines
+    'generateAiImage': 'إنشاء صورة بالذكاء الاصطناعي',
+    'aiGeneratingImage': 'جاري الإنشاء بالذكاء الاصطناعي...',
+    'cfAiUrl': 'رابط بوابة Cloudflare AI',
+    'cfAiPlaceholder': 'https://your-worker.workers.dev',
+    'hcAiUrl': 'رابط بوابة Hack Club AI',
+    'hcAiPlaceholder': 'https://hc-ai.yourproxy.com',
+    'useHackClub': 'استخدام Hack Club AI (غير محدود)',
+    'useCloudflare': 'استخدام Cloudflare AI',
 
     // Customer Portal
     'customerPortal': 'المتجر',

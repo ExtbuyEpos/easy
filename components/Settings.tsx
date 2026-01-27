@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { User, UserRole, Product, Sale, StoreSettings, Language } from '../types';
-import { Trash2, Plus, X, Receipt, Image as ImageIcon, ChevronLeft, Shield, Users, Fingerprint } from 'lucide-react';
+import { Trash2, Plus, X, Receipt, Image as ImageIcon, ChevronLeft, Shield, Users, Fingerprint, Zap, Globe, Heart } from 'lucide-react';
 
 interface SettingsProps {
   users: User[];
@@ -63,6 +63,47 @@ export const Settings: React.FC<SettingsProps> = ({
                 <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tax Rate (%)</label><input type="number" value={storeForm.taxRate} onChange={e => setStoreForm({...storeForm, taxRate: parseFloat(e.target.value) || 0})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black dark:text-white" /></div>
                 <div className="md:col-span-2 space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Store Address</label><textarea value={storeForm.address} onChange={e => setStoreForm({...storeForm, address: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white h-24 resize-none" /></div>
             </div>
+
+            <div className="pt-6">
+                <div className="flex items-center gap-3 border-b border-slate-50 dark:border-slate-800 pb-6 mb-6">
+                    <Zap size={28} className="text-brand-500" />
+                    <h3 className="text-2xl font-black uppercase italic tracking-tighter dark:text-white">Image Generation Engines</h3>
+                </div>
+                <div className="space-y-8">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('cfAiUrl')}</label>
+                        <div className="relative">
+                            <input 
+                                type="url" 
+                                value={storeForm.cloudflareAiUrl || ''} 
+                                onChange={e => setStoreForm({...storeForm, cloudflareAiUrl: e.target.value})} 
+                                className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white pl-12" 
+                                placeholder={t('cfAiPlaceholder')} 
+                            />
+                            <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
+                        </div>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-2 italic">Requires Cloudflare Workers AI integration.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-rose-400 uppercase tracking-widest flex items-center gap-2">
+                            <Heart size={12} className="fill-rose-400" /> {t('hcAiUrl')} (Hack Club)
+                        </label>
+                        <div className="relative">
+                            <input 
+                                type="url" 
+                                value={storeForm.hackClubAiUrl || ''} 
+                                onChange={e => setStoreForm({...storeForm, hackClubAiUrl: e.target.value})} 
+                                className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white pl-12" 
+                                placeholder={t('hcAiPlaceholder')} 
+                            />
+                            <Zap className="absolute left-4 top-1/2 -translate-y-1/2 text-rose-300" size={20} />
+                        </div>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-2 italic">Unlimited free image generation for educational/youth projects.</p>
+                    </div>
+                </div>
+            </div>
+
             <button onClick={() => onUpdateStoreSettings(storeForm)} className="px-10 py-5 bg-brand-600 text-white rounded-3xl font-black uppercase tracking-widest shadow-2xl hover:bg-brand-500 transition-all active:scale-95 italic text-xs">Sync Terminal Settings</button>
         </div>
       ) : (

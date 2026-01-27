@@ -407,7 +407,20 @@ const App: React.FC = () => {
               <POS products={products} sales={sales} onCheckout={handleCheckout} storeSettings={storeSettings} onViewOrderHistory={() => setCurrentView(AppView.ORDERS)} onUpdateStoreSettings={handleUpdateStoreSettings} t={t} language={language} currentUser={user!} onGoBack={() => setCurrentView(AppView.REPORTS)} />
             )}
             {(currentView === AppView.INVENTORY || currentView === AppView.CATEGORIES) && (
-              <Inventory products={products} categories={categories} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} onBulkUpdateProduct={handleBulkUpdateProduct} onDeleteProduct={handleDeleteProduct} initialTab={currentView === AppView.CATEGORIES ? 'categories' : 'products'} onGoBack={() => setCurrentView(AppView.POS)} t={t} currentUser={user!} language={language} />
+              <Inventory 
+                products={products} 
+                categories={categories} 
+                onAddProduct={handleAddProduct} 
+                onUpdateProduct={handleUpdateProduct} 
+                onBulkUpdateProduct={handleBulkUpdateProduct} 
+                onDeleteProduct={handleDeleteProduct} 
+                initialTab={currentView === AppView.CATEGORIES ? 'categories' : 'products'} 
+                onGoBack={() => setCurrentView(AppView.POS)} 
+                t={t} 
+                currentUser={user!} 
+                language={language} 
+                storeSettings={storeSettings}
+              />
             )}
             {currentView === AppView.STOCK_CHECK && (
               <StockCheck 
