@@ -25,7 +25,7 @@ interface InventoryProps {
   storeSettings?: StoreSettings;
 }
 
-const COMMON_SIZES = ['S', 'M', 'L', 'XL', 'XXL', '3XL', 'Free'];
+const COMMON_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL', 'Free', '28', '30', '32', '34', '36', '38', '40', '42'];
 const COMMON_COLORS = [
     { name: 'Black', hex: '#000000' },
     { name: 'White', hex: '#ffffff' },
@@ -34,7 +34,15 @@ const COMMON_COLORS = [
     { name: 'Green', hex: '#22c55e' },
     { name: 'Yellow', hex: '#eab308' },
     { name: 'Gray', hex: '#64748b' },
-    { name: 'Pink', hex: '#ec4899' }
+    { name: 'Pink', hex: '#ec4899' },
+    { name: 'Navy', hex: '#1e3a8a' },
+    { name: 'Orange', hex: '#f97316' },
+    { name: 'Purple', hex: '#a855f7' },
+    { name: 'Brown', hex: '#78350f' },
+    { name: 'Beige', hex: '#f5f5dc' },
+    { name: 'Maroon', hex: '#800000' },
+    { name: 'Teal', hex: '#14b8a6' },
+    { name: 'Lime', hex: '#84cc16' }
 ];
 
 export const Inventory: React.FC<InventoryProps> = ({ 
