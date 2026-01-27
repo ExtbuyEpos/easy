@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ShoppingCart, Package, BarChart3, LogOut, ScanLine, Settings, MessageCircle, X, History, Wifi, WifiOff, RefreshCw, List, Moon, Sun, Globe, LayoutDashboard, ChevronLeft, ChevronRight, QrCode } from 'lucide-react';
+import { ShoppingCart, Package, BarChart3, LogOut, ScanLine, Settings, MessageCircle, X, History, Wifi, WifiOff, RefreshCw, List, Moon, Sun, Globe, LayoutDashboard, ChevronLeft, ChevronRight, QrCode, CalendarDays } from 'lucide-react';
 import { AppView, User, UserRole, Language } from '../types';
 
 interface SidebarProps {
@@ -26,9 +26,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const getNavItems = (role: UserRole) => {
     const items = [
       { view: AppView.POS, label: t('posTerminal'), icon: ShoppingCart },
+      { view: AppView.BOOKINGS, label: t('bookings'), icon: CalendarDays },
     ];
     
-    // CASHIER: Restricted to POS Only
+    // CASHIER: Restricted to POS & Bookings Only
     if (role === 'CASHIER') return items;
 
     // STAFF & ABOVE

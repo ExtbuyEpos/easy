@@ -10,7 +10,8 @@ export enum AppView {
   BAILEYS_SETUP = 'BAILEYS_SETUP',
   ORDERS = 'ORDERS',
   PRINT_BARCODE = 'PRINT_BARCODE',
-  CUSTOMER_PORTAL = 'CUSTOMER_PORTAL'
+  CUSTOMER_PORTAL = 'CUSTOMER_PORTAL',
+  BOOKINGS = 'BOOKINGS'
 }
 
 export type UserRole = 'ADMIN' | 'MANAGER' | 'STAFF' | 'CASHIER' | 'CUSTOMER';
@@ -52,6 +53,18 @@ export interface Sale {
   processedBy?: string; // User ID
   customerName?: string;
   customerPhone?: string;
+}
+
+export interface Booking {
+  id: string;
+  timestamp: number;
+  customerName: string;
+  customerMobile: string;
+  customerAddress: string;
+  bookingDate: string; // ISO string
+  status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
+  notes?: string;
+  serviceType?: string;
 }
 
 export interface User {

@@ -12,7 +12,8 @@ import { Orders } from './components/Orders';
 import { PrintBarcode } from './components/PrintBarcode';
 import { AiAssistant } from './components/AiAssistant';
 import { CustomerPortal } from './components/CustomerPortal';
-import { AppView, Product, Sale, CartItem, User, StoreSettings, Language } from './types';
+import { Bookings } from './components/Bookings';
+import { AppView, Product, Sale, CartItem, User, StoreSettings, Language, Booking } from './types';
 import { INITIAL_PRODUCTS, INITIAL_USERS } from './constants';
 import { translations } from './translations';
 import { Menu, CloudOff, AlertTriangle, PanelLeftOpen } from 'lucide-react';
@@ -26,6 +27,7 @@ const App: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => localStorage.getItem('easyPOS_theme') === 'dark');
@@ -87,6 +89,10 @@ const App: React.FC = () => {
             const data = snapshot.docs.map(doc => doc.data() as Sale);
             setSales(data.sort((a,b) => b.timestamp - a.timestamp));
         });
+        const unsubBookings = onSnapshot(collection(db, 'bookings'), (snapshot) => {
+            const data = snapshot.docs.map(doc => doc.data() as Booking);
+            setBookings(data.sort((a,b) => b.timestamp - a.timestamp));
+        });
         const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
             const data = snapshot.docs.map(doc => doc.data() as User);
             setUsers(data);
@@ -98,16 +104,18 @@ const App: React.FC = () => {
             if (docSnap.exists()) setStoreSettings(docSnap.data() as StoreSettings);
             setIsSyncing(false);
         });
-        return () => { unsubProducts(); unsubCategories(); unsubSales(); unsubUsers(); unsubSettings(); };
+        return () => { unsubProducts(); unsubCategories(); unsubSales(); unsubBookings(); unsubUsers(); unsubSettings(); };
     } else {
         const savedProducts = localStorage.getItem('easyPOS_products');
         const savedCategories = localStorage.getItem('easyPOS_categories');
         const savedSales = localStorage.getItem('easyPOS_sales');
+        const savedBookings = localStorage.getItem('easyPOS_bookings');
         const savedUsers = localStorage.getItem('easyPOS_users');
         const savedSettings = localStorage.getItem('easyPOS_storeSettings');
         setProducts(savedProducts ? JSON.parse(savedProducts) : INITIAL_PRODUCTS);
         setCategories(savedCategories ? JSON.parse(savedCategories) : Array.from(new Set(INITIAL_PRODUCTS.map(p => p.category))).sort());
         setSales(savedSales ? JSON.parse(savedSales) : []);
+        setBookings(savedBookings ? JSON.parse(savedBookings) : []);
         setUsers(savedUsers ? JSON.parse(savedUsers) : INITIAL_USERS);
         if (savedSettings) setStoreSettings(prev => ({ ...prev, ...JSON.parse(savedSettings) }));
     }
@@ -151,6 +159,35 @@ const App: React.FC = () => {
       const updated = products.filter(p => p.id !== id);
       setProducts(updated);
       localStorage.setItem('easyPOS_products', JSON.stringify(updated));
+    }
+  };
+
+  // Booking Handlers
+  const handleAddBooking = async (b: Booking) => {
+    if (db) await setDoc(doc(db, 'bookings', b.id), b);
+    else {
+      const updated = [...bookings, b];
+      setBookings(updated);
+      localStorage.setItem('easyPOS_bookings', JSON.stringify(updated));
+    }
+  };
+
+  const handleUpdateBooking = async (b: Booking) => {
+    if (db) await setDoc(doc(db, 'bookings', b.id), b);
+    else {
+      const updated = bookings.map(item => item.id === b.id ? b : item);
+      setBookings(updated);
+      localStorage.setItem('easyPOS_bookings', JSON.stringify(updated));
+    }
+  };
+
+  const handleDeleteBooking = async (id: string) => {
+    if (!window.confirm('Delete booking?')) return;
+    if (db) await deleteDoc(doc(db, 'bookings', id));
+    else {
+      const updated = bookings.filter(b => b.id !== id);
+      setBookings(updated);
+      localStorage.setItem('easyPOS_bookings', JSON.stringify(updated));
     }
   };
 
@@ -405,6 +442,9 @@ const App: React.FC = () => {
             )}
             {currentView === AppView.POS && (
               <POS products={products} sales={sales} onCheckout={handleCheckout} storeSettings={storeSettings} onViewOrderHistory={() => setCurrentView(AppView.ORDERS)} onUpdateStoreSettings={handleUpdateStoreSettings} t={t} language={language} currentUser={user!} onGoBack={() => setCurrentView(AppView.REPORTS)} />
+            )}
+            {currentView === AppView.BOOKINGS && (
+              <Bookings bookings={bookings} onAddBooking={handleAddBooking} onUpdateBooking={handleUpdateBooking} onDeleteBooking={handleDeleteBooking} onGoBack={() => setCurrentView(AppView.POS)} language={language} t={t} />
             )}
             {(currentView === AppView.INVENTORY || currentView === AppView.CATEGORIES) && (
               <Inventory 

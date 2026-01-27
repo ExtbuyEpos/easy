@@ -27,6 +27,23 @@ export const translations: Record<Language, Translations> = {
     'loginWithGoogle': 'Sign in with Google',
     'continueAsGuest': 'Continue as Guest',
 
+    // Bookings
+    'bookings': 'Customer Bookings',
+    'addBooking': 'New Booking',
+    'editBooking': 'Edit Booking',
+    'customerName': 'Customer Name',
+    'mobileNumber': 'Mobile Number',
+    'address': 'Address',
+    'bookingDate': 'Booking Date',
+    'notes': 'Notes / Requirements',
+    'status': 'Status',
+    'pending': 'Pending',
+    'confirmed': 'Confirmed',
+    'completed': 'Completed',
+    'cancelled': 'Cancelled',
+    'saveBooking': 'Commit Booking',
+    'noBookings': 'No bookings found',
+
     // AI Engines
     'generateAiImage': 'AI Generate Image',
     'aiGeneratingImage': 'AI generating...',
@@ -181,6 +198,23 @@ export const translations: Record<Language, Translations> = {
     'codeSent': 'تم إرسال الرمز إلى',
     'loginWithGoogle': 'تسجيل الدخول بواسطة جوجل',
     'continueAsGuest': 'المتابعة كضيف',
+
+    // Bookings
+    'bookings': 'الحجوزات',
+    'addBooking': 'حجز جديد',
+    'editBooking': 'تعديل الحجز',
+    'customerName': 'اسم العميل',
+    'mobileNumber': 'رقم الهاتف',
+    'address': 'العنوان',
+    'bookingDate': 'تاريخ الحجز',
+    'notes': 'ملاحظات / متطلبات',
+    'status': 'الحالة',
+    'pending': 'قيد الانتظار',
+    'confirmed': 'تم التأكيد',
+    'completed': 'مكتمل',
+    'cancelled': 'ملغى',
+    'saveBooking': 'تأكيد الحجز',
+    'noBookings': 'لا يوجد حجوزات',
 
     // AI Engines
     'generateAiImage': 'إنشاء صورة بالذكاء الاصطناعي',

@@ -1,9 +1,10 @@
-
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
+import { getAuth, Auth } from 'firebase/auth';
 
 let app: FirebaseApp;
 let db: Firestore;
+let auth: Auth;
 
 // Use the provided Firebase configuration
 const firebaseConfig = {
@@ -28,14 +29,17 @@ try {
 
   // Basic initialization to avoid registration issues in modular environments
   db = getFirestore(app);
+  auth = getAuth(app);
   
 } catch (e) {
-  console.error("CRITICAL: Firebase/Firestore initialization failed:", e);
+  console.error("CRITICAL: Firebase initialization failed:", e);
   // @ts-ignore - Exporting null db to let App.tsx fall back to LocalStorage
   db = null;
+  // @ts-ignore
+  auth = null;
 }
 
-export { db, app };
+export { db, app, auth };
 
 export const saveFirebaseConfig = (configStr: string) => {
   try {

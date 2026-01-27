@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { User, Language } from '../types';
-// Added missing Loader2 import from lucide-react
 import { ShoppingBag, Lock, User as UserIcon, AlertCircle, ChevronRight, Moon, Sun, Globe, Smartphone, MessageSquare, LayoutDashboard, ShieldCheck, RefreshCw, ShoppingCart, Loader2 } from 'lucide-react';
+import { auth } from '../firebase';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -56,21 +56,41 @@ export const Login: React.FC<LoginProps> = ({
   };
 
   const handleGoogleLogin = async () => {
+    if (!auth) {
+        setError(language === 'ar' ? 'فشل الاتصال بخادم الأمان' : 'Security server connection failed');
+        return;
+    }
+
     setLoading(true);
     setError('');
-    // Simulated Google OAuth Flow
-    await new Promise(resolve => setTimeout(resolve, 2000));
     
-    const googleUser: User = {
-      id: 'google_' + Date.now(),
-      name: 'Google User',
-      username: 'google_user',
-      role: 'CUSTOMER',
-      email: 'customer@gmail.com'
-    };
-    
-    onLogin(googleUser);
-    setLoading(false);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const fbUser = result.user;
+      
+      const googleUser: User = {
+        id: fbUser.uid,
+        name: fbUser.displayName || 'Google User',
+        username: fbUser.email?.split('@')[0] || 'google_user',
+        role: 'CUSTOMER',
+        email: fbUser.email || undefined,
+        avatar: fbUser.photoURL || undefined
+      };
+      
+      onLogin(googleUser);
+    } catch (err: any) {
+      console.error("Google Auth Error:", err);
+      if (err.code === 'auth/popup-blocked') {
+        setError(language === 'ar' ? 'تم حظر النافذة المنبثقة. يرجى تفعيلها.' : 'Popup blocked. Please enable popups.');
+      } else if (err.code === 'auth/cancelled-popup-request') {
+        setError(language === 'ar' ? 'تم إلغاء عملية الدخول.' : 'Login cancelled.');
+      } else {
+        setError(language === 'ar' ? 'فشل تسجيل الدخول عبر جوجل.' : 'Google Login failed.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -182,7 +202,7 @@ export const Login: React.FC<LoginProps> = ({
                       <MessageSquare size={12} /> {t('whatsappLogin')}
                   </button>
                   <button 
-                    onClick={() => setMethod('GOOGLE')}
+                    onClick={() => { setMethod('GOOGLE'); setError(''); }}
                     className={`flex-1 py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 ${method === 'GOOGLE' ? 'bg-white dark:bg-slate-700 border-2 border-slate-100 dark:border-slate-600 shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}
                   >
                       <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-4 h-4" /> Google
@@ -200,6 +220,14 @@ export const Login: React.FC<LoginProps> = ({
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">Secure authentication for our smart retail ecosystem</p>
                       </div>
                    </div>
+                   
+                   {error && (
+                      <div className="p-4 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 text-[10px] font-black uppercase tracking-widest rounded-2xl flex items-center gap-3 border border-red-100 dark:border-red-900/30">
+                          <AlertCircle size={16} className="shrink-0" /> 
+                          <span>{error}</span>
+                      </div>
+                   )}
+
                    <button 
                     onClick={handleGoogleLogin} 
                     disabled={loading}
