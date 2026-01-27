@@ -1,10 +1,12 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
+import { getMessaging, Messaging, isSupported } from 'firebase/messaging';
 
-let app: FirebaseApp;
-let db: Firestore;
-let auth: Auth;
+let app: FirebaseApp | undefined;
+let db: Firestore | null = null;
+let auth: Auth | null = null;
+let messaging: Messaging | null = null;
 
 // Use the provided Firebase configuration
 const firebaseConfig = {
@@ -16,35 +18,46 @@ const firebaseConfig = {
   appId: "1:856022079884:web:bfb08ce547b42a50f31ea9"
 };
 
-const savedConfigStr = localStorage.getItem('easyPOS_firebaseConfig');
-const finalConfig = savedConfigStr ? JSON.parse(savedConfigStr) : firebaseConfig;
+const initFirebase = async () => {
+  try {
+    const savedConfigStr = localStorage.getItem('easyPOS_firebaseConfig');
+    const finalConfig = savedConfigStr ? JSON.parse(savedConfigStr) : firebaseConfig;
 
-try {
-  // Ensure the app is initialized only once
-  if (!getApps().length) {
-    app = initializeApp(finalConfig);
-  } else {
-    app = getApp();
+    if (!getApps().length) {
+      app = initializeApp(finalConfig);
+    } else {
+      app = getApp();
+    }
+
+    if (app) {
+      db = getFirestore(app);
+      auth = getAuth(app);
+      
+      const supported = await isSupported();
+      if (supported) {
+        messaging = getMessaging(app);
+      }
+    }
+  } catch (e) {
+    console.warn("Firebase initialization skipped or failed. Operating in LocalStorage mode.", e);
+    app = undefined;
+    db = null;
+    auth = null;
+    messaging = null;
   }
+};
 
-  // Basic initialization to avoid registration issues in modular environments
-  db = getFirestore(app);
-  auth = getAuth(app);
-  
-} catch (e) {
-  console.error("CRITICAL: Firebase initialization failed:", e);
-  // @ts-ignore - Exporting null db to let App.tsx fall back to LocalStorage
-  db = null;
-  // @ts-ignore
-  auth = null;
-}
+// Immediate invocation
+initFirebase();
 
-export { db, app, auth };
+export { db, app, auth, messaging };
 
 export const saveFirebaseConfig = (configStr: string) => {
   try {
     JSON.parse(configStr);
     localStorage.setItem('easyPOS_firebaseConfig', configStr);
+    // Re-initialize after config update
+    initFirebase();
     return true;
   } catch (e) {
     return false;
@@ -53,4 +66,7 @@ export const saveFirebaseConfig = (configStr: string) => {
 
 export const clearFirebaseConfig = () => {
   localStorage.removeItem('easyPOS_firebaseConfig');
+  db = null;
+  auth = null;
+  messaging = null;
 };

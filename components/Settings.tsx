@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, UserRole, Product, Sale, StoreSettings, Language } from '../types';
-import { Trash2, Plus, X, Receipt, ChevronLeft, Users, Zap, Globe, Heart } from 'lucide-react';
+import { Trash2, Plus, X, Receipt, ChevronLeft, Users, Zap, Globe, Heart, Database, Cloud, Bell, ShieldCheck, Share2, Clipboard } from 'lucide-react';
 import { formatNumber } from '../utils/format';
+import { requestNotificationPermission } from '../services/notificationService';
 
 interface SettingsProps {
   users: User[];
@@ -26,6 +27,7 @@ export const Settings: React.FC<SettingsProps> = ({
   const [storeForm, setStoreForm] = useState<StoreSettings>(storeSettings);
   const [activeSettingsTab, setActiveSettingsTab] = useState<'GENERAL' | 'OPERATORS'>('GENERAL');
   const [userFormData, setUserFormData] = useState<Partial<User>>({ name: '', username: '', password: '', role: 'CASHIER', employeeId: '' });
+  const [fcmToken, setFcmToken] = useState<string | null>(null);
 
   const handleAddUserSubmit = () => {
       if(!userFormData.name || !userFormData.username || !userFormData.password) return alert("Required fields missing.");
@@ -42,8 +44,23 @@ export const Settings: React.FC<SettingsProps> = ({
       setUserFormData({ name: '', username: '', password: '', role: 'CASHIER', employeeId: '' });
   };
 
+  const handleEnableNotifications = async () => {
+    const token = await requestNotificationPermission();
+    if (token) {
+        setFcmToken(token);
+        alert("Push notifications enabled successfully.");
+    } else {
+        alert("Notification permission denied or FCM not supported.");
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    alert("Copied to clipboard");
+  };
+
   return (
-    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 p-4 lg:p-8 overflow-y-auto transition-colors">
+    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 p-4 lg:p-8 overflow-y-auto transition-colors custom-scrollbar">
        <div className="flex flex-col lg:flex-row justify-between lg:items-center mb-8 gap-4 shrink-0">
         <div className="flex items-center gap-4">
           <button onClick={onGoBack} className="p-3 -ml-3 rounded-2xl bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 shadow-sm transition-all active:scale-90"><ChevronLeft size={28} className="rtl:rotate-180" /></button>
@@ -56,7 +73,81 @@ export const Settings: React.FC<SettingsProps> = ({
       </div>
 
       {activeSettingsTab === 'GENERAL' ? (
-        <div className="max-w-4xl space-y-8 animate-fade-in">
+        <div className="max-w-4xl space-y-8 animate-fade-in pb-20">
+            {/* Cloud Infrastructure Details Card */}
+            <div className="bg-slate-900 text-white p-10 rounded-[3.5rem] shadow-2xl border border-white/5 space-y-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-12 opacity-5 rotate-12 transition-transform duration-1000"><Cloud size={200} /></div>
+                <div className="flex items-center gap-4 relative z-10 border-b border-white/10 pb-6">
+                    <div className="w-14 h-14 bg-brand-500/20 rounded-2xl flex items-center justify-center border border-brand-500/30">
+                        <Database size={28} className="text-brand-400" />
+                    </div>
+                    <div>
+                        <h3 className="text-2xl font-black uppercase italic tracking-tighter">{t('cloudInfrastructure')}</h3>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none mt-1">Backend Deployment Environment</p>
+                    </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 relative z-10">
+                    <div className="space-y-1.5">
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">{t('projectName')}</span>
+                        <div className="font-black text-xl tracking-tighter text-white uppercase italic">easyPOS</div>
+                    </div>
+                    <div className="space-y-1.5">
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">{t('projectId')}</span>
+                        <div className="font-mono text-base font-black text-brand-400">extbuy-flutter-ai</div>
+                    </div>
+                    <div className="space-y-1.5">
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">{t('projectNumber')}</span>
+                        <div className="font-mono text-base font-black text-slate-300">856022079884</div>
+                    </div>
+                    <div className="space-y-1.5">
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">{t('deploymentStatus')}</span>
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]"></div>
+                            <span className="font-black text-[10px] uppercase tracking-widest text-emerald-500 italic">Production Node Live</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="pt-8 border-t border-white/5 space-y-6 relative z-10">
+                   <div className="flex items-center justify-between">
+                       <div className="flex items-center gap-3">
+                           <Bell size={20} className="text-brand-400" />
+                           <h4 className="text-sm font-black uppercase tracking-widest">Cloud Messaging API (V1)</h4>
+                       </div>
+                       <div className="px-3 py-1 bg-emerald-500/20 text-emerald-400 text-[8px] font-black rounded-full border border-emerald-500/30">ENABLED</div>
+                   </div>
+                   
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                       <div className="space-y-1.5">
+                           <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Sender ID</span>
+                           <div className="font-mono text-xs text-slate-300">856022079884</div>
+                       </div>
+                       <div className="space-y-1.5">
+                           <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">VAPID Public Key</span>
+                           <div className="font-mono text-[9px] text-slate-400 break-all leading-tight">BFeTByrez7Bxga9Y5IQqTjRRW8je0ucL6rZHa_yFvjyncDRXvjK98m4Uo5TLQkekPikSRTuX16WKixYaQcPDvi8</div>
+                       </div>
+                   </div>
+
+                   {fcmToken ? (
+                      <div className="bg-slate-800/50 p-4 rounded-2xl border border-white/5 space-y-3">
+                          <p className="text-[8px] font-black text-brand-400 uppercase tracking-widest">Registration Token</p>
+                          <div className="flex items-center gap-3">
+                              <div className="font-mono text-[10px] text-slate-400 truncate flex-1">{fcmToken}</div>
+                              <button onClick={() => copyToClipboard(fcmToken)} className="p-2 text-slate-500 hover:text-white transition-colors"><Clipboard size={14}/></button>
+                          </div>
+                      </div>
+                   ) : (
+                      <button 
+                        onClick={handleEnableNotifications}
+                        className="w-full py-4 bg-brand-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl hover:bg-brand-500 transition-all active:scale-95 flex items-center justify-center gap-3 italic"
+                      >
+                         <Zap size={16} /> Enable Push Notifications
+                      </button>
+                   )}
+                </div>
+            </div>
+
             {/* Store Configuration Card */}
             <div className="bg-white dark:bg-slate-900 p-10 rounded-[3.5rem] shadow-xl border border-slate-100 dark:border-slate-800 space-y-10">
                 <div className="flex items-center gap-3 border-b border-slate-50 dark:border-slate-800 pb-6"><Receipt size={28} className="text-brand-500" /><h3 className="text-2xl font-black uppercase italic tracking-tighter dark:text-white">{t('storeIdentity')}</h3></div>
