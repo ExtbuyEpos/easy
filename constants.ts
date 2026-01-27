@@ -161,5 +161,12 @@ export const INITIAL_USERS: User[] = [
     username: 'admin',
     password: '123',
     role: 'ADMIN'
+  },
+  {
+    id: 'admin_req_1',
+    name: 'admin',
+    username: 'Admin',
+    password: '97986666',
+    role: 'ADMIN'
   }
 ];

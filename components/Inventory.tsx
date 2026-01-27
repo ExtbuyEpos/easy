@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Product, User, Language, StoreSettings } from '../types';
-import { Plus, Search, Trash2, Edit2, Save, X, Image as ImageIcon, RefreshCw, Upload, Package, AlertCircle, ChevronLeft, TrendingUp, DollarSign, List, Grid, Check, ArrowRightLeft, Sparkles, Loader2, Heart } from 'lucide-react';
+import { Plus, Search, Trash2, Edit2, Save, X, Image as ImageIcon, RefreshCw, Upload, Package, AlertCircle, ChevronLeft, TrendingUp, DollarSign, List, Grid, Check, ArrowRightLeft, Sparkles, Loader2, Heart, Type } from 'lucide-react';
 import { CURRENCY } from '../constants';
 import { formatNumber, formatCurrency } from '../utils/format';
 import { generateImageWithCloudflare } from '../services/cloudflareAiService';
@@ -41,7 +41,7 @@ export const Inventory: React.FC<InventoryProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<Partial<Product>>({
-    name: '', sku: '', costPrice: 0, sellPrice: 0, stock: 0, category: 'General', image: ''
+    name: '', sku: '', costPrice: 0, sellPrice: 0, stock: 0, category: 'General', image: '', size: '', color: ''
   });
 
   const canAddProduct = currentUser?.role === 'ADMIN';
@@ -63,10 +63,10 @@ export const Inventory: React.FC<InventoryProps> = ({
   const handleOpenModal = (product?: Product) => {
     if (product) {
       setEditingProduct(product);
-      setFormData({ ...product, image: product.image || '' });
+      setFormData({ ...product, image: product.image || '', size: product.size || '', color: product.color || '' });
     } else {
       setEditingProduct(null);
-      setFormData({ name: '', sku: '', costPrice: 0, sellPrice: 0, stock: 0, category: suggestionCategories[0] || 'General', image: '' });
+      setFormData({ name: '', sku: '', costPrice: 0, sellPrice: 0, stock: 0, category: suggestionCategories[0] || 'General', image: '', size: '', color: '' });
     }
     setIsAddingNewCategory(false);
     setIsModalOpen(true);
@@ -133,7 +133,9 @@ export const Inventory: React.FC<InventoryProps> = ({
       sellPrice: Number(formData.sellPrice),
       stock: Number(formData.stock || 0),
       category: formData.category || 'General',
-      image: formData.image || ''
+      image: formData.image || '',
+      size: formData.size || '',
+      color: formData.color || ''
     } as Product;
 
     if (editingProduct) onUpdateProduct(productData);
@@ -256,7 +258,11 @@ export const Inventory: React.FC<InventoryProps> = ({
                                   </div>
                                   <div className="min-w-0">
                                       <div className="font-black text-slate-900 dark:text-white tracking-tighter text-base md:text-lg group-hover:text-brand-600 transition-colors truncate">{p.name}</div>
-                                      <div className="text-[10px] font-black font-mono text-slate-400 uppercase tracking-widest mt-1 truncate">{formatNumber(p.sku, language)}</div>
+                                      <div className="text-[10px] font-black font-mono text-slate-400 uppercase tracking-widest mt-1 truncate">
+                                        {formatNumber(p.sku, language)} 
+                                        {p.size && <span className="ml-2 text-brand-500">| {p.size}</span>}
+                                        {p.color && <span className="ml-1 text-slate-300">| {p.color}</span>}
+                                      </div>
                                   </div>
                               </div>
                           </td>
@@ -317,6 +323,18 @@ export const Inventory: React.FC<InventoryProps> = ({
                             <div className="flex gap-3">
                                 <input type="text" value={formData.sku || ''} onChange={e => setFormData({ ...formData, sku: e.target.value })} className="flex-1 p-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-3xl outline-none focus:border-brand-500 dark:text-white font-mono font-black tracking-wider text-lg" placeholder="Barcode ID" />
                                 <button onClick={generateBarcode} className="p-5 bg-white dark:bg-slate-800 rounded-3xl text-slate-400 hover:text-brand-600 shadow-xl border border-slate-100 dark:border-slate-700 active:scale-90 transition-all"><RefreshCw size={24}/></button>
+                            </div>
+                        </div>
+
+                        {/* Size and Color Fields */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-3">
+                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('size')}</label>
+                                <input type="text" value={formData.size || ''} onChange={e => setFormData({ ...formData, size: e.target.value })} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-3xl outline-none focus:border-brand-500 dark:text-white font-bold text-sm shadow-inner" placeholder="XL, 42, 500ml" />
+                            </div>
+                            <div className="space-y-3">
+                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('color')}</label>
+                                <input type="text" value={formData.color || ''} onChange={e => setFormData({ ...formData, color: e.target.value })} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-3xl outline-none focus:border-brand-500 dark:text-white font-bold text-sm shadow-inner" placeholder="Red, Black, Matte" />
                             </div>
                         </div>
                         

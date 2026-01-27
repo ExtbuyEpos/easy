@@ -15,7 +15,7 @@ export enum AppView {
 }
 
 export type UserRole = 'ADMIN' | 'MANAGER' | 'STAFF' | 'CASHIER' | 'CUSTOMER';
-export type Language = 'en' | 'ar';
+export type Language = 'en' | 'ar' | 'hi';
 
 export interface Translations {
   [key: string]: string;
@@ -31,6 +31,8 @@ export interface Product {
   category: string;
   image?: string;
   tags?: string[];
+  size?: string;
+  color?: string;
 }
 
 export interface CartItem extends Product {
@@ -95,6 +97,7 @@ export interface StoreSettings {
   autoPrint: boolean;
   cloudflareAiUrl?: string; // Endpoint for Cloudflare Workers AI
   hackClubAiUrl?: string; // Endpoint for Hack Club AI
+  visitorAccessCode?: string; // Security code for direct shop entry
 }
 
 export interface StockAdjustment {

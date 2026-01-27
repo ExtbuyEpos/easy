@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { User, Language } from '../types';
-import { Lock, User as UserIcon, AlertCircle, ChevronRight, Moon, Sun, Smartphone, MessageSquare, LayoutDashboard, ShieldCheck, RefreshCw, Loader2 } from 'lucide-react';
+import { User, Language, StoreSettings } from '../types';
+import { Lock, User as UserIcon, AlertCircle, ChevronRight, Moon, Sun, Smartphone, MessageSquare, LayoutDashboard, ShieldCheck, RefreshCw, Loader2, Key, Store } from 'lucide-react';
 import { auth } from '../firebase';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 
@@ -14,18 +14,20 @@ interface LoginProps {
   language?: Language;
   toggleLanguage?: () => void;
   onEnterAsGuest?: () => void;
+  storeSettings?: StoreSettings;
 }
 
-type LoginMethod = 'CREDENTIALS' | 'CUSTOMER_GOOGLE' | 'CUSTOMER_PHONE';
+type LoginMethod = 'CREDENTIALS' | 'CUSTOMER_GOOGLE' | 'CUSTOMER_PHONE' | 'VISITOR_CODE';
 
 export const Login: React.FC<LoginProps> = ({ 
-  onLogin, users, t = (k) => k, isDarkMode, toggleTheme, language, toggleLanguage, onEnterAsGuest
+  onLogin, users, t = (k) => k, isDarkMode, toggleTheme, language, toggleLanguage, onEnterAsGuest, storeSettings
 }) => {
   const [method, setMethod] = useState<LoginMethod>('CREDENTIALS');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
+  const [visitorCode, setVisitorCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -114,7 +116,6 @@ export const Login: React.FC<LoginProps> = ({
           handleRequestOtp();
       } else {
           await new Promise(resolve => setTimeout(resolve, 1000));
-          // Verification logic for simulation
           if (otp === '123456' || otp === '000000') {
              const customerUser: User = {
                  id: `phone_${phone}`,
@@ -128,6 +129,21 @@ export const Login: React.FC<LoginProps> = ({
              setLoading(false);
           }
       }
+    } else if (method === 'VISITOR_CODE') {
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        const correctCode = storeSettings?.visitorAccessCode || '2026';
+        if (visitorCode === correctCode) {
+            const visitorUser: User = {
+                id: `visitor_${Date.now()}`,
+                name: 'Shop Visitor',
+                username: 'visitor',
+                role: 'CUSTOMER'
+            };
+            onLogin(visitorUser);
+        } else {
+            setError(t('invalidShopCode'));
+            setLoading(false);
+        }
     }
   };
 
@@ -149,7 +165,7 @@ export const Login: React.FC<LoginProps> = ({
                 onClick={toggleLanguage} 
                 className="px-4 py-3 bg-white/10 backdrop-blur-xl rounded-2xl text-white hover:bg-white/20 transition-all font-black text-[10px] uppercase tracking-widest flex items-center justify-center min-w-[70px] shadow-2xl border border-white/10 active:scale-90"
              >
-                 {language === 'en' ? 'Arabic' : 'English'}
+                 {language === 'en' ? 'Arabic' : language === 'ar' ? 'Hindi' : 'English'}
              </button>
          )}
       </div>
@@ -187,30 +203,30 @@ export const Login: React.FC<LoginProps> = ({
         {/* Auth Interaction Side */}
         <div className="p-8 md:p-14 md:w-[58%] flex flex-col justify-center bg-white dark:bg-slate-900 flex-1 relative rounded-t-[3.5rem] md:rounded-none -mt-16 md:mt-0 z-20 shadow-[0_-25px_50px_-12px_rgba(0,0,0,0.25)] md:shadow-none transition-colors duration-500 overflow-y-auto">
           <div className="max-w-sm mx-auto w-full py-6">
-              <div className="mb-10 text-center md:text-left rtl:md:text-right">
+              <div className="mb-8 text-center md:text-left rtl:md:text-right">
                 <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter italic uppercase mb-2">{t('welcomeBack')}</h2>
                 <p className="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest">{t('signInToAccess')}</p>
               </div>
 
-              {/* Interaction Tabs */}
-              <div className="flex bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-2xl mb-10 border border-slate-100 dark:border-slate-800">
+              {/* Branded Interaction Tabs */}
+              <div className="flex bg-slate-50 dark:bg-slate-800/50 p-1 rounded-2xl mb-8 border border-slate-100 dark:border-slate-800 flex-wrap">
                   <button 
-                    onClick={() => { setMethod('CREDENTIALS'); setError(''); setOtpSent(false); }}
-                    className={`flex-1 py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 ${method === 'CREDENTIALS' ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-white shadow-xl border border-slate-100 dark:border-slate-600' : 'text-slate-400 hover:text-slate-600'}`}
+                    onClick={() => { setMethod('VISITOR_CODE'); setError(''); }}
+                    className={`flex-1 min-w-[100px] py-3.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 ${method === 'VISITOR_CODE' ? 'bg-brand-600 text-white shadow-xl shadow-brand-500/20' : 'text-slate-400 hover:text-slate-600'}`}
                   >
-                      <UserIcon size={12} /> {t('staffLogin')}
+                      <Store size={12} /> {t('visitorAccess')}
                   </button>
                   <button 
                     onClick={() => { setMethod('CUSTOMER_GOOGLE'); setError(''); }}
-                    className={`flex-1 py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 ${method === 'CUSTOMER_GOOGLE' ? 'bg-white dark:bg-slate-700 border-2 border-slate-100 dark:border-slate-600 shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`flex-1 min-w-[100px] py-3.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 ${method === 'CUSTOMER_GOOGLE' ? 'bg-white dark:bg-slate-700 border-2 border-slate-100 dark:border-slate-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                   >
-                      <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-4 h-4" /> Google
+                      <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-3.5 h-3.5" /> Google
                   </button>
                   <button 
-                    onClick={() => { setMethod('CUSTOMER_PHONE'); setError(''); }}
-                    className={`flex-1 py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 ${method === 'CUSTOMER_PHONE' ? 'bg-emerald-500 text-white shadow-xl shadow-emerald-500/20' : 'text-slate-400 hover:text-slate-600'}`}
+                    onClick={() => { setMethod('CREDENTIALS'); setError(''); }}
+                    className={`flex-1 min-w-[100px] py-3.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 ${method === 'CREDENTIALS' ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}
                   >
-                      <Smartphone size={12} /> {t('customerPhone')}
+                      <UserIcon size={12} /> {t('staffLogin')}
                   </button>
               </div>
 
@@ -241,15 +257,51 @@ export const Login: React.FC<LoginProps> = ({
                      {loading ? <Loader2 className="animate-spin" size={20} /> : <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-5 h-5" />}
                      {t('loginWithGoogle')}
                    </button>
-                   {onEnterAsGuest && (
-                    <button 
-                      onClick={onEnterAsGuest}
-                      className="w-full py-5 text-slate-400 font-black uppercase tracking-widest text-[9px] hover:text-brand-600 transition-all"
-                    >
-                      {t('continueAsGuest')}
-                    </button>
-                   )}
                 </div>
+              ) : method === 'VISITOR_CODE' ? (
+                <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in-up">
+                    <div className="p-6 bg-brand-50/50 dark:bg-brand-900/10 rounded-[2rem] border border-brand-100 dark:border-brand-900/20 flex flex-col items-center text-center gap-4 mb-4">
+                        <div className="w-14 h-14 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center shadow-lg text-brand-600">
+                           <Store size={28} />
+                        </div>
+                        <div className="space-y-1">
+                           <h4 className="font-black text-slate-900 dark:text-white uppercase italic text-lg">{storeSettings?.name || 'easyPOS'}</h4>
+                           <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t('enterShopCode')}</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('visitorCode')}</label>
+                        <div className="relative group">
+                          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                              <Key className="text-slate-300 group-focus-within:text-brand-500 transition-colors" size={20} />
+                          </div>
+                          <input
+                            type="password"
+                            value={visitorCode}
+                            onChange={(e) => setVisitorCode(e.target.value)}
+                            className="w-full pl-14 pr-5 py-5 bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-100 dark:border-slate-800 rounded-2xl focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 outline-none transition-all text-slate-900 dark:text-white font-black text-2xl tracking-[0.4em] text-center placeholder-slate-300"
+                            placeholder="••••"
+                          />
+                        </div>
+                    </div>
+
+                    {error && (
+                      <div className="p-4 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 text-[10px] font-black uppercase tracking-widest rounded-2xl flex items-center gap-3 border border-red-100 dark:border-red-900/30">
+                          <AlertCircle size={16} /> 
+                          <span>{error}</span>
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={loading || !visitorCode}
+                      className="w-full py-5 bg-brand-600 hover:bg-brand-500 text-white rounded-[2rem] font-black uppercase tracking-widest text-[10px] shadow-2xl active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-3 italic"
+                    >
+                      {loading ? <Loader2 className="animate-spin" size={20} /> : <ChevronRight size={20} />}
+                      {t('accessTerminal')}
+                    </button>
+                </form>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-8 animate-fade-in">
                   {error && (
@@ -259,133 +311,61 @@ export const Login: React.FC<LoginProps> = ({
                       </div>
                   )}
 
-                  {method === 'CREDENTIALS' ? (
-                    <div className="space-y-6">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('username')}</label>
-                        <div className="relative group">
-                          <div className="absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 pl-5 rtl:pr-5 flex items-center pointer-events-none">
-                              <UserIcon className="text-slate-300 group-focus-within:text-brand-500 transition-colors" size={20} />
-                          </div>
-                          <input
-                            type="text"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            className="w-full pl-14 rtl:pr-14 pr-5 py-5 bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-100 dark:border-slate-800 rounded-2xl focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 outline-none transition-all text-slate-900 dark:text-white font-bold text-lg placeholder-slate-300"
-                            placeholder="admin"
-                          />
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('username')}</label>
+                      <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                            <UserIcon className="text-slate-300 group-focus-within:text-brand-500 transition-colors" size={20} />
                         </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('password')}</label>
-                        <div className="relative group">
-                          <div className="absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 pl-5 rtl:pr-5 flex items-center pointer-events-none">
-                              <Lock className="text-slate-300 group-focus-within:text-brand-500 transition-colors" size={20} />
-                          </div>
-                          <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full pl-14 rtl:pr-14 pr-5 py-5 bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-100 dark:border-slate-800 rounded-2xl focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 outline-none transition-all text-slate-900 dark:text-white font-bold text-lg placeholder-slate-300"
-                            placeholder="••••••••"
-                          />
-                        </div>
+                        <input
+                          type="text"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          className="w-full pl-14 pr-5 py-5 bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-100 dark:border-slate-800 rounded-2xl focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 outline-none transition-all text-slate-900 dark:text-white font-bold text-lg placeholder-slate-300"
+                          placeholder="admin"
+                        />
                       </div>
                     </div>
-                  ) : (
-                    <div className="space-y-6">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('phoneNumber')}</label>
-                        <div className="relative group">
-                          <div className="absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 pl-5 rtl:pr-5 flex items-center pointer-events-none">
-                              <Smartphone className="text-slate-300 group-focus-within:text-brand-500 transition-colors" size={20} />
-                          </div>
-                          <input
-                            type="tel"
-                            disabled={otpSent || loading}
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            className="w-full pl-14 rtl:pr-14 pr-5 py-5 bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-100 dark:border-slate-800 rounded-2xl focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 outline-none transition-all text-slate-900 dark:text-white font-black text-lg disabled:opacity-50"
-                            placeholder="+971 00 000 0000"
-                          />
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('password')}</label>
+                      <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                            <Lock className="text-slate-300 group-focus-within:text-brand-500 transition-colors" size={20} />
                         </div>
+                        <input
+                          type="password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="w-full pl-14 pr-5 py-5 bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-100 dark:border-slate-800 rounded-2xl focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 outline-none transition-all text-slate-900 dark:text-white font-bold text-lg placeholder-slate-300"
+                          placeholder="••••••••"
+                        />
                       </div>
-
-                      {otpSent && (
-                        <div className="space-y-4 animate-fade-in-up">
-                          <div className="flex items-center gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl">
-                              <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white shrink-0 animate-pulse">
-                                  <ShieldCheck size={20} />
-                              </div>
-                              <div>
-                                  <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">{t('codeSent')}</p>
-                                  <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{phone}</p>
-                              </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">6-Digit Code</label>
-                            <div className="relative group">
-                              <div className="absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 pl-5 rtl:pr-5 flex items-center pointer-events-none">
-                                  <Lock className="text-slate-300 group-focus-within:text-brand-500 transition-colors" size={20} />
-                              </div>
-                              <input
-                                type="text"
-                                value={otp}
-                                onChange={(e) => setOtp(e.target.value)}
-                                className="w-full pl-14 rtl:pr-14 pr-5 py-5 bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-100 dark:border-slate-800 rounded-2xl focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 outline-none transition-all text-slate-900 dark:text-white font-black text-2xl tracking-[0.3em] placeholder-slate-300"
-                                placeholder="000000"
-                                maxLength={6}
-                              />
-                            </div>
-                            <div className="flex justify-between items-center px-1">
-                                <button type="button" onClick={() => { setOtpSent(false); setOtp(''); }} className="text-[9px] text-slate-400 font-black uppercase tracking-widest hover:underline">Change Number</button>
-                                {timer > 0 ? (
-                                  <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">{t('resendIn')} {timer}s</span>
-                                ) : (
-                                  <button type="button" onClick={handleRequestOtp} className="text-[9px] text-brand-600 font-black uppercase tracking-widest hover:underline flex items-center gap-1">
-                                      <RefreshCw size={10} /> {t('resendCode')}
-                                  </button>
-                                )}
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
-                  )}
+                  </div>
 
                   <button
                     type="submit"
                     disabled={loading}
-                    className={`w-full font-black py-5 rounded-[2rem] transition-all shadow-2xl active:scale-[0.98] mt-8 flex items-center justify-center gap-3 disabled:opacity-70 group text-sm uppercase tracking-widest italic ${method === 'CUSTOMER_PHONE' ? 'bg-[#25D366] hover:bg-[#128C7E] text-white' : 'bg-slate-900 dark:bg-brand-600 hover:bg-black dark:hover:bg-brand-500 text-white'}`}
+                    className="w-full font-black py-5 bg-slate-900 hover:bg-black text-white rounded-[2rem] transition-all shadow-2xl active:scale-[0.98] mt-8 flex items-center justify-center gap-3 disabled:opacity-70 group text-[10px] uppercase tracking-widest italic"
                   >
                     {loading ? (
-                      <div className="w-6 h-6 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                      <Loader2 className="animate-spin" size={20} />
                     ) : (
                       <>
-                        <span>{method === 'CUSTOMER_PHONE' && !otpSent ? t('getOtp') : t('accessTerminal')}</span>
-                        <ChevronRight size={20} strokeWidth={3} className="group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-transform rtl:rotate-180"/>
+                        <span>{t('accessTerminal')}</span>
+                        <ChevronRight size={20} strokeWidth={3} className="group-hover:translate-x-1 transition-transform rtl:rotate-180"/>
                       </>
                     )}
                   </button>
                 </form>
               )}
               
-              <div className="mt-12 text-center md:hidden flex flex-col gap-1 items-center opacity-30">
-                  <span className="text-[8px] text-slate-400 font-black uppercase tracking-widest">{t('copyright')}</span>
-                  <span className="text-[9px] font-black text-slate-700 dark:text-slate-300 tracking-[0.2em] uppercase">{t('poweredBy')}</span>
-              </div>
-
                <div className="mt-12 text-center flex flex-col gap-4">
-                 {method === 'CREDENTIALS' && (
-                    <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest border-2 border-dashed border-slate-100 dark:border-slate-800 py-4 px-6 rounded-3xl inline-block">
-                        {t('defaultLogin')}: <strong className="text-slate-900 dark:text-white">admin</strong> / <strong className="text-slate-900 dark:text-white">123</strong>
-                    </div>
-                 )}
                  <div className="flex items-center justify-center gap-2 text-[9px] text-slate-400 font-black uppercase tracking-widest italic">
-                    <ShieldCheck size={12} className={method === 'CUSTOMER_PHONE' ? 'text-emerald-500' : method === 'CUSTOMER_GOOGLE' ? 'text-brand-500' : 'text-slate-400'} />
-                    {method === 'CUSTOMER_PHONE' ? 'Verified via Live WhatsApp Dispatch' : method === 'CUSTOMER_GOOGLE' ? 'Encrypted via Google OAuth' : 'Encrypted via easyPOS Multi-Device'}
+                    <ShieldCheck size={12} className={method === 'VISITOR_CODE' ? 'text-emerald-500' : 'text-slate-400'} />
+                    {method === 'VISITOR_CODE' ? 'Verified direct shop access' : 'Encrypted via easyPOS Multi-Device'}
                  </div>
               </div>
           </div>

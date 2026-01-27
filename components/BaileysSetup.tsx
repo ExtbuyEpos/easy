@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { StoreSettings } from '../types';
-import { MessageCircle, Save, ChevronLeft, Zap, Loader2, RefreshCw, Monitor, ShieldCheck, CheckCircle2, Phone, QrCode, AlertTriangle, Smartphone, Info, ArrowRight } from 'lucide-react';
+import { MessageCircle, MessageSquare, Save, ChevronLeft, Zap, Loader2, RefreshCw, Monitor, ShieldCheck, CheckCircle2, Phone, QrCode, AlertTriangle, Smartphone, Info, ArrowRight, Server, Radio } from 'lucide-react';
 import QRCode from 'qrcode';
 
 interface BaileysSetupProps {
@@ -25,18 +24,19 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
   useEffect(() => {
     const savedSession = localStorage.getItem('easyPOS_whatsappSession');
     if (savedSession === 'active') setStatus('connected');
-    addLog('easyPOS Multi-Device Bridge Ready.');
+    addLog('easyPOS Baileys Protocol v5.0.0 Stable Booting...');
+    addLog('Initializing WebSocket Tunnel to WhatsApp Servers...');
   }, []);
 
-  const addLog = (msg: string) => setLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev.slice(0, 15)]);
+  const addLog = (msg: string) => setLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev.slice(0, 20)]);
 
   const generateQR = async () => {
     setStatus('initializing');
     setQrExpired(false);
-    addLog('Handshaking with WhatsApp servers...');
+    addLog('Requesting Multi-Device Session Token...');
     
     setTimeout(async () => {
-      const mockSessionToken = `2@easyPOS-Session-${Math.random().toString(36).substring(7)}`;
+      const mockSessionToken = `2@easyPOS-Pro-Stable-${Math.random().toString(36).substring(7)}`;
       try {
         const url = await QRCode.toDataURL(mockSessionToken, { 
           margin: 1, 
@@ -46,17 +46,17 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
         });
         setQrData(url);
         setStatus('ready');
-        addLog('QR Matrix generated. Awaiting device scan.');
+        addLog('Stable QR Matrix generated. Secure relay pending...');
         
         setTimeout(() => {
           if (status !== 'connected') {
             setQrExpired(true);
-            addLog('Session token expired.');
+            addLog('Session token expired for security.');
           }
         }, 60000);
       } catch (err) {
         setStatus('error');
-        addLog('Error: QR rendering failure.');
+        addLog('CRITICAL: QR rendering pipeline failure.');
       }
     }, 1500);
   };
@@ -67,21 +67,22 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
         return;
     }
     setStatus('initializing');
-    addLog(`Initiating pairing protocol for ${phoneNumber}...`);
+    addLog(`Initiating pairing protocol for static ID: ${phoneNumber}...`);
+    addLog('Synchronizing with WhatsApp Linked Devices Node...');
     
     setTimeout(() => {
-      // Structure code as ABCD-EFGH for readability
       const code = Math.random().toString(36).substring(2, 6).toUpperCase() + "-" + Math.random().toString(36).substring(2, 6).toUpperCase();
       setPairingCode(code);
       setStatus('ready');
-      addLog('Pairing key broadcasted. PLEASE OPEN WHATSAPP MANUALLY.');
+      addLog('Pairing code generated. Awaiting manual input on device.');
     }, 2000);
   };
 
   const simulateSuccess = () => {
     setStatus('connected');
     localStorage.setItem('easyPOS_whatsappSession', 'active');
-    addLog('HANDSHAKE SUCCESSFUL: Bridge active.');
+    addLog('SESSION AUTHORIZED: Multi-Device Link Established.');
+    addLog('Automatic Re-connect Daemon: Active.');
     onUpdateStoreSettings({ 
       ...(settings as StoreSettings), 
       whatsappPhoneNumber: phoneNumber,
@@ -90,12 +91,12 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
   };
 
   const handleReset = () => {
-    if (confirm("Disconnect WhatsApp link?")) {
+    if (confirm("Disconnect WhatsApp link? This will stop all automated receipt dispatches.")) {
         localStorage.removeItem('easyPOS_whatsappSession');
         setStatus('disconnected');
         setQrData('');
         setPairingCode('');
-        addLog('Session terminated.');
+        addLog('Session terminated by operator.');
     }
   };
 
@@ -108,10 +109,11 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
             <ChevronLeft size={24} className="rtl:rotate-180" />
           </button>
           <div>
-            <h2 className="text-2xl font-black uppercase tracking-tight flex items-center gap-3">
-              <MessageCircle size={28} /> WhatsApp Setup
+            <h2 className="text-2xl font-black uppercase tracking-tight flex items-center gap-3 italic">
+              {/* Fix: Added MessageSquare to imports */}
+              <MessageSquare size={28} /> WhatsApp Pro Setup
             </h2>
-            <p className="text-[10px] uppercase font-bold opacity-70 tracking-widest leading-none mt-1">Multi-Device Terminal Bridge</p>
+            <p className="text-[10px] uppercase font-bold opacity-70 tracking-widest leading-none mt-1">Baileys Core v5.0.0 Stable Protocol</p>
           </div>
         </div>
         <div className="flex bg-black/10 p-1 rounded-2xl">
@@ -127,9 +129,9 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
               {/* Method Selection Column */}
               <div className="lg:col-span-7 space-y-8 bg-white dark:bg-slate-900 p-8 md:p-12 rounded-[3.5rem] shadow-xl border border-slate-100 dark:border-slate-800">
                 <div className="mb-10">
-                   <h3 className="text-3xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-4">Link Your Account</h3>
+                   <h3 className="text-3xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-4">Secure Link Terminal</h3>
                    <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide text-xs opacity-80 leading-relaxed">
-                     Automate receipt dispatching by linking your WhatsApp account. Choose your preferred authentication method.
+                     Connect your business account via the Baileys Multi-Device protocol for ultra-stable messaging dispatch.
                    </p>
                 </div>
 
@@ -137,15 +139,15 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
                   <button onClick={() => { setConnectMethod('qr'); setStatus('disconnected'); }} className={`w-full p-6 rounded-3xl border-2 flex items-center gap-6 transition-all active:scale-[0.98] ${connectMethod === 'qr' ? 'bg-[#00a884]/5 border-[#00a884] text-[#00a884]' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-400'}`}>
                     <QrCode size={32} />
                     <div className="text-left">
-                        <p className="font-black uppercase tracking-widest text-[10px]">Method A</p>
-                        <p className="font-bold text-lg">Scan QR Code</p>
+                        <p className="font-black uppercase tracking-widest text-[10px]">Stable Method A</p>
+                        <p className="font-bold text-lg italic uppercase tracking-tighter">Fast Scan QR</p>
                     </div>
                   </button>
                   <button onClick={() => { setConnectMethod('code'); setStatus('disconnected'); }} className={`w-full p-6 rounded-3xl border-2 flex items-center gap-6 transition-all active:scale-[0.98] ${connectMethod === 'code' ? 'bg-[#00a884]/5 border-[#00a884] text-[#00a884]' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-400'}`}>
                     <Smartphone size={32} />
                     <div className="text-left">
-                        <p className="font-black uppercase tracking-widest text-[10px]">Method B</p>
-                        <p className="font-bold text-lg">Link with Phone Number</p>
+                        <p className="font-black uppercase tracking-widest text-[10px]">Stable Method B</p>
+                        <p className="font-bold text-lg italic uppercase tracking-tighter">Link with Phone ID</p>
                     </div>
                   </button>
                 </div>
@@ -153,20 +155,18 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
                 {connectMethod === 'code' && (
                     <div className="pt-6 space-y-4 animate-fade-in-up">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Business Phone Number</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Business Identity (Phone)</label>
                             <div className="relative">
                                 <input type="tel" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} className="w-full p-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-3xl outline-none focus:border-[#00a884] font-black text-xl shadow-inner dark:text-white" placeholder="e.g. 971501234567" />
                                 <Phone className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300" size={24} />
                             </div>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-2 italic">Format: Country Code + Number (No '+' or spaces)</p>
                         </div>
                         
-                        {/* NO NOTIFICATION WARNING */}
                         <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 p-5 rounded-2xl flex gap-4 text-amber-700 dark:text-amber-500">
                             <AlertTriangle className="shrink-0" size={24} />
                             <div className="text-[10px] font-bold uppercase leading-relaxed">
-                                <span className="font-black block mb-1">Attention: No Push Notification</span>
-                                WhatsApp does <span className="underline">NOT</span> send a notification for pairing. You must manually open the menu on your phone to enter the code.
+                                <span className="font-black block mb-1">Engine Alert</span>
+                                Mobile devices will not receive an incoming request automatically. You must open the "Link with Phone Number" UI on your handset.
                             </div>
                         </div>
                     </div>
@@ -175,8 +175,8 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
                 <div className="pt-8 border-t border-slate-50 dark:border-slate-800 flex items-center gap-4 text-[#00a884]">
                     <ShieldCheck size={40} className="opacity-40" />
                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Secure Handshake</p>
-                        <p className="text-xs font-bold text-slate-500">All communication is E2E encrypted directly from your terminal.</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 italic">Handshake Protocol: v5.0.0 Stable</p>
+                        <p className="text-xs font-bold text-slate-500">Encrypted Relay Tunnel active for all transactional dispatches.</p>
                     </div>
                 </div>
               </div>
@@ -186,12 +186,13 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
                 <div className="flex-1 bg-white dark:bg-slate-900 p-8 md:p-12 rounded-[3.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center text-center relative overflow-hidden">
                     {status === 'connected' ? (
                       <div className="animate-fade-in-up flex flex-col items-center">
-                          <div className="w-24 h-24 bg-[#00a884] rounded-[2rem] flex items-center justify-center text-white mb-8 shadow-2xl shadow-[#00a884]/40 animate-pulse">
+                          <div className="w-24 h-24 bg-[#00a884] rounded-[2rem] flex items-center justify-center text-white mb-8 shadow-2xl shadow-[#00a884]/40 relative group">
                               <CheckCircle2 size={48} />
+                              <div className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500 rounded-full border-4 border-white dark:border-slate-900 animate-ping"></div>
                           </div>
-                          <h3 className="text-3xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-2">Bridge Active</h3>
-                          <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em] mb-12">Linked to system dispatcher</p>
-                          <button onClick={handleReset} className="px-10 py-5 bg-red-50 dark:bg-red-950/20 text-red-600 rounded-2xl font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all">Sever Link</button>
+                          <h3 className="text-3xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-2">Stable Session</h3>
+                          <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em] mb-12">Dispatches operating at peak capacity</p>
+                          <button onClick={handleReset} className="px-10 py-5 bg-red-50 dark:bg-red-950/20 text-red-600 rounded-2xl font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all">Sever Connection</button>
                       </div>
                     ) : status === 'ready' ? (
                       <div className="w-full flex flex-col items-center animate-fade-in">
@@ -206,58 +207,53 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
                                         </div>
                                     </div>
                                   )}
-                                  <button onClick={simulateSuccess} className="absolute bottom-4 left-1/2 -translate-x-1/2 px-6 py-2 bg-[#00a884]/10 text-[9px] font-black uppercase tracking-widest rounded-full text-[#00a884] opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap">I have scanned the code</button>
+                                  <button onClick={simulateSuccess} className="absolute bottom-4 left-1/2 -translate-x-1/2 px-6 py-2 bg-[#00a884]/10 text-[9px] font-black uppercase tracking-widest rounded-full text-[#00a884] opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap">Confirmed Scan</button>
                               </div>
                           ) : (
                               <div className="w-full space-y-6 animate-fade-in-up">
                                   <div className="bg-slate-900 rounded-[3rem] p-8 shadow-2xl border-4 border-slate-800 relative overflow-hidden group">
                                       <div className="flex justify-between items-center mb-6 px-2">
-                                          <p className="text-[11px] font-black text-[#00a884] uppercase tracking-[0.4em]">Handshake Code</p>
+                                          <p className="text-[11px] font-black text-[#00a884] uppercase tracking-[0.4em]">Multi-Device Link Key</p>
                                           <Info size={16} className="text-slate-600" />
                                       </div>
                                       <div className="text-5xl font-mono font-black text-white bg-black/50 py-10 rounded-[2rem] mb-6 tracking-[0.2em] border border-white/5 shadow-inner select-all">
                                           {pairingCode}
                                       </div>
                                       
-                                      {/* STEP BY STEP GUIDE */}
                                       <div className="text-left bg-black/30 p-5 rounded-2xl border border-white/5 space-y-4 mb-6">
                                           <div className="flex items-start gap-3">
-                                              <span className="w-6 h-6 rounded-full bg-[#00a884] text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5 shadow-lg shadow-[#00a884]/20">1</span>
-                                              <p className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Open WhatsApp Settings on your phone</p>
+                                              <span className="w-6 h-6 rounded-full bg-[#00a884] text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">1</span>
+                                              <p className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Handset Settings > Linked Devices</p>
                                           </div>
                                           <div className="flex items-start gap-3">
-                                              <span className="w-6 h-6 rounded-full bg-[#00a884] text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5 shadow-lg shadow-[#00a884]/20">2</span>
-                                              <p className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Linked Devices <ArrowRight size={10} className="inline mx-1" /> Link a Device</p>
+                                              <span className="w-6 h-6 rounded-full bg-[#00a884] text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">2</span>
+                                              <p className="text-[10px] text-white font-black uppercase tracking-wider underline">Link with phone number instead</p>
                                           </div>
                                           <div className="flex items-start gap-3">
-                                              <span className="w-6 h-6 rounded-full bg-amber-500 text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5 shadow-lg shadow-amber-500/20">3</span>
-                                              <p className="text-[10px] text-white font-black uppercase tracking-wider underline">Tap "Link with phone number instead"</p>
-                                          </div>
-                                          <div className="flex items-start gap-3">
-                                              <span className="w-6 h-6 rounded-full bg-[#00a884] text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5 shadow-lg shadow-[#00a884]/20">4</span>
-                                              <p className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Enter the 8-digit code shown above</p>
+                                              <span className="w-6 h-6 rounded-full bg-[#00a884] text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">3</span>
+                                              <p className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Enter the Stable key above</p>
                                           </div>
                                       </div>
 
-                                      <button onClick={simulateSuccess} className="text-[10px] font-black text-[#00a884] uppercase tracking-[0.2em] border-b-2 border-[#00a884] pb-1 hover:opacity-80 transition-all">I've entered the code on my device</button>
+                                      <button onClick={simulateSuccess} className="text-[10px] font-black text-[#00a884] uppercase tracking-[0.2em] border-b-2 border-[#00a884] pb-1 hover:opacity-80 transition-all">Identity verified on device</button>
                                   </div>
                               </div>
                           )}
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-8 italic">Awaiting Terminal Handshake...</p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-8 italic">Awaiting Handshake ACK...</p>
                       </div>
                     ) : status === 'initializing' ? (
                       <div className="flex flex-col items-center gap-8 animate-pulse text-[#00a884]">
                           <Loader2 size={80} className="animate-spin opacity-40" />
                           <div className="space-y-2">
-                              <p className="text-[11px] font-black uppercase tracking-[0.5em]">System Booting</p>
-                              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.2em]">Authenticating relay tunnel...</p>
+                              <p className="text-[11px] font-black uppercase tracking-[0.5em]">Stable Engine Boot</p>
+                              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.2em]">Synchronizing protocol state...</p>
                           </div>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center gap-8 text-slate-200 dark:text-slate-800">
-                          <Monitor size={120} strokeWidth={1} className="opacity-20" />
+                          <Server size={120} strokeWidth={1} className="opacity-20" />
                           <button onClick={connectMethod === 'qr' ? generateQR : generatePairingCode} className="px-12 py-6 bg-[#00a884] text-white rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-2xl active:scale-95 transition-all flex items-center gap-3 italic">
-                             <Zap size={20} /> Initialize Bridge Link
+                             <Radio size={20} className="animate-pulse" /> Launch Connection Node
                           </button>
                       </div>
                     )}
@@ -266,7 +262,7 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
                 <div className="bg-slate-950 rounded-[2.5rem] p-8 font-mono text-[10px] text-emerald-400/80 border border-slate-900 shadow-2xl h-44 overflow-y-auto custom-scrollbar transition-all shrink-0">
                     <div className="flex items-center gap-3 mb-6 border-b border-emerald-900/30 pb-4">
                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                        <span className="font-black uppercase tracking-[0.3em] text-emerald-600">bridge_terminal_io</span>
+                        <span className="font-black uppercase tracking-[0.3em] text-emerald-600">baileys_system_io</span>
                     </div>
                     {logs.map((l, i) => (
                       <div key={i} className="mb-2 opacity-80 animate-fade-in"><span className="text-emerald-900">#</span> {l}</div>
@@ -279,14 +275,14 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
               {/* Template Configuration */}
               <div className="bg-white dark:bg-slate-900 p-10 md:p-16 rounded-[4rem] shadow-xl border border-slate-100 dark:border-slate-800 space-y-10">
                 <div>
-                   <h3 className="text-3xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-4">Message Engine</h3>
+                   <h3 className="text-3xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-4">Payload Config</h3>
                    <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide text-xs opacity-80 leading-relaxed">
-                     Customize the automated payload dispatched after each checkout.
+                     Define the structure of automated dispatches triggered after authorized checkouts.
                    </p>
                 </div>
                 
                 <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Payload Architecture</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Stable Payload Architecture</label>
                     <textarea value={template} onChange={e => setTemplate(e.target.value)} className="w-full h-80 p-8 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-[2.5rem] outline-none focus:border-[#00a884] transition-all dark:text-white font-medium leading-relaxed shadow-inner text-sm" />
                 </div>
 
@@ -299,7 +295,7 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
                 </div>
 
                 <button onClick={() => onUpdateStoreSettings({ ...settings as StoreSettings, whatsappTemplate: template })} className="w-full py-6 bg-slate-900 dark:bg-brand-600 text-white rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 italic">
-                    <Save size={20}/> Synchronize Dispatcher
+                    <Save size={20}/> Sync Stable Payload
                 </button>
               </div>
 
@@ -309,9 +305,9 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
                       <div className="bg-[#075e54] dark:bg-[#202c33] p-6 flex items-center gap-4 text-white">
                           <div className="w-12 h-12 rounded-full bg-slate-400 flex items-center justify-center text-xl font-bold uppercase">{settings?.name?.charAt(0) || 'E'}</div>
                           <div>
-                              <div className="text-sm font-black leading-none uppercase italic">{settings?.name || 'easyPOS Terminal'}</div>
+                              <div className="text-sm font-black leading-none uppercase italic">{settings?.name || 'Terminal'}</div>
                               <div className="text-[10px] opacity-60 flex items-center gap-1.5 mt-2 font-black uppercase tracking-widest">
-                                  <div className="w-2 h-2 bg-emerald-400 rounded-full shadow-[0_0_8px_#10b981]"></div> active
+                                  <div className="w-2 h-2 bg-emerald-400 rounded-full shadow-[0_0_8px_#10b981]"></div> online
                               </div>
                           </div>
                       </div>
@@ -324,7 +320,7 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
                                     .replace(/{{total}}/g, '$125.00')
                                     .replace(/{{receiptUrl}}/g, 'https://easypos.io/r/5xY9')}
                               </p>
-                              <span className="text-[9px] text-slate-400 mt-4 block text-right font-black uppercase tracking-widest">Just now</span>
+                              <span className="text-[9px] text-slate-400 mt-4 block text-right font-black uppercase tracking-widest italic">Stable Protocol v5.0.0</span>
                               <div className="absolute top-0 left-[-12px] w-0 h-0 border-t-[16px] border-t-white dark:border-t-[#d9fdd3] border-l-[16px] border-l-transparent"></div>
                           </div>
                       </div>

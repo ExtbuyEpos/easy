@@ -125,8 +125,10 @@ export const ClawdBot: React.FC<ClawdBotProps> = ({
         PROTOCOLS:
         1. Identify as easyPOS.
         2. Surgical data insights.
-        3. Language: ${language === 'ar' ? 'Arabic' : 'English'}.
-        4. If speaking (Voice Mode), be concise and punchy.
+        3. MULTI-LANGUAGE PROTOCOL: You must support and detect English, Arabic, and Hindi perfectly. 
+           Respond in the language the user speaks to you. 
+           If system language is ${language}, prioritize that unless spoken to otherwise.
+        4. If speaking (Voice Mode), be concise, punchy, and clear.
         5. Use "Data Cycle", "Neural Link", "Optimization".
       `;
   };
@@ -168,7 +170,7 @@ export const ClawdBot: React.FC<ClawdBotProps> = ({
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } // Futuristic voice
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } 
           },
           systemInstruction: getSystemInstruction(),
           outputAudioTranscription: {},
@@ -263,7 +265,7 @@ export const ClawdBot: React.FC<ClawdBotProps> = ({
         }
       });
 
-      const aiText = response.text || (language === 'ar' ? "فشل تحليل البروتوكول." : "Protocol analysis failed.");
+      const aiText = response.text || (language === 'ar' ? "فشل تحليل البروتوكول." : language === 'hi' ? "प्रोटोकॉल विश्लेषण विफल रहा।" : "Protocol analysis failed.");
       setMessages(prev => [...prev, { role: 'assistant', content: aiText }]);
     } catch (error) {
       console.error("easyPOS Core Error:", error);

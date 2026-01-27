@@ -43,7 +43,8 @@ const App: React.FC = () => {
 
   const [storeSettings, setStoreSettings] = useState<StoreSettings>({
     name: 'easyPOS', address: 'Retail Management System', phone: '', footerMessage: 'Thank you!',
-    receiptSize: '80mm', whatsappTemplate: '', whatsappPhoneNumber: '', taxEnabled: false, taxRate: 0, taxName: 'Tax', autoPrint: false
+    receiptSize: '80mm', whatsappTemplate: '', whatsappPhoneNumber: '', taxEnabled: false, taxRate: 0, taxName: 'Tax', autoPrint: false,
+    visitorAccessCode: '2026'
   });
 
   // Track Page Views
@@ -59,12 +60,20 @@ const App: React.FC = () => {
 
   useEffect(() => {
     localStorage.setItem('easyPOS_language', language);
-    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.dir = (language === 'ar') ? 'rtl' : 'ltr';
     document.documentElement.lang = language;
   }, [language]);
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
-  const toggleLanguage = () => setLanguage(prev => prev === 'en' ? 'ar' : 'en');
+  
+  const toggleLanguage = () => {
+    setLanguage(prev => {
+        if (prev === 'en') return 'ar';
+        if (prev === 'ar') return 'hi';
+        return 'en';
+    });
+  };
+
   const t = (key: string) => translations[language][key] || key;
 
   useEffect(() => {
@@ -366,6 +375,7 @@ const App: React.FC = () => {
           setCurrentView(AppView.CUSTOMER_PORTAL);
           logUserLogin('GUEST');
         }}
+        storeSettings={storeSettings}
       />
     );
   }
@@ -454,6 +464,7 @@ const App: React.FC = () => {
                 onLoginRequest={() => { setUser(null); setCurrentView(AppView.LOGIN); }}
                 onLogout={() => { setUser(null); setCurrentView(AppView.CUSTOMER_PORTAL); }}
                 onUpdateAvatar={handleUpdateUserAvatar}
+                storeSettings={storeSettings}
               />
             )}
             {currentView === AppView.POS && (
@@ -494,10 +505,24 @@ const App: React.FC = () => {
               <Reports sales={sales} products={products} users={users} onGoBack={() => setCurrentView(AppView.POS)} language={language} />
             )}
             {currentView === AppView.SETTINGS && (
-              <Settings users={users} products={products} sales={sales} onAddUser={handleAddUser} onDeleteUser={handleDeleteUser} currentUser={user!} storeSettings={storeSettings} onUpdateStoreSettings={handleUpdateStoreSettings} onGoBack={() => setCurrentView(AppView.POS)} language={language} toggleLanguage={toggleLanguage} t={t} />
+              <Settings 
+                users={users} 
+                products={products} 
+                sales={sales} 
+                onAddUser={handleAddUser} 
+                onDeleteUser={handleDeleteUser} 
+                currentUser={user!} 
+                storeSettings={storeSettings} 
+                onUpdateStoreSettings={handleUpdateStoreSettings} 
+                onGoBack={() => setCurrentView(AppView.POS)} 
+                language={language} 
+                toggleLanguage={toggleLanguage} 
+                t={t} 
+                onNavigate={(v) => setCurrentView(v)}
+              />
             )}
             {currentView === AppView.BAILEYS_SETUP && (
-              <BaileysSetup onUpdateStoreSettings={handleUpdateStoreSettings} settings={storeSettings} onGoBack={() => setCurrentView(AppView.POS)} t={t} />
+              <BaileysSetup onUpdateStoreSettings={handleUpdateStoreSettings} settings={storeSettings} onGoBack={() => setCurrentView(AppView.SETTINGS)} t={t} />
             )}
             {currentView === AppView.PRINT_BARCODE && (
               <PrintBarcode products={products} storeSettings={storeSettings} onGoBack={() => setCurrentView(AppView.POS)} language={language} t={t} />
@@ -519,6 +544,7 @@ const App: React.FC = () => {
                   setCurrentView(AppView.CUSTOMER_PORTAL);
                   logUserLogin('GUEST');
                 }}
+                storeSettings={storeSettings}
               />
             )}
         </div>

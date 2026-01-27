@@ -157,7 +157,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className="flex flex-col items-center justify-center gap-2 p-3.5 rounded-[22px] bg-slate-800/20 hover:bg-slate-800/40 transition-all border border-slate-700/20 group"
             >
                 <Globe size={20} className="text-emerald-400 group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-white">{language === 'en' ? 'Arabic' : 'English'}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-white">
+                  {language === 'en' ? 'Arabic' : language === 'ar' ? 'Hindi' : 'English'}
+                </span>
             </button>
         </div>
 

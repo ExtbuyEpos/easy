@@ -1,9 +1,9 @@
+
 import { Language } from '../types';
 
 /**
  * Formats numbers into localized strings.
- * If language is 'ar', it returns Eastern Arabic numerals (٠١٢٣٤٥٦٧٨٩) 
- * by using the 'u-nu-arab' extension.
+ * Supports English, Arabic, and Hindi localized numerals.
  */
 export const formatNumber = (
   num: number | string, 
@@ -13,8 +13,10 @@ export const formatNumber = (
   const value = typeof num === 'string' ? parseFloat(num) : num;
   if (isNaN(value)) return '0';
 
-  // Use the 'u-nu-arab' extension to force Eastern Arabic numerals
-  const locale = lang === 'ar' ? 'ar-SA-u-nu-arab' : 'en-US';
+  // locale detection logic
+  let locale = 'en-US';
+  if (lang === 'ar') locale = 'ar-SA-u-nu-arab'; // Arabic numerals
+  if (lang === 'hi') locale = 'hi-IN-u-nu-deva'; // Devanagari (Hindi) numerals
   
   const defaultOptions: Intl.NumberFormatOptions = {
     minimumFractionDigits: options.minimumFractionDigits ?? 0,
@@ -38,8 +40,9 @@ export const formatCurrency = (
     maximumFractionDigits: 2 
   });
   
-  // In Arabic, the currency symbol typically follows the number
-  return lang === 'ar' 
-    ? `${formattedValue} ${currencySymbol}`
-    : `${currencySymbol}${formattedValue}`;
+  // In many Asian/Arabic locales, symbol position varies
+  if (lang === 'ar') return `${formattedValue} ${currencySymbol}`;
+  if (lang === 'hi') return `${currencySymbol}${formattedValue}`; // Standard for IN context
+  
+  return `${currencySymbol}${formattedValue}`;
 };

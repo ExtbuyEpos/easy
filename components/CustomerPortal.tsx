@@ -1,10 +1,11 @@
 
 import React, { useState, useMemo } from 'react';
-import { Product, Language, User } from '../types';
+import { Product, Language, User, StoreSettings } from '../types';
 import { CURRENCY } from '../constants';
 import { Search, ShoppingBag, User as UserIcon, Sparkles, LogIn, ChevronRight, LayoutGrid, List, Camera, ImageIcon, UserCircle2, Settings2, RefreshCcw } from 'lucide-react';
 import { formatCurrency, formatNumber } from '../utils/format';
 import { VirtualTryOn } from './VirtualTryOn';
+import { CustomerBot } from './CustomerBot';
 
 interface CustomerPortalProps {
   products: Product[];
@@ -14,6 +15,7 @@ interface CustomerPortalProps {
   currentUser: User | null;
   onLogout: () => void;
   onUpdateAvatar: (data: string, tryOnCache?: Record<string, string>) => void;
+  storeSettings: StoreSettings;
 }
 
 export const CustomerPortal: React.FC<CustomerPortalProps> = ({
@@ -23,7 +25,8 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
   onLoginRequest,
   currentUser,
   onLogout,
-  onUpdateAvatar
+  onUpdateAvatar,
+  storeSettings
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -61,7 +64,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors flex flex-col">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors flex flex-col relative">
       {/* Customer Header */}
       <header className="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 px-6 py-6 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-6">
@@ -144,25 +147,6 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
         </div>
       )}
 
-      {/* Real Avatar Context Bar (Logged In Only) */}
-      {currentUser && currentUser.customerAvatar && (
-          <div className="bg-slate-900 dark:bg-brand-900/20 px-6 py-4 flex items-center justify-center gap-6 animate-fade-in border-b border-white/5">
-              <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full border-2 border-brand-500 overflow-hidden shadow-lg">
-                      <img src={currentUser.customerAvatar} className="w-full h-full object-cover" alt="My Avatar" />
-                  </div>
-                  <div className="hidden sm:block">
-                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Active Identity</p>
-                      <p className="text-[10px] font-black text-white uppercase italic tracking-tighter">AI Try-On Enabled</p>
-                  </div>
-              </div>
-              <div className="h-4 w-px bg-white/10"></div>
-              <button onClick={() => setShowAvatarSetup(true)} className="flex items-center gap-2 text-[9px] font-black text-brand-400 uppercase tracking-widest hover:text-white transition-colors">
-                  <RefreshCcw size={12} /> Rescan Face
-              </button>
-          </div>
-      )}
-
       {/* Filter Bar */}
       <div className="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 px-6 py-4 overflow-x-auto no-scrollbar flex items-center gap-4 justify-center">
         {categories.map(cat => (
@@ -224,6 +208,12 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                     <h4 className="font-black text-slate-900 dark:text-white text-lg tracking-tight truncate uppercase italic">{p.name}</h4>
                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1 shrink-0">{p.category}</span>
                   </div>
+                  {(p.size || p.color) && (
+                    <div className="flex gap-2 mb-4">
+                      {p.size && <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[9px] font-black uppercase text-slate-500 border border-slate-200 dark:border-slate-700">{t('size')}: {p.size}</span>}
+                      {p.color && <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[9px] font-black uppercase text-slate-500 border border-slate-200 dark:border-slate-700">{t('color')}: {p.color}</span>}
+                    </div>
+                  )}
                   <div className="flex items-end justify-between mt-auto">
                     <div>
                       <p className="text-2xl font-black text-brand-600 dark:text-brand-400 tracking-tighter">{formatCurrency(p.sellPrice, language, CURRENCY)}</p>
@@ -238,6 +228,15 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
           </div>
         )}
       </main>
+
+      {/* Support Chatbot for Customers */}
+      <CustomerBot 
+        products={products}
+        storeSettings={storeSettings}
+        currentUser={currentUser}
+        language={language}
+        t={t}
+      />
 
       {/* Simple Footer */}
       <footer className="bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 p-12 text-center opacity-40">

@@ -159,7 +159,12 @@ export const POS: React.FC<POSProps> = ({
                         {product.stock < 10 && <div className="absolute bottom-2 right-2 bg-red-500 text-white text-[8px] font-black px-2 py-1 rounded-lg uppercase">Low Stock</div>}
                     </div>
                     <div className="flex flex-col flex-1">
-                        <h3 className="font-black text-slate-800 dark:text-slate-100 text-xs md:text-sm leading-tight line-clamp-2 h-8 mb-2">{product.name}</h3>
+                        <h3 className="font-black text-slate-800 dark:text-slate-100 text-xs md:text-sm leading-tight line-clamp-2 h-8 mb-1">{product.name}</h3>
+                        {(product.size || product.color) && (
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-2">
+                             {product.size}{product.size && product.color && ' • '}{product.color}
+                          </p>
+                        )}
                         <div className="mt-auto flex justify-between items-center">
                             <div className="text-sm md:text-lg font-black text-brand-600 dark:text-brand-400">{formatCurrency(product.sellPrice, language, CURRENCY)}</div>
                             <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-xl flex items-center justify-center group-hover:bg-brand-600 group-hover:text-white transition-all shadow-sm"><Plus size={18} strokeWidth={3} /></div>
@@ -196,6 +201,11 @@ export const POS: React.FC<POSProps> = ({
                 <div className="bg-white text-slate-900 p-8 rounded-[1rem] shadow-2xl relative font-mono text-xs border-t-[12px] border-brand-500 overflow-hidden">
                    <div className="absolute inset-x-0 -bottom-3 h-4 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iMTAiIHZpZXdCb3g9IjAgMCA0MCAxMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMCAwbDEwIDEwbDEwLTEwbDEwIDEwbDEwLTEwdjEwaC00MHoiIGZpbGw9IndoaXRlIi8+PC9zdmc+')] bg-repeat-x"></div>
                    <div className="text-center mb-6">
+                      {storeSettings.logo && (
+                        <div className="flex justify-center mb-4">
+                            <img src={storeSettings.logo} className="h-16 object-contain" alt="Logo" />
+                        </div>
+                      )}
                       <p className="font-black text-xl uppercase tracking-tighter">{storeSettings.name}</p>
                       <p className="opacity-60 text-[9px] uppercase tracking-widest leading-relaxed mt-1">{storeSettings.address}</p>
                       <div className="border-b border-dashed border-slate-300 my-4"></div>
@@ -206,7 +216,10 @@ export const POS: React.FC<POSProps> = ({
                          <div key={idx} className="flex justify-between items-start">
                             <span className="flex-1 pr-4">
                                {item.name.toUpperCase()}
-                               <span className="block opacity-60 text-[9px] mt-0.5">{formatNumber(item.quantity, language)} X {formatCurrency(item.sellPrice, language, CURRENCY)}</span>
+                               <span className="block opacity-60 text-[9px] mt-0.5">
+                                 {formatNumber(item.quantity, language)} X {formatCurrency(item.sellPrice, language, CURRENCY)}
+                                 {(item.size || item.color) && ` [${item.size}${item.size && item.color ? ', ' : ''}${item.color}]`}
+                               </span>
                             </span>
                             <span className="font-bold">{formatCurrency(item.sellPrice * item.quantity, language, CURRENCY)}</span>
                          </div>
@@ -256,7 +269,10 @@ export const POS: React.FC<POSProps> = ({
                               </div>
                               <div className="flex-1 min-w-0">
                                   <p className="font-black text-slate-800 dark:text-slate-100 text-sm truncate">{item.name}</p>
-                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{formatCurrency(item.sellPrice, language, CURRENCY)}</p>
+                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                    {formatCurrency(item.sellPrice, language, CURRENCY)}
+                                    {(item.size || item.color) && ` | ${item.size}${item.size && item.color ? ', ' : ''}${item.color}`}
+                                  </p>
                               </div>
                               <div className="flex items-center gap-3">
                                   <button onClick={() => updateQuantity(item.id, -1)} className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-red-500 active:scale-90 transition-all"><Minus size={14}/></button>
@@ -315,14 +331,19 @@ export const POS: React.FC<POSProps> = ({
       </div>
 
       {showInvoice && lastSale && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-3xl flex items-center justify-center z-[110] p-4 print:p-0">
-          <div className="bg-white rounded-[3.5rem] w-full max-w-md relative animate-fade-in-up shadow-2xl overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-3xl flex items-center justify-center z-[110] p-4 print:p-0 print:bg-white">
+          <div className="bg-white rounded-[3.5rem] w-full max-w-md relative animate-fade-in-up shadow-2xl overflow-hidden flex flex-col print:shadow-none print:max-h-none print:h-auto print:rounded-none">
             <div className="p-8 pb-4 flex justify-between items-center no-print">
                  <div className="flex items-center gap-3 text-emerald-600"><CheckCircle size={24} /><span className="font-black text-[10px] uppercase tracking-widest">Sale Authorized</span></div>
                  <button onClick={() => setShowInvoice(false)} className="p-2 bg-slate-100 rounded-full text-slate-800"><X size={20}/></button>
             </div>
-            <div className="p-10 flex-1 overflow-y-auto print:p-0">
+            <div className="p-10 flex-1 overflow-y-auto print:p-0 print:overflow-visible">
                 <div className="text-center mb-10">
+                   {storeSettings.logo && (
+                     <div className="flex justify-center mb-6">
+                        <img src={storeSettings.logo} className="h-24 object-contain max-w-full" alt="Logo" />
+                     </div>
+                   )}
                    <h1 className="text-3xl font-black uppercase tracking-tighter italic leading-none">{storeSettings.name}</h1>
                    <p className="text-[9px] text-slate-400 uppercase tracking-widest font-bold mt-3 leading-relaxed">{storeSettings.address}</p>
                 </div>
@@ -336,7 +357,11 @@ export const POS: React.FC<POSProps> = ({
                 <div className="space-y-4 mb-10 border-t-2 border-dashed border-slate-100 pt-8 font-mono">
                    {lastSale.items.map((item: any) => (
                      <div key={item.id} className="flex justify-between items-start text-sm">
-                        <span className="flex-1 pr-6">{item.name.toUpperCase()} <span className="text-[10px] opacity-50 block mt-1">x{formatNumber(item.quantity, language)} @ {formatCurrency(item.sellPrice, language, CURRENCY)}</span></span>
+                        <span className="flex-1 pr-6">
+                          {item.name.toUpperCase()} 
+                          {(item.size || item.color) && <span className="text-[10px] opacity-70 block">({item.size}{item.size && item.color ? ', ' : ''}{item.color})</span>}
+                          <span className="text-[10px] opacity-50 block mt-1">x{formatNumber(item.quantity, language)} @ {formatCurrency(item.sellPrice, language, CURRENCY)}</span>
+                        </span>
                         <span className="font-black">{formatCurrency(item.sellPrice * item.quantity, language, CURRENCY)}</span>
                      </div>
                    ))}
