@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Product, User, Language, StoreSettings, ProductVariant } from '../types';
-import { Plus, Search, Trash2, Edit2, Save, X, Image as ImageIcon, RefreshCw, Upload, Package, AlertCircle, ChevronLeft, TrendingUp, DollarSign, List, Grid, Check, ArrowRightLeft, Sparkles, Loader2, Heart, Type, Palette, Ruler, Layers, Settings2 } from 'lucide-react';
+import { Plus, Search, Trash2, Edit2, Save, X, Image as ImageIcon, RefreshCw, Upload, Package, AlertCircle, ChevronLeft, TrendingUp, DollarSign, List, Grid, Check, ArrowRightLeft, Sparkles, Loader2, Heart, Type, Palette, Ruler, Layers, Settings2, CheckCircle2 } from 'lucide-react';
 import { CURRENCY } from '../constants';
 import { formatNumber, formatCurrency } from '../utils/format';
 import { generateImageWithCloudflare } from '../services/cloudflareAiService';
@@ -65,6 +65,14 @@ export const Inventory: React.FC<InventoryProps> = ({
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [matrix, setMatrix] = useState<ProductVariant[]>([]);
 
+  // Custom additions
+  const [customColors, setCustomColors] = useState<{name: string, hex: string}[]>([]);
+  const [customSizes, setCustomSizes] = useState<string[]>([]);
+  const [isAddingCustomColor, setIsAddingCustomColor] = useState(false);
+  const [isAddingCustomSize, setIsAddingCustomSize] = useState(false);
+  const [newColorInput, setNewColorInput] = useState({ name: '', hex: '#6366f1' });
+  const [newSizeInput, setNewSizeInput] = useState('');
+
   const [formData, setFormData] = useState<Partial<Product>>({
     name: '', sku: '', costPrice: 0, sellPrice: 0, stock: 0, category: 'General', image: '', size: '', color: ''
   });
@@ -114,12 +122,22 @@ export const Inventory: React.FC<InventoryProps> = ({
       setUseVariants(!!product.hasVariants);
       if (product.hasVariants && product.variants) {
           setMatrix(product.variants);
-          setSelectedColors(Array.from(new Set(product.variants.map(v => v.color))));
-          setSelectedSizes(Array.from(new Set(product.variants.map(v => v.size))));
+          const pColors = Array.from(new Set(product.variants.map(v => v.color)));
+          const pSizes = Array.from(new Set(product.variants.map(v => v.size)));
+          setSelectedColors(pColors);
+          setSelectedSizes(pSizes);
+          
+          // Add any non-common variants to custom lists
+          const pCustomColors = pColors.filter(pc => !COMMON_COLORS.some(cc => cc.name === pc)).map(c => ({ name: c, hex: '#cccccc' }));
+          const pCustomSizes = pSizes.filter(ps => !COMMON_SIZES.includes(ps));
+          setCustomColors(pCustomColors);
+          setCustomSizes(pCustomSizes);
       } else {
           setMatrix([]);
           setSelectedColors([]);
           setSelectedSizes([]);
+          setCustomColors([]);
+          setCustomSizes([]);
       }
     } else {
       setEditingProduct(null);
@@ -128,7 +146,11 @@ export const Inventory: React.FC<InventoryProps> = ({
       setMatrix([]);
       setSelectedColors([]);
       setSelectedSizes([]);
+      setCustomColors([]);
+      setCustomSizes([]);
     }
+    setIsAddingCustomColor(false);
+    setIsAddingCustomSize(false);
     setIsModalOpen(true);
   };
 
@@ -162,6 +184,32 @@ export const Inventory: React.FC<InventoryProps> = ({
     setSelectedSizes(prev => prev.includes(name) ? prev.filter(s => s !== name) : [...prev, name]);
   };
 
+  const addCustomColor = () => {
+    if (!newColorInput.name.trim()) return;
+    const exists = [...COMMON_COLORS, ...customColors].some(c => c.name.toLowerCase() === newColorInput.name.toLowerCase());
+    if (exists) {
+        toggleColor(newColorInput.name);
+    } else {
+        setCustomColors(prev => [...prev, newColorInput]);
+        setSelectedColors(prev => [...prev, newColorInput.name]);
+    }
+    setNewColorInput({ name: '', hex: '#6366f1' });
+    setIsAddingCustomColor(false);
+  };
+
+  const addCustomSize = () => {
+    if (!newSizeInput.trim()) return;
+    const exists = [...COMMON_SIZES, ...customSizes].some(s => s.toLowerCase() === newSizeInput.toLowerCase());
+    if (exists) {
+        toggleSize(newSizeInput);
+    } else {
+        setCustomSizes(prev => [...prev, newSizeInput]);
+        setSelectedSizes(prev => [...prev, newSizeInput]);
+    }
+    setNewSizeInput('');
+    setIsAddingCustomSize(false);
+  };
+
   const updateMatrixStock = (color: string, size: string, value: string) => {
     const qty = parseInt(value) || 0;
     setMatrix(prev => prev.map(m => (m.color === color && m.size === size) ? { ...m, stock: qty } : m));
@@ -175,6 +223,9 @@ export const Inventory: React.FC<InventoryProps> = ({
       reader.readAsDataURL(file);
     }
   };
+
+  const allColors = [...COMMON_COLORS, ...customColors];
+  const allSizes = [...COMMON_SIZES, ...customSizes];
 
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 p-4 lg:p-8 overflow-hidden transition-colors">
@@ -411,12 +462,33 @@ export const Inventory: React.FC<InventoryProps> = ({
                             <div className="space-y-10 animate-fade-in">
                                 {/* Step 1: Color Selection */}
                                 <div className="space-y-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center text-white text-[10px] font-black">1</div>
-                                        <label className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2"><Palette size={14}/> Define Available Colours</label>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center text-white text-[10px] font-black">1</div>
+                                            <label className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2"><Palette size={14}/> Define Available Colours</label>
+                                        </div>
+                                        <button onClick={() => setIsAddingCustomColor(true)} className="flex items-center gap-2 text-[10px] font-black text-brand-600 uppercase tracking-widest hover:underline italic"><Plus size={14}/> Add More Colour</button>
                                     </div>
-                                    <div className="flex flex-wrap gap-3 p-6 bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-inner">
-                                        {COMMON_COLORS.map(c => (
+
+                                    {isAddingCustomColor && (
+                                        <div className="p-6 bg-brand-50 dark:bg-brand-900/10 rounded-[2rem] border border-brand-100 dark:border-brand-900/30 flex flex-col md:flex-row gap-4 animate-fade-in-down">
+                                            <div className="flex-1 space-y-2">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Colour Name</label>
+                                                <input type="text" value={newColorInput.name} onChange={e => setNewColorInput({...newColorInput, name: e.target.value})} className="w-full p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:border-brand-500 font-bold text-sm" placeholder="E.g. Emerald Gold" />
+                                            </div>
+                                            <div className="w-full md:w-32 space-y-2">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Hex Code</label>
+                                                <input type="color" value={newColorInput.hex} onChange={e => setNewColorInput({...newColorInput, hex: e.target.value})} className="w-full h-11 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-1 cursor-pointer" />
+                                            </div>
+                                            <div className="flex items-end gap-2">
+                                                <button onClick={addCustomColor} className="p-3.5 bg-brand-600 text-white rounded-xl shadow-lg hover:scale-105 active:scale-95 transition-all"><Check size={18}/></button>
+                                                <button onClick={() => setIsAddingCustomColor(false)} className="p-3.5 bg-slate-200 text-slate-500 rounded-xl hover:bg-slate-300 transition-all"><X size={18}/></button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="flex flex-wrap gap-3 p-6 bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-inner max-h-48 overflow-y-auto custom-scrollbar">
+                                        {allColors.map(c => (
                                             <button 
                                                 key={c.name} 
                                                 onClick={() => toggleColor(c.name)}
@@ -431,12 +503,29 @@ export const Inventory: React.FC<InventoryProps> = ({
 
                                 {/* Step 2: Size Selection */}
                                 <div className="space-y-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center text-white text-[10px] font-black">2</div>
-                                        <label className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2"><Ruler size={14}/> Define Available Sizes</label>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center text-white text-[10px] font-black">2</div>
+                                            <label className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2"><Ruler size={14}/> Define Available Sizes</label>
+                                        </div>
+                                        <button onClick={() => setIsAddingCustomSize(true)} className="flex items-center gap-2 text-[10px] font-black text-brand-600 uppercase tracking-widest hover:underline italic"><Plus size={14}/> Add More Size</button>
                                     </div>
-                                    <div className="flex flex-wrap gap-2 p-6 bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-inner">
-                                        {COMMON_SIZES.map(s => (
+
+                                    {isAddingCustomSize && (
+                                        <div className="p-6 bg-brand-50 dark:bg-brand-900/10 rounded-[2rem] border border-brand-100 dark:border-brand-900/30 flex gap-4 animate-fade-in-down">
+                                            <div className="flex-1 space-y-2">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Size Label</label>
+                                                <input type="text" value={newSizeInput} onChange={e => setNewSizeInput(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:border-brand-500 font-bold text-sm" placeholder="E.g. 6XL or 44" />
+                                            </div>
+                                            <div className="flex items-end gap-2">
+                                                <button onClick={addCustomSize} className="p-3.5 bg-brand-600 text-white rounded-xl shadow-lg hover:scale-105 active:scale-95 transition-all"><Check size={18}/></button>
+                                                <button onClick={() => setIsAddingCustomSize(false)} className="p-3.5 bg-slate-200 text-slate-500 rounded-xl hover:bg-slate-300 transition-all"><X size={18}/></button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="flex flex-wrap gap-2 p-6 bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-inner max-h-48 overflow-y-auto custom-scrollbar">
+                                        {allSizes.map(s => (
                                             <button 
                                                 key={s} 
                                                 onClick={() => toggleSize(s)}
@@ -456,21 +545,21 @@ export const Inventory: React.FC<InventoryProps> = ({
                                     </div>
                                     
                                     {selectedColors.length > 0 && selectedSizes.length > 0 ? (
-                                        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-700 overflow-hidden shadow-2xl">
+                                        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-700 overflow-hidden shadow-2xl overflow-x-auto custom-scrollbar">
                                             <table className="w-full text-left">
                                                 <thead className="bg-slate-50 dark:bg-slate-800 text-slate-400 font-black uppercase text-[9px] tracking-widest">
                                                     <tr>
-                                                        <th className="p-6">Variant Mapping</th>
+                                                        <th className="p-6 sticky left-0 bg-slate-50 dark:bg-slate-800 z-10">Variant Mapping</th>
                                                         {selectedSizes.map(s => <th key={s} className="p-6 text-center">{s}</th>)}
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                                                     {selectedColors.map(color => (
                                                         <tr key={color} className="group">
-                                                            <td className="p-6 bg-slate-50/30 dark:bg-slate-800/30">
+                                                            <td className="p-6 bg-slate-50/30 dark:bg-slate-800/30 sticky left-0 z-10 backdrop-blur-md">
                                                                 <div className="flex items-center gap-3">
-                                                                    <div className="w-6 h-6 rounded-full border border-black/10" style={{ backgroundColor: COMMON_COLORS.find(c=>c.name === color)?.hex }}></div>
-                                                                    <span className="font-black text-[11px] uppercase dark:text-white">{color}</span>
+                                                                    <div className="w-6 h-6 rounded-full border border-black/10" style={{ backgroundColor: allColors.find(c=>c.name === color)?.hex || '#cccccc' }}></div>
+                                                                    <span className="font-black text-[11px] uppercase dark:text-white whitespace-nowrap">{color}</span>
                                                                 </div>
                                                             </td>
                                                             {selectedSizes.map(size => {
@@ -481,7 +570,7 @@ export const Inventory: React.FC<InventoryProps> = ({
                                                                             type="number" 
                                                                             value={v?.stock || 0}
                                                                             onChange={e => updateMatrixStock(color, size, e.target.value)}
-                                                                            className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-brand-500 rounded-2xl text-center font-black text-lg outline-none transition-all dark:text-white"
+                                                                            className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-brand-500 rounded-2xl text-center font-black text-lg outline-none transition-all dark:text-white min-w-[80px]"
                                                                         />
                                                                     </td>
                                                                 );
