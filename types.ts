@@ -9,10 +9,11 @@ export enum AppView {
   SETTINGS = 'SETTINGS',
   BAILEYS_SETUP = 'BAILEYS_SETUP',
   ORDERS = 'ORDERS',
-  PRINT_BARCODE = 'PRINT_BARCODE'
+  PRINT_BARCODE = 'PRINT_BARCODE',
+  CUSTOMER_PORTAL = 'CUSTOMER_PORTAL'
 }
 
-export type UserRole = 'ADMIN' | 'MANAGER' | 'STAFF' | 'CASHIER';
+export type UserRole = 'ADMIN' | 'MANAGER' | 'STAFF' | 'CASHIER' | 'CUSTOMER';
 export type Language = 'en' | 'ar';
 
 export interface Translations {
@@ -60,6 +61,8 @@ export interface User {
   password?: string;
   role: UserRole;
   employeeId?: string;
+  email?: string;
+  avatar?: string;
 }
 
 export interface StoreSettings {

@@ -10,6 +10,8 @@ import { Settings } from './components/Settings';
 import { BaileysSetup } from './components/BaileysSetup';
 import { Orders } from './components/Orders';
 import { PrintBarcode } from './components/PrintBarcode';
+import { AiAssistant } from './components/AiAssistant';
+import { CustomerPortal } from './components/CustomerPortal';
 import { AppView, Product, Sale, CartItem, User, StoreSettings, Language } from './types';
 import { INITIAL_PRODUCTS, INITIAL_USERS } from './constants';
 import { translations } from './translations';
@@ -276,61 +278,84 @@ const App: React.FC = () => {
       }
   };
 
-  if (!user) return <Login onLogin={setUser} users={users} t={t} isDarkMode={isDarkMode} toggleTheme={toggleTheme} language={language} toggleLanguage={toggleLanguage} />;
+  // Helper for app state
+  const isCustomer = user?.role === 'CUSTOMER';
+  const isGuest = currentView === AppView.CUSTOMER_PORTAL && !user;
 
-  const isSidebarShown = isMobileMenuOpen || (isSidebarVisible && window.innerWidth >= 1024);
+  if (!user && currentView !== AppView.CUSTOMER_PORTAL) {
+    return (
+      <Login 
+        onLogin={(u) => { setUser(u); setCurrentView(u.role === 'CUSTOMER' ? AppView.CUSTOMER_PORTAL : AppView.POS); }} 
+        users={users} 
+        t={t} 
+        isDarkMode={isDarkMode} 
+        toggleTheme={toggleTheme} 
+        language={language} 
+        toggleLanguage={toggleLanguage}
+        onEnterAsGuest={() => setCurrentView(AppView.CUSTOMER_PORTAL)}
+      />
+    );
+  }
+
+  const isSidebarShown = !isCustomer && (isMobileMenuOpen || (isSidebarVisible && window.innerWidth >= 1024));
 
   return (
     <div className="flex h-[100svh] overflow-hidden bg-[#111827] dark:bg-slate-950 font-sans flex-col lg:flex-row transition-colors">
       
-      {isMobileMenuOpen && (
+      {isMobileMenuOpen && !isCustomer && (
         <div className="fixed inset-0 bg-black/70 z-[60] lg:hidden backdrop-blur-md" onClick={() => setIsMobileMenuOpen(false)} />
       )}
 
-      <div className={`
-        fixed inset-y-0 left-0 rtl:left-auto rtl:right-0 z-[70] w-72 transform transition-all duration-500 ease-out 
-        lg:static lg:w-72 lg:translate-x-0
-        ${isSidebarShown ? 'translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'}
-        ${!isSidebarVisible && window.innerWidth >= 1024 ? 'lg:hidden' : ''}
-      `}>
-          <Sidebar 
-            currentView={currentView} 
-            onChangeView={(v) => { setCurrentView(v); setIsMobileMenuOpen(false); }} 
-            onLogout={() => setUser(null)} 
-            currentUser={user} 
-            onClose={() => {
-                if(window.innerWidth < 1024) setIsMobileMenuOpen(false);
-                else setIsSidebarVisible(false);
-            }} 
-            isOnline={isOnline} 
-            isSyncing={isSyncing} 
-            isDarkMode={isDarkMode} 
-            toggleTheme={toggleTheme} 
-            language={language} 
-            toggleLanguage={toggleLanguage} 
-            t={t} 
-          />
-      </div>
+      {/* Hide Sidebar for Customers */}
+      {!isCustomer && (
+        <div className={`
+          fixed inset-y-0 left-0 rtl:left-auto rtl:right-0 z-[70] w-72 transform transition-all duration-500 ease-out 
+          lg:static lg:w-72 lg:translate-x-0
+          ${isSidebarShown ? 'translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'}
+          ${!isSidebarVisible && window.innerWidth >= 1024 ? 'lg:hidden' : ''}
+        `}>
+            <Sidebar 
+              currentView={currentView} 
+              onChangeView={(v) => { setCurrentView(v); setIsMobileMenuOpen(false); }} 
+              onLogout={() => { setUser(null); setCurrentView(AppView.POS); }} 
+              currentUser={user!} 
+              onClose={() => {
+                  if(window.innerWidth < 1024) setIsMobileMenuOpen(false);
+                  else setIsSidebarVisible(false);
+              }} 
+              isOnline={isOnline} 
+              isSyncing={isSyncing} 
+              isDarkMode={isDarkMode} 
+              toggleTheme={toggleTheme} 
+              language={language} 
+              toggleLanguage={toggleLanguage} 
+              t={t} 
+            />
+        </div>
+      )}
 
       <main className={`
         flex-1 overflow-hidden relative flex flex-col min-w-0 bg-[#f8fafc] dark:bg-slate-950 transition-all duration-500
-        ${isSidebarVisible && window.innerWidth >= 1024 ? 'lg:rounded-l-[44px] rtl:lg:rounded-r-[44px] shadow-2xl' : 'rounded-none'}
+        ${!isCustomer && isSidebarVisible && window.innerWidth >= 1024 ? 'lg:rounded-l-[44px] rtl:lg:rounded-r-[44px] shadow-2xl' : 'rounded-none'}
       `}>
         
-        <div className="absolute top-0 left-0 right-0 z-50 pointer-events-none flex justify-center">
-            {!isOnline && (
-              <div className="bg-red-600 text-white text-[9px] font-black px-6 py-1 rounded-b-xl shadow-lg flex items-center gap-2 animate-bounce pointer-events-auto">
-                <CloudOff size={12} /> {t('offlineMode')}
-              </div>
-            )}
-            {!isFirebaseConfigured && isOnline && (
-              <div className="bg-orange-500 text-white text-[9px] font-black px-6 py-1 rounded-b-xl shadow-lg cursor-pointer flex items-center gap-2 animate-pulse pointer-events-auto" onClick={() => setCurrentView(AppView.SETTINGS)}>
-                <AlertTriangle size={12} /> SYNC REQUIRED (TAP)
-              </div>
-            )}
-        </div>
+        {/* Connection status (Only for Staff) */}
+        {!isCustomer && (
+          <div className="absolute top-0 left-0 right-0 z-50 pointer-events-none flex justify-center">
+              {!isOnline && (
+                <div className="bg-red-600 text-white text-[9px] font-black px-6 py-1 rounded-b-xl shadow-lg flex items-center gap-2 animate-bounce pointer-events-auto">
+                  <CloudOff size={12} /> {t('offlineMode')}
+                </div>
+              )}
+              {!isFirebaseConfigured && isOnline && (
+                <div className="bg-orange-500 text-white text-[9px] font-black px-6 py-1 rounded-b-xl shadow-lg cursor-pointer flex items-center gap-2 animate-pulse pointer-events-auto" onClick={() => setCurrentView(AppView.SETTINGS)}>
+                  <AlertTriangle size={12} /> SYNC REQUIRED (TAP)
+                </div>
+              )}
+          </div>
+        )}
 
-        {!isSidebarVisible && (
+        {!isCustomer && !isSidebarVisible && (
             <div className="hidden lg:block absolute top-6 left-6 z-[60] no-print">
                 <button onClick={() => setIsSidebarVisible(true)} className="p-3 bg-white dark:bg-slate-900 text-slate-800 dark:text-white rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 hover:scale-105 active:scale-95 transition-all">
                     <PanelLeftOpen size={24} className="text-brand-500" />
@@ -338,20 +363,33 @@ const App: React.FC = () => {
             </div>
         )}
 
-        <div className="lg:hidden bg-slate-900 text-white p-5 flex items-center justify-between shrink-0 shadow-lg z-30">
-            <div className="flex items-center gap-4">
-                <button onClick={() => setIsMobileMenuOpen(true)} className="p-2.5 bg-slate-800 rounded-xl active:scale-95 transition-transform"><Menu size={24} /></button>
-                <h1 className="font-black text-xl italic uppercase tracking-tighter">easyPOS</h1>
-            </div>
-            <div className="w-10 h-10 rounded-2xl bg-brand-600 flex items-center justify-center font-black text-white">{user.name.charAt(0).toUpperCase()}</div>
-        </div>
+        {/* Mobile Header (Only for Staff) */}
+        {!isCustomer && (
+          <div className="lg:hidden bg-slate-900 text-white p-5 flex items-center justify-between shrink-0 shadow-lg z-30">
+              <div className="flex items-center gap-4">
+                  <button onClick={() => setIsMobileMenuOpen(true)} className="p-2.5 bg-slate-800 rounded-xl active:scale-95 transition-transform"><Menu size={24} /></button>
+                  <h1 className="font-black text-xl italic uppercase tracking-tighter">easyPOS</h1>
+              </div>
+              <div className="w-10 h-10 rounded-2xl bg-brand-600 flex items-center justify-center font-black text-white">{user?.name.charAt(0).toUpperCase()}</div>
+          </div>
+        )}
 
         <div className="flex-1 overflow-hidden relative">
+            {currentView === AppView.CUSTOMER_PORTAL && (
+              <CustomerPortal 
+                products={products} 
+                language={language} 
+                t={t} 
+                currentUser={user}
+                onLoginRequest={() => { setUser(null); setCurrentView(AppView.POS); }}
+                onLogout={() => { setUser(null); setCurrentView(AppView.CUSTOMER_PORTAL); }}
+              />
+            )}
             {currentView === AppView.POS && (
-              <POS products={products} sales={sales} onCheckout={handleCheckout} storeSettings={storeSettings} onViewOrderHistory={() => setCurrentView(AppView.ORDERS)} onUpdateStoreSettings={handleUpdateStoreSettings} t={t} language={language} currentUser={user} onGoBack={() => setCurrentView(AppView.REPORTS)} />
+              <POS products={products} sales={sales} onCheckout={handleCheckout} storeSettings={storeSettings} onViewOrderHistory={() => setCurrentView(AppView.ORDERS)} onUpdateStoreSettings={handleUpdateStoreSettings} t={t} language={language} currentUser={user!} onGoBack={() => setCurrentView(AppView.REPORTS)} />
             )}
             {(currentView === AppView.INVENTORY || currentView === AppView.CATEGORIES) && (
-              <Inventory products={products} categories={categories} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} onBulkUpdateProduct={handleBulkUpdateProduct} onDeleteProduct={handleDeleteProduct} initialTab={currentView === AppView.CATEGORIES ? 'categories' : 'products'} onGoBack={() => setCurrentView(AppView.POS)} t={t} currentUser={user} language={language} />
+              <Inventory products={products} categories={categories} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} onBulkUpdateProduct={handleBulkUpdateProduct} onDeleteProduct={handleDeleteProduct} initialTab={currentView === AppView.CATEGORIES ? 'categories' : 'products'} onGoBack={() => setCurrentView(AppView.POS)} t={t} currentUser={user!} language={language} />
             )}
             {currentView === AppView.STOCK_CHECK && (
               <StockCheck 
@@ -369,7 +407,7 @@ const App: React.FC = () => {
               <Reports sales={sales} products={products} users={users} onGoBack={() => setCurrentView(AppView.POS)} language={language} />
             )}
             {currentView === AppView.SETTINGS && (
-              <Settings users={users} products={products} sales={sales} onAddUser={handleAddUser} onDeleteUser={handleDeleteUser} currentUser={user} storeSettings={storeSettings} onUpdateStoreSettings={handleUpdateStoreSettings} onGoBack={() => setCurrentView(AppView.POS)} language={language} toggleLanguage={toggleLanguage} t={t} />
+              <Settings users={users} products={products} sales={sales} onAddUser={handleAddUser} onDeleteUser={handleDeleteUser} currentUser={user!} storeSettings={storeSettings} onUpdateStoreSettings={handleUpdateStoreSettings} onGoBack={() => setCurrentView(AppView.POS)} language={language} toggleLanguage={toggleLanguage} t={t} />
             )}
             {currentView === AppView.BAILEYS_SETUP && (
               <BaileysSetup onUpdateStoreSettings={handleUpdateStoreSettings} settings={storeSettings} onGoBack={() => setCurrentView(AppView.POS)} t={t} />
@@ -378,6 +416,18 @@ const App: React.FC = () => {
               <PrintBarcode products={products} storeSettings={storeSettings} onGoBack={() => setCurrentView(AppView.POS)} language={language} t={t} />
             )}
         </div>
+
+        {/* Global AI Assistant Button/Overlay (Only for Staff) */}
+        {user && !isCustomer && (
+            <AiAssistant 
+                products={products} 
+                sales={sales} 
+                storeSettings={storeSettings} 
+                currentUser={user} 
+                language={language} 
+                t={t} 
+            />
+        )}
       </main>
     </div>
   );

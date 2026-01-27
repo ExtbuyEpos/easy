@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Product, Language } from '../types';
-import { Minus, Plus, Save, Search, ChevronLeft, CheckCircle, Trash2, AlertCircle } from 'lucide-react';
+import { Minus, Plus, Save, Search, ChevronLeft, CheckCircle, Trash2, AlertCircle, Download } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, addDoc, onSnapshot, writeBatch, doc } from 'firebase/firestore';
 import { formatNumber } from '../utils/format';
@@ -122,6 +122,37 @@ export const StockCheck: React.FC<StockCheckProps> = ({ products, onUpdateStock,
     }
   };
 
+  const handleDownloadHistory = () => {
+    if (history.length === 0) {
+      alert("No history available to export.");
+      return;
+    }
+    
+    // CSV Construction
+    const headers = ['Date', 'Time', 'SKU', 'Product Name', 'System Stock', 'Physical Count', 'Variance'];
+    const rows = history.map(h => [
+      new Date(h.timestamp).toLocaleDateString(),
+      new Date(h.timestamp).toLocaleTimeString(),
+      h.sku,
+      `"${h.name.replace(/"/g, '""')}"`, // Handle quotes in CSV
+      h.oldStock.toString(),
+      h.newStock.toString(),
+      h.variance.toString()
+    ]);
+    
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `stock_audit_history_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const removeFromSession = (id: string) => {
     setSessionList(prev => prev.filter(i => i.product.id !== id));
   };
@@ -139,9 +170,19 @@ export const StockCheck: React.FC<StockCheckProps> = ({ products, onUpdateStock,
                     <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mt-1">Physical Inventory Jurd</p>
                 </div>
             </div>
-            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
-                <button onClick={() => setActiveTab('scan')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'scan' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-md' : 'text-slate-400'}`}>Current Scan</button>
-                <button onClick={() => setActiveTab('history')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'history' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-md' : 'text-slate-400'}`}>Audit History</button>
+            <div className="flex items-center gap-3">
+                {activeTab === 'history' && history.length > 0 && (
+                  <button 
+                    onClick={handleDownloadHistory}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-800 text-white font-black uppercase text-[10px] tracking-widest hover:bg-black transition-all active:scale-95 shadow-lg"
+                  >
+                    <Download size={16} /> Download CSV
+                  </button>
+                )}
+                <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl shadow-inner">
+                    <button onClick={() => setActiveTab('scan')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'scan' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-md' : 'text-slate-400'}`}>Current Scan</button>
+                    <button onClick={() => setActiveTab('history')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'history' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-md' : 'text-slate-400'}`}>Audit History</button>
+                </div>
             </div>
           </div>
           {activeTab === 'scan' && (

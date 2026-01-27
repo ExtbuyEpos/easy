@@ -24,6 +24,21 @@ export const translations: Record<Language, Translations> = {
     'resendIn': 'Resend in',
     'resendCode': 'Resend Code',
     'codeSent': 'Verification code sent to',
+    'loginWithGoogle': 'Sign in with Google',
+    'continueAsGuest': 'Continue as Guest',
+
+    // Customer Portal
+    'customerPortal': 'Shop',
+    'virtualTryOn': 'Virtual Try-On',
+    'tryItOn': 'Try It On',
+    'uploadYourPhoto': 'Upload Your Photo',
+    'takeAPhoto': 'Take a Photo',
+    'aiGenerating': 'AI Generating Your Look...',
+    'processing': 'Processing...',
+    'magicMirror': 'AI Magic Mirror',
+    'mirrorInstruction': 'Show the product and your face for the best AI try-on result.',
+    'downloadLook': 'Download Result',
+    'backToShop': 'Back to Shop',
 
     // Sidebar
     'posTerminal': 'POS Terminal',
@@ -41,6 +56,13 @@ export const translations: Record<Language, Translations> = {
     'logout': 'Logout',
     'synced': 'Data synced to cloud',
     'savedDevice': 'Data saved to device',
+
+    // AI Assistant
+    'aiAssistant': 'easyPOS AI',
+    'aiGreeting': 'Hello! I am your AI Business Assistant. How can I help you today?',
+    'aiContextInfo': 'I have real-time access to your stock, sales, and settings.',
+    'aiPlaceholder': 'Ask me about stock, revenue, or orders...',
+    'aiThinking': 'Analyzing data...',
 
     // POS
     'searchProducts': 'Search products...',
@@ -147,6 +169,21 @@ export const translations: Record<Language, Translations> = {
     'resendIn': 'إعادة الإرسال خلال',
     'resendCode': 'إعادة إرسال الرمز',
     'codeSent': 'تم إرسال الرمز إلى',
+    'loginWithGoogle': 'تسجيل الدخول بواسطة جوجل',
+    'continueAsGuest': 'المتابعة كضيف',
+
+    // Customer Portal
+    'customerPortal': 'المتجر',
+    'virtualTryOn': 'تجربة افتراضية',
+    'tryItOn': 'جرب الآن',
+    'uploadYourPhoto': 'ارفع صورتك',
+    'takeAPhoto': 'التقط صورة',
+    'aiGenerating': 'جاري إنشاء مظهرك بالذكاء الاصطناعي...',
+    'processing': 'جاري المعالجة...',
+    'magicMirror': 'مرآة الذكاء الاصطناعي',
+    'mirrorInstruction': 'أظهر المنتج ووجهك للحصول على أفضل نتيجة للتجربة.',
+    'downloadLook': 'تحميل النتيجة',
+    'backToShop': 'العودة للمتجر',
 
     // Sidebar
     'posTerminal': 'نقطة البيع',
@@ -164,6 +201,13 @@ export const translations: Record<Language, Translations> = {
     'logout': 'تسجيل خروج',
     'synced': 'تمت المزامنة سحابياً',
     'savedDevice': 'محفوظ على الجهاز',
+
+    // AI Assistant
+    'aiAssistant': 'مساعد easyPOS الذكي',
+    'aiGreeting': 'مرحباً! أنا مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟',
+    'aiContextInfo': 'لدي وصول مباشر لبيانات المخزون والمبيعات والإعدادات.',
+    'aiPlaceholder': 'اسألني عن المخزون، الدخل، أو الطلبات...',
+    'aiThinking': 'جاري تحليل البيانات...',
 
     // POS
     'searchProducts': 'بحث عن منتجات...',
