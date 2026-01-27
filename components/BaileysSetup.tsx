@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { StoreSettings } from '../types';
 import { MessageCircle, MessageSquare, Save, ChevronLeft, Zap, Loader2, RefreshCw, Monitor, ShieldCheck, CheckCircle2, Phone, QrCode, AlertTriangle, Smartphone, Info, ArrowRight, Server, Radio } from 'lucide-react';
@@ -110,7 +111,6 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
           </button>
           <div>
             <h2 className="text-2xl font-black uppercase tracking-tight flex items-center gap-3 italic">
-              {/* Fix: Added MessageSquare to imports */}
               <MessageSquare size={28} /> WhatsApp Pro Setup
             </h2>
             <p className="text-[10px] uppercase font-bold opacity-70 tracking-widest leading-none mt-1">Baileys Core v5.0.0 Stable Protocol</p>
@@ -192,7 +192,7 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
                           </div>
                           <h3 className="text-3xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-2">Stable Session</h3>
                           <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em] mb-12">Dispatches operating at peak capacity</p>
-                          <button onClick={handleReset} className="px-10 py-5 bg-red-50 dark:bg-red-950/20 text-red-600 rounded-2xl font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all">Sever Connection</button>
+                          <button onClick={handleReset} className="px-10 py-5 bg-red-600/10 text-red-600 rounded-2xl font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all">Sever Connection</button>
                       </div>
                     ) : status === 'ready' ? (
                       <div className="w-full flex flex-col items-center animate-fade-in">
@@ -223,7 +223,7 @@ export const BaileysSetup: React.FC<BaileysSetupProps> = ({ onUpdateStoreSetting
                                       <div className="text-left bg-black/30 p-5 rounded-2xl border border-white/5 space-y-4 mb-6">
                                           <div className="flex items-start gap-3">
                                               <span className="w-6 h-6 rounded-full bg-[#00a884] text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">1</span>
-                                              <p className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Handset Settings > Linked Devices</p>
+                                              <p className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Handset Settings &gt; Linked Devices</p>
                                           </div>
                                           <div className="flex items-start gap-3">
                                               <span className="w-6 h-6 rounded-full bg-[#00a884] text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">2</span>
