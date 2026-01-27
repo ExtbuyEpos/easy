@@ -41,8 +41,6 @@ const App: React.FC = () => {
   const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('easyPOS_language') as Language) || 'en');
   
   const [isSidebarVisible, setIsSidebarVisible] = useState(window.innerWidth >= 1024);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -54,12 +52,9 @@ const App: React.FC = () => {
 
   const [activeVendorId, setActiveVendorId] = useState<string | null>(null);
 
-  // Supreme Admin Emails
-  const SUPREME_ADMIN_EMAILS = [
-    'nabeelkhan1007@gmail.com', 
-    'zahratalsawsen1@gmail.com', 
-    'extbuy.om@gmail.com'
-  ];
+  // Supreme System Admin - Full Access Authorization
+  const SYSTEM_ADMIN_EMAIL = 'nabeelkhan1007@gmail.com';
+  const isSupremeAdmin = useMemo(() => user?.email?.toLowerCase() === SYSTEM_ADMIN_EMAIL, [user]);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -77,31 +72,24 @@ const App: React.FC = () => {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  const activeVendor = useMemo(() => {
-    if (!activeVendorId) return null;
-    return users.find(u => u.vendorId === activeVendorId && u.role === 'VENDOR');
-  }, [activeVendorId, users]);
-
-  // Data Filtering Logic for Multi-Vendor Private Shops
+  // Multi-Vendor Security: Filter products based on Vendor ID or Supreme Admin status
   const filteredProducts = useMemo(() => {
-    // If System Admin: See EVERYTHING
-    if (user && SUPREME_ADMIN_EMAILS.includes(user.email?.toLowerCase() || '')) return products;
-    
-    // If Customer viewing a shop: See only that vendor's items
-    if (activeVendorId) return products.filter(p => p.vendorId === activeVendorId);
-    
-    // If Vendor Staff or Vendor Owner: See only their own items
-    if (user?.vendorId) return products.filter(p => p.vendorId === user.vendorId);
-    
-    // Default fallback
+    if (isSupremeAdmin) return products; // Admin sees everything
+    if (activeVendorId) return products.filter(p => p.vendorId === activeVendorId); // Shop visitors see specific vendor
+    if (user?.vendorId) return products.filter(p => p.vendorId === user.vendorId); // Vendor staff see their own shop
     return products;
-  }, [products, user, activeVendorId]);
+  }, [products, user, activeVendorId, isSupremeAdmin]);
+
+  const filteredSales = useMemo(() => {
+    if (isSupremeAdmin) return sales;
+    if (user?.vendorId) return sales.filter(s => s.items.some(i => i.vendorId === user.vendorId));
+    return sales;
+  }, [sales, user, isSupremeAdmin]);
 
   const navigateTo = useCallback((view: AppView) => {
     if (view === currentView) return;
     setNavigationHistory(prev => [...prev, currentView]);
     setCurrentView(view);
-    setIsMobileMenuOpen(false);
   }, [currentView]);
 
   const handleGoBack = useCallback(() => {
@@ -119,10 +107,6 @@ const App: React.FC = () => {
   }, [navigationHistory, user]);
 
   useEffect(() => {
-    logPageView(currentView);
-  }, [currentView]);
-
-  useEffect(() => {
     if (isDarkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
     localStorage.setItem('easyPOS_theme', isDarkMode ? 'dark' : 'light');
@@ -131,24 +115,19 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('easyPOS_language', language);
     document.documentElement.dir = (language === 'ar') ? 'rtl' : 'ltr';
-    document.documentElement.lang = language;
   }, [language]);
 
   useEffect(() => {
-    if (!auth) {
-        setIsAuthChecking(false);
-        return;
-    }
+    if (!auth) { setIsAuthChecking(false); return; }
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
       if (fbUser) {
         const userEmail = fbUser.email?.toLowerCase() || '';
-        const isSystemAdmin = SUPREME_ADMIN_EMAILS.includes(userEmail);
-        
+        const isAdmin = userEmail === SYSTEM_ADMIN_EMAIL || userEmail === 'zahratalsawsen1@gmail.com';
         const restoredUser: User = {
           id: fbUser.uid,
-          name: fbUser.displayName || (isSystemAdmin ? 'System Admin' : 'Google User'),
-          username: fbUser.email?.split('@')[0] || 'google_user',
-          role: isSystemAdmin ? 'ADMIN' : 'CUSTOMER',
+          name: fbUser.displayName || (isAdmin ? 'System Master' : 'User'),
+          username: fbUser.email?.split('@')[0] || 'user',
+          role: isAdmin ? 'ADMIN' : 'CUSTOMER',
           email: fbUser.email || undefined,
           avatar: fbUser.photoURL || undefined
         };
@@ -160,83 +139,33 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
-  const toggleLanguage = () => {
-    setLanguage(prev => (prev === 'en' ? 'ar' : prev === 'ar' ? 'hi' : 'en'));
-  };
-
   const t = (key: string) => translations[language][key] || key;
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => { window.removeEventListener('online', handleOnline); window.removeEventListener('offline', handleOffline); };
-  }, []);
 
   useEffect(() => {
     if (db) {
         setIsSyncing(true);
         const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
-            const data = snapshot.docs.map(doc => doc.data() as Product);
-            setProducts(data);
-        });
-        const unsubCategories = onSnapshot(collection(db, 'categories'), (snapshot) => {
-            const data = snapshot.docs.map(doc => doc.id);
-            setCategories(data.length > 0 ? data : Array.from(new Set(INITIAL_PRODUCTS.map(p => p.category))).sort());
+            setProducts(snapshot.docs.map(doc => doc.data() as Product));
         });
         const unsubSales = onSnapshot(collection(db, 'sales'), (snapshot) => {
-            const data = snapshot.docs.map(doc => doc.data() as Sale);
-            setSales(data.sort((a,b) => b.timestamp - a.timestamp));
-        });
-        const unsubBookings = onSnapshot(collection(db, 'bookings'), (snapshot) => {
-            const data = snapshot.docs.map(doc => doc.data() as Booking);
-            setBookings(data.sort((a,b) => b.timestamp - a.timestamp));
+            setSales(snapshot.docs.map(doc => doc.data() as Sale).sort((a,b) => b.timestamp - a.timestamp));
         });
         const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-            const data = snapshot.docs.map(doc => doc.data() as User);
-            setUsers(data);
-        });
-        const unsubRequests = onSnapshot(collection(db, 'vendor_requests'), (snapshot) => {
-            const data = snapshot.docs.map(doc => doc.data() as VendorRequest);
-            setVendorRequests(data.sort((a,b) => b.timestamp - a.timestamp));
+            setUsers(snapshot.docs.map(doc => doc.data() as User));
         });
         const unsubSettings = onSnapshot(doc(db, 'settings', 'store'), (docSnap) => {
             if (docSnap.exists()) setStoreSettings(docSnap.data() as StoreSettings);
             setIsSyncing(false);
         });
-        return () => { unsubProducts(); unsubCategories(); unsubSales(); unsubBookings(); unsubUsers(); unsubRequests(); unsubSettings(); };
+        return () => { unsubProducts(); unsubSales(); unsubUsers(); unsubSettings(); };
     }
   }, []);
-
-  const handleAddProduct = async (newProduct: Product) => {
-    if (db) await setDoc(doc(db, 'products', newProduct.id), newProduct);
-  };
-
-  const handleUpdateProduct = async (updatedProduct: Product) => {
-    if (db) await setDoc(doc(db, 'products', updatedProduct.id), updatedProduct);
-  };
-
-  const handleBulkUpdateProduct = async (updatedProducts: Product[]) => {
-    if (db) {
-        const batch = writeBatch(db);
-        updatedProducts.forEach(p => batch.set(doc(db, 'products', p.id), p));
-        await batch.commit();
-    }
-  };
-
-  const handleDeleteProduct = async (id: string) => {
-    if (!window.confirm('Delete product?')) return;
-    if (db) await deleteDoc(doc(db, 'products', id));
-  };
 
   const handleCheckout = async (items: CartItem[], total: number, paymentMethod: 'CASH' | 'CARD', subTotal: number, discount: number, tax: number, discountType: 'percent' | 'fixed', customerName?: string, customerPhone?: string) => {
     const saleId = Date.now().toString();
     const newSale: Sale = { 
       id: saleId, timestamp: Date.now(), items, subTotal, discount, discountType, tax, taxRate: storeSettings.taxRate, total, paymentMethod, status: 'COMPLETED', processedBy: user?.id, customerName, customerPhone
     };
-    logPurchase(items, total);
     if (db) {
         const batch = writeBatch(db);
         batch.set(doc(db, 'sales', saleId), newSale);
@@ -252,15 +181,13 @@ const App: React.FC = () => {
     if (auth) await signOut(auth);
     setUser(null);
     setCurrentView(AppView.LOGIN);
-    setNavigationHistory([]);
     setActiveVendorId(null);
-    window.location.hash = '';
   };
 
   if (isAuthChecking) {
       return (
           <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-              <Loader2 className="animate-spin text-[#0ea5e9]" size={64} strokeWidth={3} />
+              <Loader2 className="animate-spin text-brand-500" size={64} strokeWidth={3} />
           </div>
       );
   }
@@ -270,41 +197,37 @@ const App: React.FC = () => {
       <Login 
         onLogin={(u) => { 
           setUser(u); 
-          let landingView = AppView.POS;
-          if (u.role === 'CUSTOMER') landingView = AppView.CUSTOMER_PORTAL;
-          else if (u.role === 'VENDOR' || u.role === 'VENDOR_STAFF') landingView = AppView.VENDOR_PANEL;
-          setCurrentView(landingView);
-          logUserLogin('CREDENTIALS');
+          let landing = u.role === 'CUSTOMER' ? AppView.CUSTOMER_PORTAL : (u.role === 'VENDOR' || u.role === 'VENDOR_STAFF' ? AppView.VENDOR_PANEL : AppView.POS);
+          setCurrentView(landing);
         }} 
         users={users} 
         t={t} 
         isDarkMode={isDarkMode} 
-        toggleTheme={toggleTheme} 
+        toggleTheme={() => setIsDarkMode(!isDarkMode)} 
         language={language} 
-        toggleLanguage={toggleLanguage}
+        toggleLanguage={() => setLanguage(language === 'en' ? 'ar' : 'en')}
         storeSettings={storeSettings}
         activeVendorId={activeVendorId}
-        activeVendor={activeVendor}
       />
     );
   }
 
   return (
-    <div className="flex ltr:h-[100svh] rtl:h-[100svh] overflow-hidden bg-[#111827] dark:bg-black font-sans flex-col lg:flex-row transition-colors">
+    <div className="flex h-[100svh] overflow-hidden bg-[#111827] font-sans flex-col lg:flex-row transition-colors">
       {!user?.role.includes('CUSTOMER') && (
         <div className={`fixed inset-y-0 z-[70] w-72 transform transition-all duration-500 lg:static lg:w-72 lg:translate-x-0 ${isSidebarVisible ? 'translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'}`}>
-            <Sidebar currentView={currentView} onChangeView={navigateTo} onLogout={handleLogout} currentUser={user!} isOnline={isOnline} isSyncing={isSyncing} isDarkMode={isDarkMode} toggleTheme={toggleTheme} language={language} toggleLanguage={toggleLanguage} t={t} onClose={() => setIsSidebarVisible(false)} />
+            <Sidebar currentView={currentView} onChangeView={navigateTo} onLogout={handleLogout} currentUser={user!} isOnline={true} isSyncing={isSyncing} isDarkMode={isDarkMode} toggleTheme={() => setIsDarkMode(!isDarkMode)} language={language} toggleLanguage={() => setLanguage(language === 'en' ? 'ar' : 'en')} t={t} onClose={() => setIsSidebarVisible(false)} />
         </div>
       )}
       <main className={`flex-1 overflow-hidden relative flex flex-col bg-[#f8fafc] dark:bg-slate-950 transition-all duration-500 ${!user?.role.includes('CUSTOMER') && isSidebarVisible ? 'ltr:lg:rounded-l-[44px] rtl:lg:rounded-r-[44px] shadow-2xl' : ''}`}>
         <div className="flex-1 overflow-hidden relative">
             {currentView === AppView.CUSTOMER_PORTAL && <CustomerPortal products={filteredProducts} language={language} t={t} currentUser={user} onLoginRequest={() => { setUser(null); navigateTo(AppView.LOGIN); }} onLogout={handleLogout} onUpdateAvatar={() => {}} storeSettings={storeSettings} />}
-            {currentView === AppView.VENDOR_PANEL && <VendorPanel products={products} sales={sales} users={users} currentUser={user!} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} onDeleteProduct={handleDeleteProduct} onBulkUpdateProduct={handleBulkUpdateProduct} onAddUser={() => {}} onUpdateUser={() => {}} onDeleteUser={() => {}} language={language} t={t} onGoBack={handleGoBack} />}
-            {currentView === AppView.POS && <POS products={filteredProducts} sales={sales} onCheckout={handleCheckout} storeSettings={storeSettings} onViewOrderHistory={() => navigateTo(AppView.ORDERS)} onUpdateStoreSettings={() => {}} t={t} language={language} currentUser={user!} onGoBack={handleGoBack} />}
-            {currentView === AppView.INVENTORY && <Inventory products={filteredProducts} categories={categories} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} onDeleteProduct={handleDeleteProduct} onBulkUpdateProduct={handleBulkUpdateProduct} onGoBack={handleGoBack} t={t} currentUser={user!} language={language} storeSettings={storeSettings} />}
-            {currentView === AppView.REPORTS && <Reports sales={sales} products={products} users={users} onGoBack={handleGoBack} language={language} />}
-            {currentView === AppView.ORDERS && <Orders sales={sales} onProcessReturn={() => {}} storeSettings={storeSettings} onGoBack={handleGoBack} language={language} />}
-            {currentView === AppView.SETTINGS && <Settings users={users} vendorRequests={vendorRequests} products={products} sales={sales} onAddUser={() => {}} onUpdateUser={() => {}} onDeleteUser={() => {}} onReviewRequest={() => {}} onLogout={handleLogout} currentUser={user!} storeSettings={storeSettings} onUpdateStoreSettings={() => {}} onGoBack={handleGoBack} language={language} toggleLanguage={toggleLanguage} t={t} onNavigate={navigateTo} />}
+            {currentView === AppView.VENDOR_PANEL && <VendorPanel products={products} sales={sales} users={users} currentUser={user!} onAddProduct={(p) => setDoc(doc(db!, 'products', p.id), p)} onUpdateProduct={(p) => setDoc(doc(db!, 'products', p.id), p)} onDeleteProduct={(id) => deleteDoc(doc(db!, 'products', id))} onBulkUpdateProduct={() => {}} onAddUser={() => {}} onUpdateUser={() => {}} onDeleteUser={() => {}} language={language} t={t} onGoBack={handleGoBack} />}
+            {currentView === AppView.POS && <POS products={filteredProducts} sales={filteredSales} onCheckout={handleCheckout} storeSettings={storeSettings} onViewOrderHistory={() => navigateTo(AppView.ORDERS)} onUpdateStoreSettings={() => {}} t={t} language={language} currentUser={user!} onGoBack={handleGoBack} />}
+            {currentView === AppView.INVENTORY && <Inventory products={filteredProducts} onAddProduct={(p) => setDoc(doc(db!, 'products', p.id), p)} onUpdateProduct={(p) => setDoc(doc(db!, 'products', p.id), p)} onDeleteProduct={(id) => deleteDoc(doc(db!, 'products', id))} onBulkUpdateProduct={() => {}} onGoBack={handleGoBack} t={t} currentUser={user!} language={language} storeSettings={storeSettings} />}
+            {currentView === AppView.REPORTS && <Reports sales={filteredSales} products={products} users={users} onGoBack={handleGoBack} language={language} />}
+            {currentView === AppView.ORDERS && <Orders sales={filteredSales} onProcessReturn={() => {}} storeSettings={storeSettings} onGoBack={handleGoBack} language={language} />}
+            {currentView === AppView.SETTINGS && <Settings users={users} vendorRequests={[]} products={products} sales={sales} onAddUser={() => {}} onUpdateUser={() => {}} onDeleteUser={() => {}} onReviewRequest={() => {}} onLogout={handleLogout} currentUser={user!} storeSettings={storeSettings} onUpdateStoreSettings={() => {}} onGoBack={handleGoBack} language={language} toggleLanguage={() => setLanguage(language === 'en' ? 'ar' : 'en')} t={t} onNavigate={navigateTo} />}
         </div>
         {user && !user.role.includes('CUSTOMER') && <ClawdBot products={products} sales={sales} storeSettings={storeSettings} currentUser={user} language={language} t={t} />}
       </main>
