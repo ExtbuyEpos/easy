@@ -164,8 +164,12 @@ export const POS: React.FC<POSProps> = ({
         <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 lg:px-8 lg:py-6 shrink-0 z-30 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-4 flex-1">
-              <button onClick={onGoBack} className="p-3 -ml-3 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-500 hover:text-brand-600 transition-all active:scale-90" title="Return to Dashboard">
-                  <ChevronLeft size={24} className="rtl:rotate-180" />
+              <button 
+                onClick={onGoBack} 
+                className="p-3 -ml-3 rounded-2xl bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 shadow-sm border border-slate-100 dark:border-slate-700 transition-all active:scale-90 hover:text-brand-600" 
+                title="Go Back"
+              >
+                  <ChevronLeft size={28} className="rtl:rotate-180" />
               </button>
               <div className="relative flex-1 group">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />

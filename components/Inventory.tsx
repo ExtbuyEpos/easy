@@ -232,7 +232,11 @@ export const Inventory: React.FC<InventoryProps> = ({
       <div className="flex flex-col gap-6 mb-8 shrink-0">
          <div className="flex justify-between items-center">
              <div className="flex items-center gap-4">
-                <button onClick={onGoBack} className="p-3 -ml-3 rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-all active:scale-90" title="Go Back">
+                <button 
+                  onClick={onGoBack} 
+                  className="p-3 -ml-3 rounded-2xl bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 shadow-sm border border-slate-100 dark:border-slate-800 transition-all active:scale-90 hover:text-brand-600" 
+                  title="Go Back"
+                >
                     <ChevronLeft size={28} className="rtl:rotate-180" />
                 </button>
                 <div>

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { POS } from './components/POS';
 import { Inventory } from './components/Inventory';
@@ -27,6 +27,8 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [currentView, setCurrentView] = useState<AppView>(AppView.POS);
+  const [navigationHistory, setNavigationHistory] = useState<AppView[]>([]);
+  
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
@@ -53,6 +55,26 @@ const App: React.FC = () => {
   const SYSTEM_OWNER_EMAIL = 'zahratalsawsen1@gmail.com';
   const isSystemOwner = user?.email?.toLowerCase() === SYSTEM_OWNER_EMAIL || user?.id === 'admin_1';
 
+  // Navigation Logic
+  const navigateTo = useCallback((view: AppView) => {
+    if (view === currentView) return;
+    setNavigationHistory(prev => [...prev, currentView]);
+    setCurrentView(view);
+    setIsMobileMenuOpen(false);
+  }, [currentView]);
+
+  const handleGoBack = useCallback(() => {
+    if (navigationHistory.length > 0) {
+      const prev = [...navigationHistory];
+      const lastView = prev.pop();
+      setNavigationHistory(prev);
+      setCurrentView(lastView!);
+    } else {
+      // Default fallback
+      setCurrentView(user?.role === 'CUSTOMER' ? AppView.CUSTOMER_PORTAL : AppView.POS);
+    }
+  }, [navigationHistory, user]);
+
   // Track Page Views
   useEffect(() => {
     logPageView(currentView);
@@ -70,7 +92,7 @@ const App: React.FC = () => {
     document.documentElement.lang = language;
   }, [language]);
 
-  // Firebase Auth Observer for session persistence
+  // Firebase Auth Observer
   useEffect(() => {
     if (!auth) {
         setIsAuthChecking(false);
@@ -78,7 +100,6 @@ const App: React.FC = () => {
     }
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
       if (fbUser) {
-        // Recover Admin state from explicit list
         const adminEmails = ['zahratalsawsen1@gmail.com', 'extbuy.om@gmail.com'];
         const adminUids = ['bFNTudFaGscUVu30Mcswqp0D5Yj1', 'rZB128VtiNYx92BpG3fCU62l7Kr1'];
         const userEmail = fbUser.email?.toLowerCase() || '';
@@ -147,8 +168,6 @@ const App: React.FC = () => {
         const unsubUsers = onSnapshot(collection(db, 'users'), async (snapshot) => {
             const data = snapshot.docs.map(doc => doc.data() as User);
             setUsers(data);
-            
-            // Critical: Ensure Admin with requested password exists
             const adminReqExists = data.some(u => u.username === 'Admin' || u.id === 'admin_req_1');
             if (!adminReqExists && !snapshot.metadata.fromCache) {
                 INITIAL_USERS.forEach(async (u) => {
@@ -218,7 +237,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Category Management Handlers
   const handleAddCategory = async (category: string) => {
     if (db) await setDoc(doc(db, 'categories', category), {});
     else {
@@ -251,7 +269,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Booking Handlers
   const handleAddBooking = async (b: Booking) => {
     if (db) await setDoc(doc(db, 'bookings', b.id), b);
     else {
@@ -299,7 +316,6 @@ const App: React.FC = () => {
       customerPhone
     };
     
-    // Log to Analytics
     logPurchase(items, total);
 
     if (db) {
@@ -409,28 +425,17 @@ const App: React.FC = () => {
   const handleDeleteUser = async (id: string) => {
       const targetUser = users.find(u => u.id === id);
       if (!targetUser) return;
-
-      // RULE: Only System Owner can delete Admin accounts
       if (targetUser.role === 'ADMIN' && !isSystemOwner) {
           alert("SECURITY ALERT: Only the System Owner (zahratalsawsen1@gmail.com) can remove Admin nodes.");
           return;
       }
-
-      // Hardcoded protection for Owner Node
       if (id === 'admin_1' || id === 'bFNTudFaGscUVu30Mcswqp0D5Yj1') {
           alert("SECURITY ALERT: Primary System Admin nodes are immutable.");
           return;
       }
-
       if (!window.confirm('PERMANENT ACTION: Delete operator access? This cannot be undone.')) return;
-      
       if (db) {
-          try {
-              await deleteDoc(doc(db, 'users', id));
-          } catch (e) {
-              console.error("User deletion error:", e);
-              alert("Error deleting user from cloud. Please try again.");
-          }
+          try { await deleteDoc(doc(db, 'users', id)); } catch (e) { alert("Error deleting user from cloud."); }
       } else {
           const updated = users.filter(u => u.id !== id);
           setUsers(updated);
@@ -446,12 +451,8 @@ const App: React.FC = () => {
         tryOnCache: tryOnCache || user.tryOnCache 
       };
       setUser(updatedUser);
-      // Persist to storage
       if (db) {
-        updateDoc(doc(db, 'users', user.id), { 
-          customerAvatar: updatedUser.customerAvatar,
-          tryOnCache: updatedUser.tryOnCache
-        });
+        updateDoc(doc(db, 'users', user.id), { customerAvatar: updatedUser.customerAvatar, tryOnCache: updatedUser.tryOnCache });
       } else {
         const updatedUsers = users.map(u => u.id === user.id ? updatedUser : u);
         setUsers(updatedUsers);
@@ -464,6 +465,7 @@ const App: React.FC = () => {
     if (auth) await signOut(auth);
     setUser(null);
     setCurrentView(AppView.LOGIN);
+    setNavigationHistory([]);
   };
 
   const isCustomer = user?.role === 'CUSTOMER';
@@ -517,7 +519,7 @@ const App: React.FC = () => {
         `}>
             <Sidebar 
               currentView={currentView} 
-              onChangeView={(v) => { setCurrentView(v); setIsMobileMenuOpen(false); }} 
+              onChangeView={navigateTo} 
               onLogout={handleLogout} 
               currentUser={user!} 
               onClose={() => {
@@ -548,7 +550,7 @@ const App: React.FC = () => {
                 </div>
               )}
               {!isFirebaseConfigured && isOnline && (
-                <div className="bg-orange-500 text-white text-[9px] font-black px-6 py-1 rounded-b-xl shadow-lg cursor-pointer flex items-center gap-2 animate-pulse pointer-events-auto" onClick={() => setCurrentView(AppView.SETTINGS)}>
+                <div className="bg-orange-500 text-white text-[9px] font-black px-6 py-1 rounded-b-xl shadow-lg cursor-pointer flex items-center gap-2 animate-pulse pointer-events-auto" onClick={() => navigateTo(AppView.SETTINGS)}>
                   <AlertTriangle size={12} /> SYNC REQUIRED (TAP)
                 </div>
               )}
@@ -580,17 +582,17 @@ const App: React.FC = () => {
                 language={language} 
                 t={t} 
                 currentUser={user}
-                onLoginRequest={() => { setUser(null); setCurrentView(AppView.LOGIN); }}
+                onLoginRequest={() => { setUser(null); navigateTo(AppView.LOGIN); }}
                 onLogout={handleLogout}
                 onUpdateAvatar={handleUpdateUserAvatar}
                 storeSettings={storeSettings}
               />
             )}
             {currentView === AppView.POS && (
-              <POS products={products} sales={sales} onCheckout={handleCheckout} storeSettings={storeSettings} onViewOrderHistory={() => setCurrentView(AppView.ORDERS)} onUpdateStoreSettings={handleUpdateStoreSettings} t={t} language={language} currentUser={user!} onGoBack={() => setCurrentView(AppView.REPORTS)} />
+              <POS products={products} sales={sales} onCheckout={handleCheckout} storeSettings={storeSettings} onViewOrderHistory={() => navigateTo(AppView.ORDERS)} onUpdateStoreSettings={handleUpdateStoreSettings} t={t} language={language} currentUser={user!} onGoBack={handleGoBack} />
             )}
             {currentView === AppView.BOOKINGS && (
-              <Bookings bookings={bookings} onAddBooking={handleAddBooking} onUpdateBooking={handleUpdateBooking} onDeleteBooking={handleDeleteBooking} onGoBack={() => setCurrentView(AppView.POS)} language={language} t={t} />
+              <Bookings bookings={bookings} onAddBooking={handleAddBooking} onUpdateBooking={handleUpdateBooking} onDeleteBooking={handleDeleteBooking} onGoBack={handleGoBack} language={language} t={t} />
             )}
             {(currentView === AppView.INVENTORY || currentView === AppView.CATEGORIES) && (
               <Inventory 
@@ -604,7 +606,7 @@ const App: React.FC = () => {
                 onUpdateCategory={handleUpdateCategory}
                 onDeleteCategory={handleDeleteCategory}
                 initialTab={currentView === AppView.CATEGORIES ? 'categories' : 'products'} 
-                onGoBack={() => setCurrentView(AppView.POS)} 
+                onGoBack={handleGoBack} 
                 t={t} 
                 currentUser={user!} 
                 language={language} 
@@ -616,15 +618,15 @@ const App: React.FC = () => {
                 products={products} 
                 onUpdateStock={handleStockUpdate} 
                 onBulkUpdateProducts={handleBulkUpdateProduct} 
-                onGoBack={() => setCurrentView(AppView.POS)} 
+                onGoBack={handleGoBack} 
                 language={language} 
               />
             )}
             {currentView === AppView.ORDERS && (
-              <Orders sales={sales} onProcessReturn={handleProcessReturn} storeSettings={storeSettings} onGoBack={() => setCurrentView(AppView.POS)} language={language} />
+              <Orders sales={sales} onProcessReturn={handleProcessReturn} storeSettings={storeSettings} onGoBack={handleGoBack} language={language} />
             )}
             {currentView === AppView.REPORTS && (
-              <Reports sales={sales} products={products} users={users} onGoBack={() => setCurrentView(AppView.POS)} language={language} />
+              <Reports sales={sales} products={products} users={users} onGoBack={handleGoBack} language={language} />
             )}
             {currentView === AppView.SETTINGS && (
               <Settings 
@@ -638,18 +640,18 @@ const App: React.FC = () => {
                 currentUser={user!} 
                 storeSettings={storeSettings} 
                 onUpdateStoreSettings={handleUpdateStoreSettings} 
-                onGoBack={() => setCurrentView(AppView.POS)} 
+                onGoBack={handleGoBack} 
                 language={language} 
                 toggleLanguage={toggleLanguage} 
                 t={t} 
-                onNavigate={(v) => setCurrentView(v)}
+                onNavigate={navigateTo}
               />
             )}
             {currentView === AppView.BAILEYS_SETUP && (
-              <BaileysSetup onUpdateStoreSettings={handleUpdateStoreSettings} settings={storeSettings} onGoBack={() => setCurrentView(AppView.SETTINGS)} t={t} />
+              <BaileysSetup onUpdateStoreSettings={handleUpdateStoreSettings} settings={storeSettings} onGoBack={handleGoBack} t={t} />
             )}
             {currentView === AppView.PRINT_BARCODE && (
-              <PrintBarcode products={products} storeSettings={storeSettings} onGoBack={() => setCurrentView(AppView.POS)} language={language} t={t} />
+              <PrintBarcode products={products} storeSettings={storeSettings} onGoBack={handleGoBack} language={language} t={t} />
             )}
             {currentView === AppView.LOGIN && !user && (
               <Login 
@@ -665,7 +667,7 @@ const App: React.FC = () => {
                 language={language} 
                 toggleLanguage={toggleLanguage}
                 onEnterAsGuest={() => {
-                  setCurrentView(AppView.CUSTOMER_PORTAL);
+                  navigateTo(AppView.CUSTOMER_PORTAL);
                   logUserLogin('GUEST');
                 }}
                 storeSettings={storeSettings}

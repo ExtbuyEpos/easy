@@ -178,7 +178,13 @@ export const Reports: React.FC<ReportsProps> = ({ sales, products, onGoBack, lan
       <div className="flex flex-col gap-6 mb-8 shrink-0">
         <div className="flex flex-col md:flex-row justify-between md:items-center gap-6">
             <div className="flex items-center gap-4">
-                <button onClick={onGoBack} className="p-3 -ml-3 rounded-2xl bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 shadow-sm transition-all active:scale-90"><ChevronLeft size={28} className="rtl:rotate-180" /></button>
+                <button 
+                  onClick={onGoBack} 
+                  className="p-3 -ml-3 rounded-2xl bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 shadow-sm border border-slate-100 dark:border-slate-800 transition-all active:scale-90 hover:text-brand-600" 
+                  title="Go Back"
+                >
+                  <ChevronLeft size={28} className="rtl:rotate-180" />
+                </button>
                 <div>
                     <h2 className="text-xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic leading-none">BI Intelligence</h2>
                     <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mt-1">Audit Control & Data Analytics</p>
