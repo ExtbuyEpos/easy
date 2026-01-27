@@ -4,53 +4,174 @@ import { Product, User } from './types';
 export const CURRENCY = '$';
 
 export const INITIAL_PRODUCTS: Product[] = [
-  // --- APPAREL / CLOTHING ---
+  // --- APPAREL / CLOTHING (WITH VARIANTS) ---
   {
-    id: 'CL-001',
-    sku: 'APP-1001',
-    name: 'Midnight Urban Hoodie',
-    costPrice: 15.00,
-    sellPrice: 45.00,
-    stock: 50,
-    category: 'Apparel',
-    image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=600',
-    tags: ['Streetwear', 'Cotton']
-  },
-  {
-    id: 'CL-002',
-    sku: 'APP-1002',
-    name: 'Vintage Leather Jacket',
-    costPrice: 85.00,
-    sellPrice: 189.99,
-    stock: 12,
-    category: 'Apparel',
-    image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&q=80&w=600',
-    tags: ['Premium', 'Leather']
-  },
-  {
-    id: 'CL-003',
-    sku: 'APP-1003',
-    name: 'Classic White Tee',
-    costPrice: 5.00,
-    sellPrice: 19.50,
-    stock: 100,
+    id: 'DEMO-CL-001',
+    sku: 'TSH-BLK-M',
+    name: 'Urban Essentials Tee - Black',
+    costPrice: 8.00,
+    sellPrice: 25.00,
+    stock: 40,
     category: 'Apparel',
     image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=600',
-    tags: ['Basic', 'Essential']
+    size: 'M',
+    color: 'Black',
+    tags: ['Cotton', 'Summer']
   },
   {
-    id: 'CL-004',
-    sku: 'APP-1004',
-    name: 'Slim Fit Denim Jeans',
+    id: 'DEMO-CL-002',
+    sku: 'TSH-WHT-L',
+    name: 'Urban Essentials Tee - White',
+    costPrice: 8.00,
+    sellPrice: 25.00,
+    stock: 35,
+    category: 'Apparel',
+    image: 'https://images.unsplash.com/photo-1581655353564-df123a1eb820?auto=format&fit=crop&q=80&w=600',
+    size: 'L',
+    color: 'White',
+    tags: ['Cotton', 'Summer']
+  },
+  {
+    id: 'DEMO-CL-003',
+    sku: 'HOD-NVY-XL',
+    name: 'Premium Fleece Hoodie - Navy',
+    costPrice: 18.00,
+    sellPrice: 55.00,
+    stock: 20,
+    category: 'Apparel',
+    image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=600',
+    size: 'XL',
+    color: 'Navy',
+    tags: ['Winter', 'Heavyweight']
+  },
+  {
+    id: 'DEMO-CL-004',
+    sku: 'JNS-BLU-32',
+    name: 'Classic Slim Fit Denim',
     costPrice: 22.00,
-    sellPrice: 59.00,
-    stock: 45,
+    sellPrice: 65.00,
+    stock: 25,
     category: 'Apparel',
     image: 'https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&q=80&w=600',
-    tags: ['Denim', 'Blue']
+    size: '32/S',
+    color: 'Blue',
+    tags: ['Denim', 'Stretch']
   },
 
-  // --- AUTOMOTIVE / CARS & PERFORMANCE ---
+  // --- ELECTRONICS & GADGETS ---
+  {
+    id: 'DEMO-EL-001',
+    sku: 'SW-PRO-MAX',
+    name: 'Titan Pro Smartwatch',
+    costPrice: 120.00,
+    sellPrice: 299.00,
+    stock: 12,
+    category: 'Electronics',
+    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=600',
+    color: 'Space Gray',
+    tags: ['Tech', 'OLED']
+  },
+  {
+    id: 'DEMO-EL-002',
+    sku: 'EBD-AIR-V2',
+    name: 'SonicWave Wireless Earbuds',
+    costPrice: 45.00,
+    sellPrice: 129.00,
+    stock: 18,
+    category: 'Electronics',
+    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=600',
+    color: 'Matte Black',
+    tags: ['Audio', 'Bluetooth']
+  },
+  {
+    id: 'DEMO-EL-003',
+    sku: 'PB-20K-FAST',
+    name: 'Velocity 20,000mAh Power Bank',
+    costPrice: 25.00,
+    sellPrice: 59.99,
+    stock: 30,
+    category: 'Electronics',
+    image: 'https://images.unsplash.com/photo-1619441201138-04d306637968?auto=format&fit=crop&q=80&w=600',
+    tags: ['Accessory', 'Fast Charge']
+  },
+
+  // --- HOME & LIFESTYLE ---
+  {
+    id: 'DEMO-HM-001',
+    sku: 'MUG-CER-BRN',
+    name: 'Artisan Ceramic Coffee Mug',
+    costPrice: 4.50,
+    sellPrice: 15.00,
+    stock: 50,
+    category: 'Home & Kitchen',
+    image: 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?auto=format&fit=crop&q=80&w=600',
+    color: 'Terracotta',
+    tags: ['Handmade', 'Kitchen']
+  },
+  {
+    id: 'DEMO-HM-002',
+    sku: 'LMP-DSK-LED',
+    name: 'Modern LED Desk Lamp',
+    costPrice: 15.00,
+    sellPrice: 45.00,
+    stock: 15,
+    category: 'Home & Kitchen',
+    image: 'https://images.unsplash.com/photo-1534073828943-f801091bb18c?auto=format&fit=crop&q=80&w=600',
+    color: 'Silver',
+    tags: ['Office', 'Lighting']
+  },
+  {
+    id: 'DEMO-HM-003',
+    sku: 'BOT-HYD-1L',
+    name: 'Insulated Water Bottle (1L)',
+    costPrice: 12.00,
+    sellPrice: 32.00,
+    stock: 45,
+    category: 'Home & Kitchen',
+    image: 'https://images.unsplash.com/photo-1602143307185-8a155539b324?auto=format&fit=crop&q=80&w=600',
+    color: 'Forest Green',
+    tags: ['Eco', 'Outdoor']
+  },
+
+  // --- ACCESSORIES ---
+  {
+    id: 'DEMO-AC-001',
+    sku: 'BPK-ADV-30L',
+    name: 'Nomad Adventure Backpack',
+    costPrice: 35.00,
+    sellPrice: 89.00,
+    stock: 10,
+    category: 'Accessories',
+    image: 'https://images.unsplash.com/photo-1553062407-98eeb94c6a62?auto=format&fit=crop&q=80&w=600',
+    color: 'Tan',
+    tags: ['Travel', 'Waterproof']
+  },
+  {
+    id: 'DEMO-AC-002',
+    sku: 'WLT-LTH-MIN',
+    name: 'Minimalist Leather Wallet',
+    costPrice: 12.00,
+    sellPrice: 35.00,
+    stock: 22,
+    category: 'Accessories',
+    image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&q=80&w=600',
+    color: 'Cognac',
+    tags: ['Premium', 'RFID']
+  },
+  {
+    id: 'DEMO-AC-003',
+    sku: 'SNG-VNT-BLK',
+    name: 'Retro Aviator Sunglasses',
+    costPrice: 15.00,
+    sellPrice: 49.00,
+    stock: 14,
+    category: 'Accessories',
+    image: 'https://images.unsplash.com/photo-1511499767390-a73c2331bbf1?auto=format&fit=crop&q=80&w=600',
+    color: 'Gold/Black',
+    tags: ['Fashion', 'UV400']
+  },
+
+  // --- AUTOMOTIVE (PREVIOUS DEMO DATA RETAINED) ---
   {
     id: 'CR-001',
     sku: 'VEH-9001',
@@ -61,96 +182,6 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Automotive',
     image: 'https://images.unsplash.com/photo-1560958089-b8a1929cea89?auto=format&fit=crop&q=80&w=800',
     tags: ['Electric', 'Luxury']
-  },
-  {
-    id: 'CR-002',
-    sku: 'VEH-9002',
-    name: 'Heritage Sport Coupe',
-    costPrice: 38000,
-    sellPrice: 54500,
-    stock: 1,
-    category: 'Automotive',
-    image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=800',
-    tags: ['Turbo', 'Classic']
-  },
-  {
-    id: 'CP-005',
-    sku: 'PERF-101',
-    name: 'Carbon Fiber GT Wing',
-    costPrice: 200.00,
-    sellPrice: 550.00,
-    stock: 8,
-    category: 'Car Parts',
-    image: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=600',
-    tags: ['Aero', 'Performance']
-  },
-  {
-    id: 'CP-006',
-    sku: 'PERF-102',
-    name: 'Forged Racing Wheels (Set)',
-    costPrice: 800.00,
-    sellPrice: 1600.00,
-    stock: 4,
-    category: 'Car Parts',
-    image: 'https://images.unsplash.com/photo-1552650272-b8a34e21bc4b?auto=format&fit=crop&q=80&w=600',
-    tags: ['Alloy', 'Rims']
-  },
-
-  // --- EXISTING ITEMS ---
-  { 
-    id: '1', 
-    sku: '8801001', 
-    name: 'Organic Coffee Beans', 
-    costPrice: 12.00, 
-    sellPrice: 18.50, 
-    stock: 45, 
-    category: 'Beverage',
-    image: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?auto=format&fit=crop&q=80&w=200',
-    tags: ['Organic', 'Best Seller']
-  },
-  {
-    id: 'CA-001',
-    sku: 'CA-1001',
-    name: 'Universal Phone Mount',
-    costPrice: 4.50,
-    sellPrice: 12.99,
-    stock: 35,
-    category: 'Car Accessories',
-    image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&q=80&w=200',
-    tags: ['Interior', 'Gadget']
-  },
-  {
-    id: 'CA-002',
-    sku: 'CA-1002',
-    name: 'LED Interior Ambient Lights',
-    costPrice: 8.00,
-    sellPrice: 19.99,
-    stock: 15,
-    category: 'Car Accessories',
-    image: 'https://images.unsplash.com/photo-1542318073-671c2250284f?auto=format&fit=crop&q=80&w=200',
-    tags: ['Lighting', 'Modification']
-  },
-  {
-    id: 'CP-001',
-    sku: 'CP-2001',
-    name: 'Synthetic Motor Oil 5W-30',
-    costPrice: 8.00,
-    sellPrice: 16.50,
-    stock: 40,
-    category: 'Car Parts',
-    image: 'https://images.unsplash.com/photo-1593257853483-e070860473a2?auto=format&fit=crop&q=80&w=200',
-    tags: ['Maintenance', 'Engine']
-  },
-  {
-    id: 'CC-002',
-    sku: 'CC-3002',
-    name: 'High Gloss Tire Shine',
-    costPrice: 4.50,
-    sellPrice: 11.99,
-    stock: 25,
-    category: 'Car Care',
-    image: 'https://images.unsplash.com/photo-1627483262268-9c96d8a36896?auto=format&fit=crop&q=80&w=200',
-    tags: ['Detailing']
   }
 ];
 

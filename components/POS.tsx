@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Product, CartItem, StoreSettings, Sale, Language, User } from '../types';
+import { Product, CartItem, StoreSettings, Sale, Language, User, ProductVariant } from '../types';
 import { CURRENCY } from '../constants';
-import { ShoppingCart, Plus, Minus, Search, Image as ImageIcon, X, History, ShoppingBag, DollarSign, CheckCircle, Printer, MessageCircle, CreditCard, Receipt, Eye, ChevronLeft, Calendar, User as UserIcon, Tag, Percent, Contact } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Search, Image as ImageIcon, X, History, ShoppingBag, DollarSign, CheckCircle, Printer, MessageCircle, CreditCard, Receipt, Eye, ChevronLeft, Calendar, User as UserIcon, Tag, Percent, Contact, Layers, Sparkles } from 'lucide-react';
 import QRCode from 'qrcode';
 import { formatNumber, formatCurrency } from '../utils/format';
 
@@ -40,6 +40,11 @@ export const POS: React.FC<POSProps> = ({
   const [invoiceQr, setInvoiceQr] = useState<string>('');
   const [showLivePreview, setShowLivePreview] = useState(false);
   
+  // Variant Selection State
+  const [selectingVariantProduct, setSelectingVariantProduct] = useState<Product | null>(null);
+  const [tempColor, setTempColor] = useState<string | null>(null);
+  const [tempSize, setTempSize] = useState<string | null>(null);
+
   // Customer Info
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -55,18 +60,44 @@ export const POS: React.FC<POSProps> = ({
     if (window.innerWidth > 1024) skuInputRef.current?.focus();
   }, []);
 
-  const addToCart = (product: Product) => {
-    if (product.stock <= 0) return alert("Out of stock!");
+  const addToCart = (product: Product, color?: string, size?: string) => {
+    // Check if variant selection is needed
+    if (product.hasVariants && (!color || !size)) {
+        setSelectingVariantProduct(product);
+        setTempColor(null);
+        setTempSize(null);
+        return;
+    }
+
+    // Stock check
+    let targetStock = product.stock;
+    if (product.hasVariants && color && size) {
+        const variant = product.variants?.find(v => v.color === color && v.size === size);
+        targetStock = variant ? variant.stock : 0;
+    }
+
+    if (targetStock <= 0) return alert("Selected variant is out of stock!");
+
     setCart(prev => {
-      const existing = prev.find(item => item.id === product.id);
-      if (existing) return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
-      return [...prev, { ...product, quantity: 1 }];
+      const existing = prev.find(item => 
+        item.id === product.id && 
+        item.selectedColor === color && 
+        item.selectedSize === size
+      );
+      if (existing) return prev.map(item => 
+        (item.id === product.id && item.selectedColor === color && item.selectedSize === size) 
+        ? { ...item, quantity: item.quantity + 1 } : item
+      );
+      return [...prev, { ...product, quantity: 1, selectedColor: color, selectedSize: size }];
     });
+    
+    // Close selection modal
+    setSelectingVariantProduct(null);
   };
 
-  const updateQuantity = (id: string, delta: number) => {
+  const updateQuantity = (id: string, color: string | undefined, size: string | undefined, delta: number) => {
     setCart(prev => prev.map(item => {
-      if (item.id === id) {
+      if (item.id === id && item.selectedColor === color && item.selectedSize === size) {
         const newQty = Math.max(1, item.quantity + delta);
         return { ...item, quantity: newQty };
       }
@@ -74,8 +105,8 @@ export const POS: React.FC<POSProps> = ({
     }));
   };
 
-  const removeFromCart = (id: string) => {
-    setCart(prev => prev.filter(item => item.id !== id));
+  const removeFromCart = (id: string, color: string | undefined, size: string | undefined) => {
+    setCart(prev => prev.filter(item => !(item.id === id && item.selectedColor === color && item.selectedSize === size)));
   };
 
   const cartSubtotal = cart.reduce((acc, item) => acc + (item.sellPrice * item.quantity), 0);
@@ -123,6 +154,9 @@ export const POS: React.FC<POSProps> = ({
     }
   };
 
+  const availableColors = selectingVariantProduct?.variants ? Array.from(new Set(selectingVariantProduct.variants.map(v => v.color))) : [];
+  const availableSizes = selectingVariantProduct?.variants ? Array.from(new Set(selectingVariantProduct.variants.filter(v => !tempColor || v.color === tempColor).map(v => v.size))) : [];
+
   return (
     <div className="flex h-full bg-[#f1f5f9] dark:bg-slate-950 flex-col lg:flex-row overflow-hidden transition-all duration-300">
       {/* Product Selection Panel */}
@@ -156,15 +190,11 @@ export const POS: React.FC<POSProps> = ({
                 <div key={product.id} onClick={() => addToCart(product)} className={`bg-white dark:bg-slate-900 rounded-[2.5rem] p-3 md:p-4 border border-slate-100 dark:border-slate-800 cursor-pointer hover:shadow-2xl transition-all flex flex-col group active:scale-[0.97] ${product.stock <= 0 ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
                     <div className="relative aspect-square rounded-[1.8rem] overflow-hidden bg-slate-50 dark:bg-slate-800 mb-3 shrink-0">
                         {product.image ? <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-500" /> : <div className="w-full h-full flex items-center justify-center text-slate-200"><ImageIcon size={32} /></div>}
+                        {product.hasVariants && <div className="absolute top-2 left-2 bg-brand-600 text-white text-[8px] font-black px-2 py-1 rounded-lg uppercase shadow-lg flex items-center gap-1"><Layers size={10}/> Variants</div>}
                         {product.stock < 10 && <div className="absolute bottom-2 right-2 bg-red-500 text-white text-[8px] font-black px-2 py-1 rounded-lg uppercase">Low Stock</div>}
                     </div>
                     <div className="flex flex-col flex-1">
-                        <h3 className="font-black text-slate-800 dark:text-slate-100 text-xs md:text-sm leading-tight line-clamp-2 h-8 mb-1">{product.name}</h3>
-                        {(product.size || product.color) && (
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-2">
-                             {product.size}{product.size && product.color && ' • '}{product.color}
-                          </p>
-                        )}
+                        <h3 className="font-black text-slate-800 dark:text-slate-100 text-xs md:text-sm leading-tight line-clamp-2 h-8 mb-1 uppercase italic tracking-tighter">{product.name}</h3>
                         <div className="mt-auto flex justify-between items-center">
                             <div className="text-sm md:text-lg font-black text-brand-600 dark:text-brand-400">{formatCurrency(product.sellPrice, language, CURRENCY)}</div>
                             <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-xl flex items-center justify-center group-hover:bg-brand-600 group-hover:text-white transition-all shadow-sm"><Plus size={18} strokeWidth={3} /></div>
@@ -218,7 +248,7 @@ export const POS: React.FC<POSProps> = ({
                                {item.name.toUpperCase()}
                                <span className="block opacity-60 text-[9px] mt-0.5">
                                  {formatNumber(item.quantity, language)} X {formatCurrency(item.sellPrice, language, CURRENCY)}
-                                 {(item.size || item.color) && ` [${item.size}${item.size && item.color ? ', ' : ''}${item.color}]`}
+                                 {(item.selectedColor || item.selectedSize) && ` [${item.selectedColor}${item.selectedColor && item.selectedSize ? ', ' : ''}${item.selectedSize}]`}
                                </span>
                             </span>
                             <span className="font-bold">{formatCurrency(item.sellPrice * item.quantity, language, CURRENCY)}</span>
@@ -262,24 +292,24 @@ export const POS: React.FC<POSProps> = ({
                           </div>
                       </div>
 
-                      {cart.map((item) => (
-                          <div key={item.id} className="bg-white dark:bg-slate-800 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-4">
+                      {cart.map((item, idx) => (
+                          <div key={`${item.id}-${item.selectedColor}-${item.selectedSize}`} className="bg-white dark:bg-slate-800 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-4">
                               <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center overflow-hidden shrink-0">
                                   {item.image ? <img src={item.image} className="w-full h-full object-cover" /> : <ImageIcon size={20} className="text-slate-300" />}
                               </div>
                               <div className="flex-1 min-w-0">
-                                  <p className="font-black text-slate-800 dark:text-slate-100 text-sm truncate">{item.name}</p>
+                                  <p className="font-black text-slate-800 dark:text-slate-100 text-sm truncate uppercase italic tracking-tighter">{item.name}</p>
                                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                     {formatCurrency(item.sellPrice, language, CURRENCY)}
-                                    {(item.size || item.color) && ` | ${item.size}${item.size && item.color ? ', ' : ''}${item.color}`}
+                                    {(item.selectedColor || item.selectedSize) && ` | ${item.selectedColor}${item.selectedColor && item.selectedSize ? ', ' : ''}${item.selectedSize}`}
                                   </p>
                               </div>
                               <div className="flex items-center gap-3">
-                                  <button onClick={() => updateQuantity(item.id, -1)} className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-red-500 active:scale-90 transition-all"><Minus size={14}/></button>
+                                  <button onClick={() => updateQuantity(item.id, item.selectedColor, item.selectedSize, -1)} className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-red-500 active:scale-90 transition-all"><Minus size={14}/></button>
                                   <span className="font-black text-sm dark:text-white w-4 text-center">{item.quantity}</span>
-                                  <button onClick={() => updateQuantity(item.id, 1)} className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-brand-600 active:scale-90 transition-all"><Plus size={14}/></button>
+                                  <button onClick={() => updateQuantity(item.id, item.selectedColor, item.selectedSize, 1)} className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-brand-600 active:scale-90 transition-all"><Plus size={14}/></button>
                               </div>
-                              <button onClick={() => removeFromCart(item.id)} className="p-2 text-slate-300 hover:text-red-500"><X size={18}/></button>
+                              <button onClick={() => removeFromCart(item.id, item.selectedColor, item.selectedSize)} className="p-2 text-slate-300 hover:text-red-500"><X size={18}/></button>
                           </div>
                       ))}
                   </div>
@@ -330,6 +360,87 @@ export const POS: React.FC<POSProps> = ({
         </div>
       </div>
 
+      {/* Variant Selection Modal */}
+      {selectingVariantProduct && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-2xl z-[120] flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[4rem] shadow-2xl overflow-hidden animate-fade-in-up border border-slate-100 dark:border-slate-800 flex flex-col max-h-[90vh]">
+                <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-brand-600 flex items-center justify-center text-white shadow-lg shadow-brand-500/30"><Layers size={24}/></div>
+                        <div>
+                           <h3 className="text-2xl font-black text-slate-900 dark:text-white italic uppercase tracking-tighter leading-none">Select Variant</h3>
+                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Multi-SKU Selection Pipeline</p>
+                        </div>
+                    </div>
+                    <button onClick={() => setSelectingVariantProduct(null)} className="p-3 bg-white dark:bg-slate-800 text-slate-400 rounded-2xl hover:text-red-500 transition-all"><X size={24}/></button>
+                </div>
+                
+                <div className="p-10 overflow-y-auto space-y-10 custom-scrollbar">
+                    <div className="flex items-center gap-6">
+                        <div className="w-24 h-24 rounded-3xl bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 overflow-hidden flex-shrink-0">
+                            {selectingVariantProduct.image ? <img src={selectingVariantProduct.image} className="w-full h-full object-cover" /> : <ImageIcon className="m-auto text-slate-200" size={32}/>}
+                        </div>
+                        <div>
+                           <h4 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter">{selectingVariantProduct.name}</h4>
+                           <p className="text-brand-600 font-black text-lg">{formatCurrency(selectingVariantProduct.sellPrice, language, CURRENCY)}</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Step 1: Choose Colour</label>
+                            <div className="flex flex-wrap gap-3">
+                                {availableColors.map(color => (
+                                    <button 
+                                        key={color} 
+                                        onClick={() => { setTempColor(color); setTempSize(null); }}
+                                        className={`px-6 py-3 rounded-2xl border-2 transition-all font-black text-[11px] uppercase tracking-widest flex items-center gap-3 ${tempColor === color ? 'bg-brand-600 text-white border-brand-500 shadow-xl' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 border-transparent shadow-sm hover:bg-slate-100'}`}
+                                    >
+                                        <div className="w-4 h-4 rounded-full border border-black/10" style={{ backgroundColor: selectingVariantProduct.variants?.find(v=>v.color === color)?.color || '#ccc' }}></div>
+                                        {color}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {tempColor && (
+                            <div className="space-y-3 animate-fade-in-up">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Step 2: Choose Size</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {availableSizes.map(size => {
+                                        const variant = selectingVariantProduct.variants?.find(v => v.color === tempColor && v.size === size);
+                                        const isOutOfStock = (variant?.stock || 0) <= 0;
+                                        return (
+                                            <button 
+                                                key={size} 
+                                                disabled={isOutOfStock}
+                                                onClick={() => setTempSize(size)}
+                                                className={`px-8 py-4 rounded-2xl border-2 transition-all font-black text-xs uppercase tracking-widest ${tempSize === size ? 'bg-slate-900 text-white border-slate-900 shadow-xl' : isOutOfStock ? 'bg-slate-100 dark:bg-slate-800/50 text-slate-300 border-transparent cursor-not-allowed line-through' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-100 dark:border-slate-700 shadow-sm'}`}
+                                            >
+                                                {size}
+                                                <span className="block text-[8px] font-bold opacity-50 mt-1">{isOutOfStock ? 'OUT' : `${variant?.stock} STOCK`}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="p-8 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800">
+                    <button 
+                        disabled={!tempColor || !tempSize}
+                        onClick={() => addToCart(selectingVariantProduct, tempColor!, tempSize!)}
+                        className="w-full py-6 bg-brand-600 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] text-xs shadow-2xl shadow-brand-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-30 italic"
+                    >
+                        <Sparkles size={20} className="animate-pulse" /> Add Specific Variant to Cart
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
       {showInvoice && lastSale && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-3xl flex items-center justify-center z-[110] p-4 print:p-0 print:bg-white">
           <div className="bg-white rounded-[3.5rem] w-full max-w-md relative animate-fade-in-up shadow-2xl overflow-hidden flex flex-col print:shadow-none print:max-h-none print:h-auto print:rounded-none">
@@ -355,11 +466,11 @@ export const POS: React.FC<POSProps> = ({
                     </div>
                 )}
                 <div className="space-y-4 mb-10 border-t-2 border-dashed border-slate-100 pt-8 font-mono">
-                   {lastSale.items.map((item: any) => (
-                     <div key={item.id} className="flex justify-between items-start text-sm">
+                   {lastSale.items.map((item: any, idx: number) => (
+                     <div key={idx} className="flex justify-between items-start text-sm">
                         <span className="flex-1 pr-6">
                           {item.name.toUpperCase()} 
-                          {(item.size || item.color) && <span className="text-[10px] opacity-70 block">({item.size}{item.size && item.color ? ', ' : ''}{item.color})</span>}
+                          {(item.selectedColor || item.selectedSize) && <span className="text-[10px] opacity-70 block">({item.selectedColor}{item.selectedColor && item.selectedSize ? ', ' : ''}{item.selectedSize})</span>}
                           <span className="text-[10px] opacity-50 block mt-1">x{formatNumber(item.quantity, language)} @ {formatCurrency(item.sellPrice, language, CURRENCY)}</span>
                         </span>
                         <span className="font-black">{formatCurrency(item.sellPrice * item.quantity, language, CURRENCY)}</span>

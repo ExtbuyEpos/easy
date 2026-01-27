@@ -1,7 +1,7 @@
 
-import React, { useState, useRef } from 'react';
-import { Product, User, Language, StoreSettings } from '../types';
-import { Plus, Search, Trash2, Edit2, Save, X, Image as ImageIcon, RefreshCw, Upload, Package, AlertCircle, ChevronLeft, TrendingUp, DollarSign, List, Grid, Check, ArrowRightLeft, Sparkles, Loader2, Heart, Type, Palette, Ruler } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Product, User, Language, StoreSettings, ProductVariant } from '../types';
+import { Plus, Search, Trash2, Edit2, Save, X, Image as ImageIcon, RefreshCw, Upload, Package, AlertCircle, ChevronLeft, TrendingUp, DollarSign, List, Grid, Check, ArrowRightLeft, Sparkles, Loader2, Heart, Type, Palette, Ruler, Layers, Settings2 } from 'lucide-react';
 import { CURRENCY } from '../constants';
 import { formatNumber, formatCurrency } from '../utils/format';
 import { generateImageWithCloudflare } from '../services/cloudflareAiService';
@@ -37,7 +37,6 @@ const COMMON_COLORS = [
     { name: 'Pink', hex: '#ec4899' }
 ];
 
-// Extract onDeleteCategory and onUpdateCategory from props to fix undefined variable errors
 export const Inventory: React.FC<InventoryProps> = ({ 
   products, categories = [], onAddProduct, onUpdateProduct, onDeleteProduct,
   onAddCategory, onUpdateCategory, onDeleteCategory, initialTab = 'products', onGoBack, t = (k) => k,
@@ -48,15 +47,41 @@ export const Inventory: React.FC<InventoryProps> = ({
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
   const [isGeneratingAiImage, setIsGeneratingAiImage] = useState(false);
   const [aiEngine, setAiEngine] = useState<'CLOUDFLARE' | 'HACKCLUB'>('CLOUDFLARE');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Variant Matrix state
+  const [useVariants, setUseVariants] = useState(false);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [matrix, setMatrix] = useState<ProductVariant[]>([]);
+
   const [formData, setFormData] = useState<Partial<Product>>({
     name: '', sku: '', costPrice: 0, sellPrice: 0, stock: 0, category: 'General', image: '', size: '', color: ''
   });
+
+  // Re-generate matrix when colors or sizes change
+  useEffect(() => {
+    if (useVariants) {
+        const newMatrix: ProductVariant[] = [];
+        selectedColors.forEach(color => {
+            selectedSizes.forEach(size => {
+                const existing = matrix.find(m => m.color === color && m.size === size);
+                newMatrix.push({ color, size, stock: existing ? existing.stock : 0 });
+            });
+        });
+        setMatrix(newMatrix);
+    }
+  }, [selectedColors, selectedSizes, useVariants]);
+
+  // Sync total stock from matrix
+  useEffect(() => {
+    if (useVariants) {
+        const total = matrix.reduce((acc, m) => acc + (Number(m.stock) || 0), 0);
+        setFormData(prev => ({ ...prev, stock: total }));
+    }
+  }, [matrix, useVariants]);
 
   const canAddProduct = currentUser?.role === 'ADMIN';
   const canDeleteProduct = currentUser?.role === 'ADMIN';
@@ -78,50 +103,25 @@ export const Inventory: React.FC<InventoryProps> = ({
     if (product) {
       setEditingProduct(product);
       setFormData({ ...product, image: product.image || '', size: product.size || '', color: product.color || '' });
+      setUseVariants(!!product.hasVariants);
+      if (product.hasVariants && product.variants) {
+          setMatrix(product.variants);
+          setSelectedColors(Array.from(new Set(product.variants.map(v => v.color))));
+          setSelectedSizes(Array.from(new Set(product.variants.map(v => v.size))));
+      } else {
+          setMatrix([]);
+          setSelectedColors([]);
+          setSelectedSizes([]);
+      }
     } else {
       setEditingProduct(null);
       setFormData({ name: '', sku: '', costPrice: 0, sellPrice: 0, stock: 0, category: suggestionCategories[0] || 'General', image: '', size: '', color: '' });
+      setUseVariants(false);
+      setMatrix([]);
+      setSelectedColors([]);
+      setSelectedSizes([]);
     }
-    setIsAddingNewCategory(false);
     setIsModalOpen(true);
-  };
-
-  const handleCreateCategory = () => {
-    if (!newCategoryName.trim()) return;
-    if (onAddCategory) {
-      onAddCategory(newCategoryName.trim());
-      setFormData({ ...formData, category: newCategoryName.trim() });
-      setNewCategoryName('');
-      setIsAddingNewCategory(false);
-    } else {
-      setFormData({ ...formData, category: newCategoryName.trim() });
-      setIsAddingNewCategory(false);
-    }
-  };
-
-  const handleGenerateAiImage = async (engine: 'CLOUDFLARE' | 'HACKCLUB') => {
-    if (!formData.name) {
-      alert("Please enter a product name first to use as an AI prompt.");
-      return;
-    }
-    const configUrl = engine === 'CLOUDFLARE' ? storeSettings?.cloudflareAiUrl : storeSettings?.hackClubAiUrl;
-    if (!configUrl) return alert(`${engine} URL not configured in Settings.`);
-
-    setIsGeneratingAiImage(true);
-    setAiEngine(engine);
-    try {
-      let generatedImage = '';
-      if (engine === 'CLOUDFLARE') {
-        generatedImage = await generateImageWithCloudflare(configUrl, formData.name);
-      } else {
-        generatedImage = await generateImageWithHackClub(configUrl, formData.name);
-      }
-      setFormData(prev => ({ ...prev, image: generatedImage }));
-    } catch (err) {
-      alert("AI Generation failed. Check your Gateway URL.");
-    } finally {
-      setIsGeneratingAiImage(false);
-    }
   };
 
   const handleSave = () => {
@@ -129,22 +129,34 @@ export const Inventory: React.FC<InventoryProps> = ({
       alert("Product Name and Valid Sale Price are required"); 
       return; 
     }
+    
     const productData = {
+      ...formData,
       id: editingProduct ? editingProduct.id : Date.now().toString(),
-      name: formData.name!,
       sku: formData.sku || `SKU-${Date.now()}`,
       costPrice: Number(formData.costPrice || 0),
       sellPrice: Number(formData.sellPrice),
       stock: Number(formData.stock || 0),
-      category: formData.category || 'General',
-      image: formData.image || '',
-      size: formData.size || '',
-      color: formData.color || ''
+      hasVariants: useVariants,
+      variants: useVariants ? matrix : undefined,
     } as Product;
 
     if (editingProduct) onUpdateProduct(productData);
     else onAddProduct(productData);
     setIsModalOpen(false);
+  };
+
+  const toggleColor = (name: string) => {
+    setSelectedColors(prev => prev.includes(name) ? prev.filter(c => c !== name) : [...prev, name]);
+  };
+
+  const toggleSize = (name: string) => {
+    setSelectedSizes(prev => prev.includes(name) ? prev.filter(s => s !== name) : [...prev, name]);
+  };
+
+  const updateMatrixStock = (color: string, size: string, value: string) => {
+    const qty = parseInt(value) || 0;
+    setMatrix(prev => prev.map(m => (m.color === color && m.size === size) ? { ...m, stock: qty } : m));
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -171,8 +183,8 @@ export const Inventory: React.FC<InventoryProps> = ({
             </div>
             <div className="flex gap-3">
               <div className="hidden sm:flex bg-slate-200 dark:bg-slate-800 p-1 rounded-2xl">
-                <button onClick={() => setActiveTab('products')} className={`px-6 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'products' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-md' : 'text-slate-500'}`}>Items</button>
-                <button onClick={() => setActiveTab('categories')} className={`px-6 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'categories' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-md' : 'text-slate-500'}`}>Categories</button>
+                <button onClick={() => setActiveTab('products')} className={`px-6 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'products' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-md' : 'text-slate-50'}`}>Items</button>
+                <button onClick={() => setActiveTab('categories')} className={`px-6 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'categories' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-md' : 'text-slate-50'}`}>Categories</button>
               </div>
               {canAddProduct && (
                 <button onClick={() => handleOpenModal()} className="bg-brand-600 hover:bg-brand-500 text-white px-4 md:px-8 py-3 md:py-4 rounded-2xl flex items-center gap-2 shadow-xl shadow-brand-500/20 transition-all active:scale-95 font-black text-[10px] uppercase tracking-widest italic">
@@ -218,11 +230,11 @@ export const Inventory: React.FC<InventoryProps> = ({
          <div className="flex flex-col md:flex-row gap-3">
              <div className="relative flex-1 group">
                  <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-500 transition-colors" size={20} />
-                 <input type="text" placeholder={t('search')} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-14 pr-4 py-4.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[1.8rem] outline-none shadow-sm font-bold text-sm focus:ring-4 focus:ring-brand-500/10 transition-all dark:text-white" />
+                 <input type="text" placeholder={t('search')} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-14 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[1.8rem] outline-none shadow-sm font-bold text-sm focus:ring-4 focus:ring-brand-500/10 transition-all dark:text-white" />
              </div>
              {activeTab === 'products' && (
                <div className="flex gap-2">
-                  <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="flex-1 md:flex-none px-6 py-4.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[1.8rem] outline-none shadow-sm font-black text-[10px] uppercase tracking-widest text-slate-600 dark:text-slate-300 focus:ring-4 focus:ring-brand-500/10 appearance-none cursor-pointer pr-12 relative bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJtNiA5IDYgNiA2LTYiLz48L3N2Zz4=')] bg-[length:18px] bg-[right_1rem_center] bg-no-repeat">
+                  <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="flex-1 md:flex-none px-6 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[1.8rem] outline-none shadow-sm font-black text-[10px] uppercase tracking-widest text-slate-600 dark:text-slate-300 focus:ring-4 focus:ring-brand-500/10 appearance-none cursor-pointer pr-12 relative bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJtNiA5IDYgNiA2LTYiLz48L3N2Zz4=')] bg-[length:18px] bg-[right_1rem_center] bg-no-repeat">
                       <option value="All">{t('all')}</option>
                       {suggestionCategories.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -235,12 +247,12 @@ export const Inventory: React.FC<InventoryProps> = ({
           {activeTab === 'products' ? (
             <div className="flex-1 overflow-auto custom-scrollbar animate-fade-in">
                <table className="w-full text-left text-sm border-separate border-spacing-0">
-                  <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 font-black uppercase text-[9px] tracking-[0.25em] sticky top-0 z-10 backdrop-blur-xl">
+                  <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 font-black uppercase text-[9px] tracking-widest sticky top-0 z-10 backdrop-blur-xl">
                      <tr>
                         <th className="p-6 md:p-8">{t('productName')}</th>
                         <th className="p-8 text-right hidden md:table-cell">{t('cost')}</th>
                         <th className="p-6 md:p-8 text-right">{t('price')}</th>
-                        <th className="p-8 text-center hidden lg:table-cell">Variant Map</th>
+                        <th className="p-8 text-center hidden lg:table-cell">Inventory Type</th>
                         <th className="p-6 md:p-8 text-center">{t('stock')}</th>
                         <th className="p-6 md:p-8 text-right">{t('action')}</th>
                      </tr>
@@ -263,9 +275,11 @@ export const Inventory: React.FC<InventoryProps> = ({
                             <td className="p-6 md:p-8 text-right font-black text-brand-600 dark:text-brand-400 text-lg md:text-xl">{formatCurrency(p.sellPrice, language, CURRENCY)}</td>
                             <td className="p-8 text-center hidden lg:table-cell">
                                 <div className="flex flex-wrap justify-center gap-2">
-                                  {p.size && <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[9px] font-black uppercase text-slate-500">{p.size}</span>}
-                                  {p.color && <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[9px] font-black uppercase text-slate-500">{p.color}</span>}
-                                  {!p.size && !p.color && <span className="text-[9px] text-slate-300 uppercase italic">No Variants</span>}
+                                  {p.hasVariants ? (
+                                    <span className="px-3 py-1 bg-brand-50 dark:bg-brand-900/30 rounded-lg text-[9px] font-black uppercase text-brand-600 flex items-center gap-1.5"><Layers size={10}/> Matrix Stock ({p.variants?.length})</span>
+                                  ) : (
+                                    <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[9px] font-black uppercase text-slate-400">Single SKU</span>
+                                  )}
                                 </div>
                             </td>
                             <td className="p-6 md:p-8 text-center">
@@ -288,7 +302,6 @@ export const Inventory: React.FC<InventoryProps> = ({
                     {suggestionCategories.map(cat => {
                         const catProducts = products.filter(p => p.category === cat);
                         const stockCount = catProducts.reduce((a,b) => a + b.stock, 0);
-                        const variants = Array.from(new Set(catProducts.map(p => p.size).filter(Boolean)));
                         return (
                             <div key={cat} className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-2xl transition-all group">
                                 <div className="flex justify-between items-start mb-6">
@@ -307,14 +320,6 @@ export const Inventory: React.FC<InventoryProps> = ({
                                         <span>Stock Units</span>
                                         <span className="text-emerald-500">{stockCount} Units</span>
                                     </div>
-                                    {variants.length > 0 && (
-                                        <div className="pt-4 border-t border-slate-50 dark:border-slate-700">
-                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2">Available Sizes</p>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {variants.map(v => <span key={v} className="px-2 py-0.5 bg-slate-50 dark:bg-slate-900 rounded text-[8px] font-black text-slate-400 border border-slate-100 dark:border-slate-800">{v}</span>)}
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         );
@@ -325,111 +330,176 @@ export const Inventory: React.FC<InventoryProps> = ({
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-2xl flex items-end md:items-center justify-center ltr:z-[100] rtl:z-[100] p-0 ltr:md:p-4 rtl:md:p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-t-[4rem] md:rounded-[4rem] shadow-2xl overflow-hidden animate-fade-in-up flex flex-col border border-slate-100 dark:border-slate-800 max-h-[95vh] relative">
-             <div className="p-8 md:p-12 pb-6 md:pb-8 border-b ltr:border-slate-100 rtl:border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-2xl flex items-end md:items-center justify-center z-[100] p-0 md:p-4">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-6xl rounded-t-[4rem] md:rounded-[4rem] shadow-2xl overflow-hidden animate-fade-in-up flex flex-col border border-slate-100 dark:border-slate-800 max-h-[98vh] relative">
+             <div className="p-8 md:p-10 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
                  <div>
-                    <h3 className="text-3xl md:text-4xl font-black text-slate-900 ltr:dark:text-white rtl:dark:text-white tracking-tighter uppercase ltr:italic rtl:italic leading-none">{editingProduct ? t('editProduct') : t('addProduct')}</h3>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mt-2">New Merchandise Entry</p>
+                    <h3 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic leading-none">{editingProduct ? t('editProduct') : t('addProduct')}</h3>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mt-2">Professional Merchandise Entry</p>
                  </div>
-                 <button onClick={() => setIsModalOpen(false)} className="bg-white dark:bg-slate-800 p-4 rounded-3xl text-slate-400 hover:text-red-500 transition-all shadow-xl active:scale-90"><X size={28}/></button>
+                 <div className="flex items-center gap-4">
+                    <button onClick={() => setUseVariants(!useVariants)} className={`px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all flex items-center gap-3 border-2 ${useVariants ? 'bg-brand-600 text-white border-brand-500 shadow-xl' : 'bg-white dark:bg-slate-800 text-slate-400 border-slate-100 dark:border-slate-700'}`}>
+                        <Layers size={16}/> {useVariants ? 'Variant Mode Active' : 'Enable Variant Matrix'}
+                    </button>
+                    <button onClick={() => setIsModalOpen(false)} className="bg-white dark:bg-slate-800 p-4 rounded-3xl text-slate-400 hover:text-red-500 transition-all shadow-xl active:scale-90"><X size={24}/></button>
+                 </div>
              </div>
              
-             <div className="flex-1 overflow-y-auto p-8 md:p-12 space-y-10 ltr:custom-scrollbar rtl:custom-scrollbar">
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                     <div className="space-y-8">
+             <div className="flex-1 overflow-y-auto p-8 md:p-10 space-y-10 custom-scrollbar">
+                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
+                     
+                     {/* Left Core Data Column */}
+                     <div className="xl:col-span-4 space-y-8">
                         <div className="space-y-3">
-                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ltr:ml-1 rtl:mr-1">{t('productName')}</label>
-                            <input type="text" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full p-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 ltr:dark:border-slate-700 rtl:dark:border-slate-700 rounded-3xl outline-none focus:border-brand-500 ltr:dark:text-white rtl:dark:text-white font-bold text-xl shadow-inner" placeholder="E.g. Urban Cotton Tee" />
-                        </div>
-                        
-                        {/* Size Selection Protocol */}
-                        <div className="space-y-4">
-                            <label className="text-[11px] font-black text-slate-400 uppercase ltr:tracking-widest rtl:tracking-widest ltr:ml-1 rtl:mr-1 flex items-center gap-2"><Ruler size={14}/> Variant Size (S, M, L, XL...)</label>
-                            <div className="flex flex-wrap gap-2 mb-3">
-                                {COMMON_SIZES.map(s => (
-                                    <button 
-                                        key={s} 
-                                        onClick={() => setFormData({...formData, size: s})}
-                                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase ltr:tracking-widest rtl:tracking-widest transition-all ${formData.size === s ? 'bg-brand-600 text-white shadow-lg' : 'bg-slate-100 ltr:dark:bg-slate-800 rtl:dark:bg-slate-800 text-slate-400 ltr:hover:bg-slate-200 rtl:hover:bg-slate-200'}`}
-                                    >
-                                        {s}
-                                    </button>
-                                ))}
-                            </div>
-                            <input type="text" value={formData.size || ''} onChange={e => setFormData({ ...formData, size: e.target.value })} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 ltr:dark:border-slate-700 rtl:dark:border-slate-700 rounded-2xl outline-none focus:border-brand-500 ltr:dark:text-white rtl:dark:text-white font-bold text-sm" placeholder="Custom Size..." />
+                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('productName')}</label>
+                            <input type="text" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full p-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-3xl outline-none focus:border-brand-500 dark:text-white font-bold text-xl shadow-inner" placeholder="E.g. Urban Cotton Tee" />
                         </div>
 
-                        {/* Color Selection Protocol */}
-                        <div className="space-y-4">
-                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ltr:ml-1 rtl:mr-1 flex items-center gap-2 ltr:gap-2 rtl:gap-2"><Palette size={14}/> Core Merchandise Colour</label>
-                            <div className="flex flex-wrap gap-3 mb-3">
-                                {COMMON_COLORS.map(c => (
-                                    <button 
-                                        key={c.name} 
-                                        onClick={() => setFormData({...formData, color: c.name})}
-                                        title={c.name}
-                                        className={`w-10 h-10 rounded-full border-4 transition-all hover:scale-110 active:scale-90 ${formData.color === c.name ? 'border-brand-500 scale-110 shadow-lg' : 'border-white ltr:dark:border-slate-700 rtl:dark:border-slate-700 shadow-sm'}`}
-                                        style={{ backgroundColor: c.hex }}
-                                    ></button>
-                                ))}
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className="space-y-3">
+                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('cost')}</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-300">{CURRENCY}</span>
+                                    <input type="number" step="0.01" value={formData.costPrice || ''} onChange={e => setFormData({ ...formData, costPrice: parseFloat(e.target.value) || 0 })} className="w-full p-5 pl-10 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-3xl dark:text-white font-black text-xl shadow-inner" placeholder="0.00" />
+                                </div>
                             </div>
-                            <input type="text" value={formData.color || ''} onChange={e => setFormData({ ...formData, color: e.target.value })} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl outline-none focus:border-brand-500 dark:text-white font-bold text-sm" placeholder="Custom Color..." />
+                            <div className="space-y-3">
+                                <label className="text-[11px] font-black text-brand-600 dark:text-brand-400 uppercase tracking-widest ml-1">{t('price')}</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-brand-300">{CURRENCY}</span>
+                                    <input type="number" step="0.01" value={formData.sellPrice || ''} onChange={e => setFormData({ ...formData, sellPrice: parseFloat(e.target.value) || 0 })} className="w-full p-5 pl-10 bg-slate-50 dark:bg-slate-800 border-2 border-brand-100 dark:border-brand-900 rounded-3xl dark:text-white font-black text-xl text-brand-600 shadow-inner" placeholder="0.00" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('image')}</label>
+                            <div className="aspect-square bg-slate-50 dark:bg-slate-800 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden relative group shadow-inner">
+                                {formData.image ? <img src={formData.image} className="w-full h-full object-contain p-6" alt="Preview" /> : <ImageIcon className="opacity-20" size={64} />}
+                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
+                                    <button onClick={() => fileInputRef.current?.click()} className="p-4 bg-white rounded-2xl text-slate-900 shadow-xl hover:scale-110 transition-transform"><Upload size={24}/></button>
+                                    {storeSettings?.cloudflareAiUrl && <button onClick={() => generateImageWithCloudflare(storeSettings.cloudflareAiUrl!, formData.name || 'product')} className="p-4 bg-brand-600 rounded-2xl text-white shadow-xl hover:scale-110 transition-transform"><Sparkles size={24}/></button>}
+                                </div>
+                                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('stock')}</label>
+                            <input type="number" readOnly={useVariants} value={formData.stock || 0} onChange={e => !useVariants && setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })} className={`w-full p-6 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-3xl dark:text-white font-black text-3xl shadow-inner text-center ${useVariants ? 'opacity-50 grayscale' : ''}`} />
+                            {useVariants && <p className="text-[9px] font-black text-center text-brand-500 uppercase tracking-widest">Stock is locked to variant sum</p>}
                         </div>
                      </div>
 
-                     <div className="space-y-8">
-                        <div className="grid grid-cols-2 gap-6">
-                            <div className="space-y-3">
-                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ltr:ml-1 rtl:mr-1">{t('cost')}</label>
-                                <div className="relative">
-                                    <span className="absolute ltr:left-4 rtl:right-4 top-1/2 -translate-y-1/2 font-black text-slate-300">{CURRENCY}</span>
-                                    <input type="number" step="0.01" value={formData.costPrice || ''} onChange={e => setFormData({ ...formData, costPrice: parseFloat(e.target.value) || 0 })} className="w-full p-5 ltr:pl-10 rtl:pr-10 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-3xl ltr:dark:text-white rtl:dark:text-white font-black text-xl shadow-inner" placeholder="0.00" />
-                                </div>
+                     {/* Right Variants Column */}
+                     <div className="xl:col-span-8 space-y-10">
+                        {!useVariants ? (
+                            <div className="h-full bg-slate-50 dark:bg-slate-800/40 rounded-[3.5rem] border-2 border-dashed border-slate-100 dark:border-slate-700 flex flex-col items-center justify-center p-12 text-center opacity-40">
+                                <Settings2 size={80} strokeWidth={1} className="mb-6"/>
+                                <h4 className="text-xl font-black uppercase italic text-slate-400">Single Entry Mode</h4>
+                                <p className="text-xs font-medium max-w-xs mt-2">Standard product with fixed stock. Switch to Variant Matrix to manage complex inventory with multiple colors and sizes.</p>
                             </div>
-                            <div className="space-y-3">
-                                <label className="text-[11px] font-black text-brand-600 dark:text-brand-400 uppercase tracking-widest ltr:ml-1 rtl:mr-1">{t('price')}</label>
-                                <div className="relative">
-                                    <span className="absolute ltr:left-4 rtl:right-4 top-1/2 -translate-y-1/2 font-black text-brand-300">{CURRENCY}</span>
-                                    <input type="number" step="0.01" value={formData.sellPrice || ''} onChange={e => setFormData({ ...formData, sellPrice: parseFloat(e.target.value) || 0 })} className="w-full p-5 ltr:pl-10 rtl:pr-10 bg-slate-50 dark:bg-slate-800 border-2 border-brand-100 dark:border-brand-900 rounded-3xl ltr:dark:text-white rtl:dark:text-white font-black text-xl text-brand-600 shadow-inner" placeholder="0.00" />
+                        ) : (
+                            <div className="space-y-10 animate-fade-in">
+                                {/* Step 1: Color Selection */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center text-white text-[10px] font-black">1</div>
+                                        <label className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2"><Palette size={14}/> Define Available Colours</label>
+                                    </div>
+                                    <div className="flex flex-wrap gap-3 p-6 bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-inner">
+                                        {COMMON_COLORS.map(c => (
+                                            <button 
+                                                key={c.name} 
+                                                onClick={() => toggleColor(c.name)}
+                                                className={`flex items-center gap-3 px-4 py-2 rounded-2xl border-2 transition-all active:scale-95 ${selectedColors.includes(c.name) ? 'bg-white dark:bg-slate-900 border-brand-500 shadow-md' : 'bg-transparent border-transparent opacity-60'}`}
+                                            >
+                                                <div className="w-5 h-5 rounded-full border border-black/10 shadow-sm" style={{ backgroundColor: c.hex }}></div>
+                                                <span className="text-[10px] font-black uppercase tracking-widest dark:text-white">{c.name}</span>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
 
-                        <div className="space-y-3">
-                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ltr:ml-1 rtl:mr-1">{t('image')}</label>
-                            <div className="flex flex-col gap-4">
-                                <div className="aspect-video bg-slate-50 ltr:dark:bg-slate-800 rtl:dark:bg-slate-800 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden relative ltr:group rtl:group shadow-inner">
-                                    {formData.image ? <img src={formData.image} className="w-full h-full object-contain p-6" alt="Preview" /> : <ImageIcon className="opacity-20" size={64} />}
-                                    {isGeneratingAiImage && (
-                                      <div className="absolute inset-0 bg-brand-600/80 backdrop-blur-md flex flex-col items-center justify-center ltr:text-white rtl:text-white z-20">
-                                          <Loader2 size={48} className="animate-spin mb-4" />
-                                          <p className="font-black uppercase tracking-widest text-[10px] animate-pulse ltr:animate-pulse rtl:animate-pulse">{t('aiGeneratingImage')}</p>
-                                      </div>
-                                    )}
+                                {/* Step 2: Size Selection */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center text-white text-[10px] font-black">2</div>
+                                        <label className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2"><Ruler size={14}/> Define Available Sizes</label>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 p-6 bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-inner">
+                                        {COMMON_SIZES.map(s => (
+                                            <button 
+                                                key={s} 
+                                                onClick={() => toggleSize(s)}
+                                                className={`px-5 py-3 rounded-2xl border-2 transition-all active:scale-95 text-[10px] font-black uppercase tracking-widest ${selectedSizes.includes(s) ? 'bg-brand-600 text-white border-brand-500 shadow-lg' : 'bg-white dark:bg-slate-900 text-slate-400 border-transparent shadow-sm'}`}
+                                            >
+                                                {s}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                                <div className="flex ltr:gap-2 rtl:gap-2">
-                                    <button onClick={() => fileInputRef.current?.click()} className="flex-1 py-4 bg-slate-100 ltr:dark:bg-slate-800 rtl:dark:bg-slate-800 border ltr:border-slate-200 rtl:border-slate-200 dark:border-slate-700 rounded-2xl text-slate-400 font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3"><Upload size={16}/> Hardware Upload</button>
-                                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
-                                    {storeSettings?.cloudflareAiUrl && (
-                                      <button onClick={() => handleGenerateAiImage('CLOUDFLARE')} disabled={isGeneratingAiImage} className="p-4 bg-brand-600 text-white rounded-2xl shadow-lg active:scale-95 ltr:disabled:opacity-50 rtl:disabled:opacity-50"><Sparkles size={20}/></button>
+
+                                {/* Step 3: Matrix Grid */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center text-white text-[10px] font-black">3</div>
+                                        <label className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2"><Grid size={14}/> Stock Matrix (Quantities)</label>
+                                    </div>
+                                    
+                                    {selectedColors.length > 0 && selectedSizes.length > 0 ? (
+                                        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-700 overflow-hidden shadow-2xl">
+                                            <table className="w-full text-left">
+                                                <thead className="bg-slate-50 dark:bg-slate-800 text-slate-400 font-black uppercase text-[9px] tracking-widest">
+                                                    <tr>
+                                                        <th className="p-6">Variant Mapping</th>
+                                                        {selectedSizes.map(s => <th key={s} className="p-6 text-center">{s}</th>)}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+                                                    {selectedColors.map(color => (
+                                                        <tr key={color} className="group">
+                                                            <td className="p-6 bg-slate-50/30 dark:bg-slate-800/30">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="w-6 h-6 rounded-full border border-black/10" style={{ backgroundColor: COMMON_COLORS.find(c=>c.name === color)?.hex }}></div>
+                                                                    <span className="font-black text-[11px] uppercase dark:text-white">{color}</span>
+                                                                </div>
+                                                            </td>
+                                                            {selectedSizes.map(size => {
+                                                                const v = matrix.find(m => m.color === color && m.size === size);
+                                                                return (
+                                                                    <td key={size} className="p-2">
+                                                                        <input 
+                                                                            type="number" 
+                                                                            value={v?.stock || 0}
+                                                                            onChange={e => updateMatrixStock(color, size, e.target.value)}
+                                                                            className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-brand-500 rounded-2xl text-center font-black text-lg outline-none transition-all dark:text-white"
+                                                                        />
+                                                                    </td>
+                                                                );
+                                                            })}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        <div className="p-12 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[2.5rem] flex flex-col items-center justify-center text-center opacity-30">
+                                            <Layers size={40} className="mb-4 text-slate-400"/>
+                                            <p className="text-[10px] font-black uppercase tracking-widest">Select at least one color and size to generate matrix</p>
+                                        </div>
                                     )}
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div className="space-y-3">
-                            <label className="text-[11px] font-black text-slate-400 uppercase ltr:tracking-widest rtl:tracking-widest ltr:ml-1 rtl:mr-1">{t('stock')}</label>
-                            <input type="number" value={formData.stock || 0} onChange={e => setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })} className="w-full p-6 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-3xl dark:text-white font-black text-3xl shadow-inner ltr:text-center rtl:text-center" />
-                        </div>
+                        )}
                      </div>
                  </div>
              </div>
 
-             <div className="p-8 md:p-12 border-t ltr:border-slate-100 rtl:border-slate-100 ltr:dark:border-slate-800 rtl:dark:border-slate-800 bg-slate-50 ltr:dark:bg-slate-900/50 rtl:dark:bg-slate-900/50 flex gap-4">
-                 <button onClick={() => setIsModalOpen(false)} className="flex-1 py-5 text-slate-500 font-black uppercase tracking-widest text-[11px] ltr:text-[11px] rtl:text-[11px]">{t('cancel')}</button>
-                 <button onClick={handleSave} className="flex-[2] py-5 bg-slate-900 dark:bg-brand-600 text-white font-black uppercase tracking-widest rounded-3xl shadow-2xl ltr:hover:bg-black rtl:hover:bg-black transition-all active:scale-[0.98] text-[11px] flex items-center justify-center ltr:gap-3 rtl:gap-3 ltr:italic rtl:italic">
-                    <Save size={20}/> Save Merchandise Data
+             <div className="p-8 md:p-10 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex gap-4">
+                 <button onClick={() => setIsModalOpen(false)} className="flex-1 py-5 text-slate-500 font-black uppercase tracking-widest text-[11px]">{t('cancel')}</button>
+                 <button onClick={handleSave} className="flex-[2] py-5 bg-slate-900 dark:bg-brand-600 text-white font-black uppercase tracking-widest rounded-3xl shadow-2xl hover:bg-black transition-all active:scale-[0.98] text-[11px] flex items-center justify-center gap-3 italic">
+                    <Save size={20}/> {editingProduct ? 'Commit Merchandise Updates' : 'Authorize New Product Entry'}
                  </button>
              </div>
           </div>

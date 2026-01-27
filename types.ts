@@ -21,6 +21,12 @@ export interface Translations {
   [key: string]: string;
 }
 
+export interface ProductVariant {
+  color: string;
+  size: string;
+  stock: number;
+}
+
 export interface Product {
   id: string;
   sku: string;
@@ -33,10 +39,14 @@ export interface Product {
   tags?: string[];
   size?: string;
   color?: string;
+  hasVariants?: boolean;
+  variants?: ProductVariant[];
 }
 
 export interface CartItem extends Product {
   quantity: number;
+  selectedColor?: string;
+  selectedSize?: string;
 }
 
 export interface Sale {
