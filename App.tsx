@@ -10,7 +10,7 @@ import { Settings } from './components/Settings';
 import { BaileysSetup } from './components/BaileysSetup';
 import { Orders } from './components/Orders';
 import { PrintBarcode } from './components/PrintBarcode';
-import { AiAssistant } from './components/AiAssistant';
+import { ClawdBot } from './components/ClawdBot';
 import { CustomerPortal } from './components/CustomerPortal';
 import { Bookings } from './components/Bookings';
 import { AppView, Product, Sale, CartItem, User, StoreSettings, Language, Booking } from './types';
@@ -501,7 +501,7 @@ const App: React.FC = () => {
         </div>
 
         {user && !isCustomer && (
-            <AiAssistant 
+            <ClawdBot 
                 products={products} 
                 sales={sales} 
                 storeSettings={storeSettings} 

@@ -2,7 +2,8 @@ import { Language } from '../types';
 
 /**
  * Formats numbers into localized strings.
- * If language is 'ar', it returns Eastern Arabic numerals (٠١٢٣٤٥٦٧٨٩).
+ * If language is 'ar', it returns Eastern Arabic numerals (٠١٢٣٤٥٦٧٨٩) 
+ * by using the 'u-nu-arab' extension.
  */
 export const formatNumber = (
   num: number | string, 
@@ -12,9 +13,9 @@ export const formatNumber = (
   const value = typeof num === 'string' ? parseFloat(num) : num;
   if (isNaN(value)) return '0';
 
-  const locale = lang === 'ar' ? 'ar-SA' : 'en-US';
+  // Use the 'u-nu-arab' extension to force Eastern Arabic numerals
+  const locale = lang === 'ar' ? 'ar-SA-u-nu-arab' : 'en-US';
   
-  // Set default precision for currency-like numbers if not specified
   const defaultOptions: Intl.NumberFormatOptions = {
     minimumFractionDigits: options.minimumFractionDigits ?? 0,
     maximumFractionDigits: options.maximumFractionDigits ?? 2,
@@ -37,7 +38,8 @@ export const formatCurrency = (
     maximumFractionDigits: 2 
   });
   
+  // In Arabic, the currency symbol typically follows the number
   return lang === 'ar' 
-    ? `${formattedValue} ${currencySymbol}` // Symbol often follows in Arabic contexts
+    ? `${formattedValue} ${currencySymbol}`
     : `${currencySymbol}${formattedValue}`;
 };

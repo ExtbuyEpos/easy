@@ -20,12 +20,22 @@ export const translations: Record<Language, Translations> = {
     'phoneNumber': 'Phone Number',
     'getOtp': 'Request Verification Code',
     'verify': 'Verify & Enter',
-    'whatsappLogin': 'WhatsApp Login',
+    'whatsappLogin': 'Staff Phone',
+    'customerPhone': 'Customer Phone',
     'resendIn': 'Resend in',
     'resendCode': 'Resend Code',
     'codeSent': 'Verification code sent to',
     'loginWithGoogle': 'Sign in with Google',
     'continueAsGuest': 'Continue as Guest',
+    'staffLogin': 'Staff Access',
+    'customerLogin': 'Customer Portal',
+
+    // AI Assistant (easyPOS)
+    'clawdbotName': 'easyPOS',
+    'clawdbotGreeting': 'System Online. I am easyPOS. How shall we optimize your business today?',
+    'clawdbotPlaceholder': 'Deploy command or ask easyPOS...',
+    'clawdbotThinking': 'Processing Logic...',
+    'clawdbotContext': 'Direct Neural Link to Ledger & Stock',
 
     // Bookings
     'bookings': 'Customer Bookings',
@@ -43,6 +53,32 @@ export const translations: Record<Language, Translations> = {
     'cancelled': 'Cancelled',
     'saveBooking': 'Commit Booking',
     'noBookings': 'No bookings found',
+
+    // Settings
+    'systemTerminal': 'System Terminal',
+    'controlConsole': 'Control Console',
+    'configuration': 'Configuration',
+    'operatorAccess': 'Operator Access',
+    'storeIdentity': 'Store Identity',
+    'businessName': 'Business Name',
+    'taxRate': 'Tax Rate (%)',
+    'storeAddress': 'Store Address',
+    'imageGenEngines': 'Image Generation Engines',
+    'cfAiInstructions': 'Requires Cloudflare Workers AI integration.',
+    'hcAiInstructions': 'Unlimited free image generation for educational/youth projects.',
+    'syncTerminal': 'Sync Terminal Settings',
+    'activeOperators': 'Active Terminal Operators',
+    'addNewOperator': 'Add New Operator',
+    'employeeId': 'Employee ID',
+    'name': 'Name',
+    'role': 'Role',
+    'newOperator': 'New Operator',
+    'fullLegalName': 'Full Legal Name',
+    'securityRole': 'Security Role',
+    'accessPassword': 'Access Password',
+    'authorizeOperator': 'Authorize Operator',
+    'languageSettings': 'Language Settings',
+    'switchLanguage': 'Switch to Arabic',
 
     // AI Engines
     'generateAiImage': 'AI Generate Image',
@@ -84,8 +120,8 @@ export const translations: Record<Language, Translations> = {
     'synced': 'Data synced to cloud',
     'savedDevice': 'Data saved to device',
 
-    // AI Assistant
-    'aiAssistant': 'easyPOS AI',
+    // AI Assistant (legacy keys)
+    'aiAssistant': 'easyPOS',
     'aiGreeting': 'Hello! I am your AI Business Assistant. How can I help you today?',
     'aiContextInfo': 'I have real-time access to your stock, sales, and settings.',
     'aiPlaceholder': 'Ask me about stock, revenue, or orders...',
@@ -192,12 +228,22 @@ export const translations: Record<Language, Translations> = {
     'phoneNumber': 'رقم الهاتف',
     'getOtp': 'طلب رمز التحقق',
     'verify': 'التحقق والدخول',
-    'whatsappLogin': 'دخول واتساب',
+    'whatsappLogin': 'هاتف الموظفين',
+    'customerPhone': 'هاتف العميل',
     'resendIn': 'إعادة الإرسال خلال',
     'resendCode': 'إعادة إرسال الرمز',
     'codeSent': 'تم إرسال الرمز إلى',
     'loginWithGoogle': 'تسجيل الدخول بواسطة جوجل',
     'continueAsGuest': 'المتابعة كضيف',
+    'staffLogin': 'دخول الموظفين',
+    'customerLogin': 'بوابة العملاء',
+
+    // AI Assistant (easyPOS)
+    'clawdbotName': 'إيزي بوس',
+    'clawdbotGreeting': 'النظام متصل. أنا إيزي بوس. كيف يمكنني تحسين عملك اليوم؟',
+    'clawdbotPlaceholder': 'أرسل أمراً أو اسأل إيزي بوس...',
+    'clawdbotThinking': 'جاري المعالجة المنطقية...',
+    'clawdbotContext': 'رابط عصبي مباشر للمخزون والمالية',
 
     // Bookings
     'bookings': 'الحجوزات',
@@ -215,6 +261,32 @@ export const translations: Record<Language, Translations> = {
     'cancelled': 'ملغى',
     'saveBooking': 'تأكيد الحجز',
     'noBookings': 'لا يوجد حجوزات',
+
+    // Settings
+    'systemTerminal': 'محطة النظام',
+    'controlConsole': 'لوحة التحكم',
+    'configuration': 'الإعدادات',
+    'operatorAccess': 'وصول الموظفين',
+    'storeIdentity': 'هوية المتجر',
+    'businessName': 'اسم المنشأة',
+    'taxRate': 'نسبة الضريبة (%)',
+    'storeAddress': 'عنوان المتجر',
+    'imageGenEngines': 'محركات إنشاء الصور',
+    'cfAiInstructions': 'يتطلب تكامل Cloudflare Workers AI.',
+    'hcAiInstructions': 'إنشاء صور مجاني غير محدود للمشاريع التعليمية.',
+    'syncTerminal': 'مزامنة الإعدادات',
+    'activeOperators': 'الموظفون النشطون',
+    'addNewOperator': 'إضافة موظف جديد',
+    'employeeId': 'رقم الموظف',
+    'name': 'الاسم',
+    'role': 'الدور',
+    'newOperator': 'موظف جديد',
+    'fullLegalName': 'الاسم القانوني الكامل',
+    'securityRole': 'الدور الأمني',
+    'accessPassword': 'كلمة مرور الدخول',
+    'authorizeOperator': 'اعتماد الموظف',
+    'languageSettings': 'إعدادات اللغة',
+    'switchLanguage': 'التبديل إلى الإنجليزية',
 
     // AI Engines
     'generateAiImage': 'إنشاء صورة بالذكاء الاصطناعي',
@@ -256,8 +328,8 @@ export const translations: Record<Language, Translations> = {
     'synced': 'تمت المزامنة سحابياً',
     'savedDevice': 'محفوظ على الجهاز',
 
-    // AI Assistant
-    'aiAssistant': 'مساعد easyPOS الذكي',
+    // AI Assistant (legacy keys)
+    'aiAssistant': 'إيزي بوس',
     'aiGreeting': 'مرحباً! أنا مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟',
     'aiContextInfo': 'لدي وصول مباشر لبيانات المخزون والمبيعات والإعدادات.',
     'aiPlaceholder': 'اسألني عن المخزون، الدخل، أو الطلبات...',

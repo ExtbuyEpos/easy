@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, Language } from '../types';
-import { ShoppingBag, Lock, User as UserIcon, AlertCircle, ChevronRight, Moon, Sun, Globe, Smartphone, MessageSquare, LayoutDashboard, ShieldCheck, RefreshCw, ShoppingCart, Loader2 } from 'lucide-react';
+import { Lock, User as UserIcon, AlertCircle, ChevronRight, Moon, Sun, Smartphone, MessageSquare, LayoutDashboard, ShieldCheck, RefreshCw, Loader2 } from 'lucide-react';
 import { auth } from '../firebase';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 
@@ -15,7 +16,7 @@ interface LoginProps {
   onEnterAsGuest?: () => void;
 }
 
-type LoginMethod = 'CREDENTIALS' | 'WHATSAPP' | 'GOOGLE';
+type LoginMethod = 'CREDENTIALS' | 'CUSTOMER_GOOGLE' | 'CUSTOMER_PHONE';
 
 export const Login: React.FC<LoginProps> = ({ 
   onLogin, users, t = (k) => k, isDarkMode, toggleTheme, language, toggleLanguage, onEnterAsGuest
@@ -98,10 +99,9 @@ export const Login: React.FC<LoginProps> = ({
     setError('');
     setLoading(true);
 
-    // Artificial delay for premium feel
-    await new Promise(resolve => setTimeout(resolve, 800));
-
     if (method === 'CREDENTIALS') {
+      // Artificial delay for premium feel
+      await new Promise(resolve => setTimeout(resolve, 800));
       const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
       if (user && user.password === password) {
          onLogin(user);
@@ -109,13 +109,20 @@ export const Login: React.FC<LoginProps> = ({
         setError(t('invalidCredentials'));
         setLoading(false);
       }
-    } else {
+    } else if (method === 'CUSTOMER_PHONE') {
       if (!otpSent) {
           handleRequestOtp();
       } else {
-          // Verification logic
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Verification logic for simulation
           if (otp === '123456' || otp === '000000') {
-             onLogin(users[0]);
+             const customerUser: User = {
+                 id: `phone_${phone}`,
+                 name: `Customer ${phone.slice(-4)}`,
+                 username: `user_${phone}`,
+                 role: 'CUSTOMER'
+             };
+             onLogin(customerUser);
           } else {
              setError(language === 'ar' ? 'رمز التحقق غير صحيح' : 'Invalid verification code');
              setLoading(false);
@@ -147,7 +154,7 @@ export const Login: React.FC<LoginProps> = ({
          )}
       </div>
 
-      <div className="bg-white dark:bg-slate-900 md:rounded-[3rem] shadow-none md:shadow-2xl overflow-hidden w-full max-w-5xl flex flex-col md:flex-row animate-fade-in md:h-[min(720px,90vh)] transition-all relative">
+      <div className="bg-white dark:bg-slate-900 md:rounded-[3rem] shadow-none md:shadow-2xl overflow-hidden w-full max-w-5xl flex flex-col md:flex-row animate-fade-in md:h-[min(750px,92vh)] transition-all relative">
         
         {/* Brand Hero Side */}
         <div className="bg-brand-600 dark:bg-brand-900 p-10 md:p-14 md:w-[42%] flex flex-col justify-center text-white relative overflow-hidden shrink-0 min-h-[35vh] md:min-h-0">
@@ -168,11 +175,9 @@ export const Login: React.FC<LoginProps> = ({
             </p>
           </div>
 
-          {/* Decorative Elements */}
           <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
           <div className="absolute bottom-0 left-0 w-60 h-60 bg-brand-400/20 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2"></div>
           
-          {/* Desktop Footer Info */}
           <div className="hidden md:block absolute bottom-14 left-14 z-10 opacity-40">
             <div className="text-[9px] font-black tracking-[0.2em] uppercase mb-1">{t('copyright')}</div>
             <div className="text-[10px] font-black tracking-[0.1em] uppercase">{t('poweredBy')}</div>
@@ -187,29 +192,29 @@ export const Login: React.FC<LoginProps> = ({
                 <p className="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest">{t('signInToAccess')}</p>
               </div>
 
-              {/* Enhanced Login Method Toggle */}
+              {/* Interaction Tabs */}
               <div className="flex bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-2xl mb-10 border border-slate-100 dark:border-slate-800">
                   <button 
                     onClick={() => { setMethod('CREDENTIALS'); setError(''); setOtpSent(false); }}
                     className={`flex-1 py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 ${method === 'CREDENTIALS' ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-white shadow-xl border border-slate-100 dark:border-slate-600' : 'text-slate-400 hover:text-slate-600'}`}
                   >
-                      <UserIcon size={12} /> Staff
+                      <UserIcon size={12} /> {t('staffLogin')}
                   </button>
                   <button 
-                    onClick={() => { setMethod('WHATSAPP'); setError(''); }}
-                    className={`flex-1 py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 ${method === 'WHATSAPP' ? 'bg-[#25D366] text-white shadow-xl shadow-emerald-500/20' : 'text-slate-400 hover:text-slate-600'}`}
-                  >
-                      <MessageSquare size={12} /> {t('whatsappLogin')}
-                  </button>
-                  <button 
-                    onClick={() => { setMethod('GOOGLE'); setError(''); }}
-                    className={`flex-1 py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 ${method === 'GOOGLE' ? 'bg-white dark:bg-slate-700 border-2 border-slate-100 dark:border-slate-600 shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}
+                    onClick={() => { setMethod('CUSTOMER_GOOGLE'); setError(''); }}
+                    className={`flex-1 py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 ${method === 'CUSTOMER_GOOGLE' ? 'bg-white dark:bg-slate-700 border-2 border-slate-100 dark:border-slate-600 shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}
                   >
                       <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-4 h-4" /> Google
                   </button>
+                  <button 
+                    onClick={() => { setMethod('CUSTOMER_PHONE'); setError(''); }}
+                    className={`flex-1 py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 ${method === 'CUSTOMER_PHONE' ? 'bg-emerald-500 text-white shadow-xl shadow-emerald-500/20' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                      <Smartphone size={12} /> {t('customerPhone')}
+                  </button>
               </div>
 
-              {method === 'GOOGLE' ? (
+              {method === 'CUSTOMER_GOOGLE' ? (
                 <div className="space-y-6 animate-fade-in-up">
                    <div className="p-8 bg-slate-50 dark:bg-slate-800/50 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center text-center gap-6">
                       <div className="w-20 h-20 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center shadow-xl p-4">
@@ -353,13 +358,13 @@ export const Login: React.FC<LoginProps> = ({
                   <button
                     type="submit"
                     disabled={loading}
-                    className={`w-full font-black py-5 rounded-[2rem] transition-all shadow-2xl active:scale-[0.98] mt-8 flex items-center justify-center gap-3 disabled:opacity-70 group text-sm uppercase tracking-widest italic ${method === 'WHATSAPP' ? 'bg-[#25D366] hover:bg-[#128C7E] text-white' : 'bg-slate-900 dark:bg-brand-600 hover:bg-black dark:hover:bg-brand-500 text-white'}`}
+                    className={`w-full font-black py-5 rounded-[2rem] transition-all shadow-2xl active:scale-[0.98] mt-8 flex items-center justify-center gap-3 disabled:opacity-70 group text-sm uppercase tracking-widest italic ${method === 'CUSTOMER_PHONE' ? 'bg-[#25D366] hover:bg-[#128C7E] text-white' : 'bg-slate-900 dark:bg-brand-600 hover:bg-black dark:hover:bg-brand-500 text-white'}`}
                   >
                     {loading ? (
                       <div className="w-6 h-6 border-4 border-white/20 border-t-white rounded-full animate-spin" />
                     ) : (
                       <>
-                        <span>{method === 'WHATSAPP' && !otpSent ? t('getOtp') : t('accessTerminal')}</span>
+                        <span>{method === 'CUSTOMER_PHONE' && !otpSent ? t('getOtp') : t('accessTerminal')}</span>
                         <ChevronRight size={20} strokeWidth={3} className="group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-transform rtl:rotate-180"/>
                       </>
                     )}
@@ -379,8 +384,8 @@ export const Login: React.FC<LoginProps> = ({
                     </div>
                  )}
                  <div className="flex items-center justify-center gap-2 text-[9px] text-slate-400 font-black uppercase tracking-widest italic">
-                    <ShieldCheck size={12} className={method === 'WHATSAPP' ? 'text-emerald-500' : method === 'GOOGLE' ? 'text-brand-500' : 'text-slate-400'} />
-                    {method === 'WHATSAPP' ? 'Verified via Live WhatsApp Dispatch' : method === 'GOOGLE' ? 'Encrypted via Google OAuth' : 'Encrypted via easyPOS Multi-Device'}
+                    <ShieldCheck size={12} className={method === 'CUSTOMER_PHONE' ? 'text-emerald-500' : method === 'CUSTOMER_GOOGLE' ? 'text-brand-500' : 'text-slate-400'} />
+                    {method === 'CUSTOMER_PHONE' ? 'Verified via Live WhatsApp Dispatch' : method === 'CUSTOMER_GOOGLE' ? 'Encrypted via Google OAuth' : 'Encrypted via easyPOS Multi-Device'}
                  </div>
               </div>
           </div>
