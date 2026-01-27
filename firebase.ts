@@ -1,12 +1,6 @@
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { 
-  getFirestore, 
-  Firestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
-  initializeFirestore
-} from 'firebase/firestore';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
 let app: FirebaseApp;
 let db: Firestore;
@@ -32,26 +26,12 @@ try {
     app = getApp();
   }
 
-  /**
-   * The error "Component firestore has not been registered yet" often happens 
-   * when Firestore functions are called before the service registers with the app hub.
-   * In modular SDK v9+, just calling getFirestore(app) is the correct way to register.
-   */
-  try {
-    // Attempt to initialize with modern persistence first
-    db = initializeFirestore(app, {
-      localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager()
-      })
-    });
-  } catch (initError) {
-    // Fallback if initializeFirestore has already been called or fails
-    db = getFirestore(app);
-  }
+  // Basic initialization to avoid registration issues in modular environments
+  db = getFirestore(app);
+  
 } catch (e) {
-  console.error("CRITICAL: Failed to initialize Firebase:", e);
-  // Fallback db to prevent app-wide crashes
-  // @ts-ignore
+  console.error("CRITICAL: Firebase/Firestore initialization failed:", e);
+  // @ts-ignore - Exporting null db to let App.tsx fall back to LocalStorage
   db = null;
 }
 
