@@ -1,9 +1,102 @@
+
 import { Product, User } from './types';
 
 export const CURRENCY = '$';
 
 export const INITIAL_PRODUCTS: Product[] = [
-  // --- EXISTING GENERAL ITEMS ---
+  // --- APPAREL / CLOTHING ---
+  {
+    id: 'CL-001',
+    sku: 'APP-1001',
+    name: 'Midnight Urban Hoodie',
+    costPrice: 15.00,
+    sellPrice: 45.00,
+    stock: 50,
+    category: 'Apparel',
+    image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=600',
+    tags: ['Streetwear', 'Cotton']
+  },
+  {
+    id: 'CL-002',
+    sku: 'APP-1002',
+    name: 'Vintage Leather Jacket',
+    costPrice: 85.00,
+    sellPrice: 189.99,
+    stock: 12,
+    category: 'Apparel',
+    image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&q=80&w=600',
+    tags: ['Premium', 'Leather']
+  },
+  {
+    id: 'CL-003',
+    sku: 'APP-1003',
+    name: 'Classic White Tee',
+    costPrice: 5.00,
+    sellPrice: 19.50,
+    stock: 100,
+    category: 'Apparel',
+    image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=600',
+    tags: ['Basic', 'Essential']
+  },
+  {
+    id: 'CL-004',
+    sku: 'APP-1004',
+    name: 'Slim Fit Denim Jeans',
+    costPrice: 22.00,
+    sellPrice: 59.00,
+    stock: 45,
+    category: 'Apparel',
+    image: 'https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&q=80&w=600',
+    tags: ['Denim', 'Blue']
+  },
+
+  // --- AUTOMOTIVE / CARS & PERFORMANCE ---
+  {
+    id: 'CR-001',
+    sku: 'VEH-9001',
+    name: 'Model S Performance Sedan',
+    costPrice: 45000,
+    sellPrice: 62000,
+    stock: 2,
+    category: 'Automotive',
+    image: 'https://images.unsplash.com/photo-1560958089-b8a1929cea89?auto=format&fit=crop&q=80&w=800',
+    tags: ['Electric', 'Luxury']
+  },
+  {
+    id: 'CR-002',
+    sku: 'VEH-9002',
+    name: 'Heritage Sport Coupe',
+    costPrice: 38000,
+    sellPrice: 54500,
+    stock: 1,
+    category: 'Automotive',
+    image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=800',
+    tags: ['Turbo', 'Classic']
+  },
+  {
+    id: 'CP-005',
+    sku: 'PERF-101',
+    name: 'Carbon Fiber GT Wing',
+    costPrice: 200.00,
+    sellPrice: 550.00,
+    stock: 8,
+    category: 'Car Parts',
+    image: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=600',
+    tags: ['Aero', 'Performance']
+  },
+  {
+    id: 'CP-006',
+    sku: 'PERF-102',
+    name: 'Forged Racing Wheels (Set)',
+    costPrice: 800.00,
+    sellPrice: 1600.00,
+    stock: 4,
+    category: 'Car Parts',
+    image: 'https://images.unsplash.com/photo-1552650272-b8a34e21bc4b?auto=format&fit=crop&q=80&w=600',
+    tags: ['Alloy', 'Rims']
+  },
+
+  // --- EXISTING ITEMS ---
   { 
     id: '1', 
     sku: '8801001', 
@@ -15,19 +108,6 @@ export const INITIAL_PRODUCTS: Product[] = [
     image: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?auto=format&fit=crop&q=80&w=200',
     tags: ['Organic', 'Best Seller']
   },
-  { 
-    id: '2', 
-    sku: '8801002', 
-    name: 'Green Tea Matcha', 
-    costPrice: 8.50, 
-    sellPrice: 14.00, 
-    stock: 20, 
-    category: 'Beverage',
-    image: 'https://images.unsplash.com/photo-1582793988951-9aed5509eb97?auto=format&fit=crop&q=80&w=200',
-    tags: ['Imported', 'Sugar-Free']
-  },
-
-  // --- CAR ACCESSORIES ---
   {
     id: 'CA-001',
     sku: 'CA-1001',
@@ -51,85 +131,15 @@ export const INITIAL_PRODUCTS: Product[] = [
     tags: ['Lighting', 'Modification']
   },
   {
-    id: 'CA-003',
-    sku: 'CA-1003',
-    name: 'Premium Steering Wheel Cover',
-    costPrice: 6.50,
-    sellPrice: 15.50,
-    stock: 22,
-    category: 'Car Accessories',
-    image: 'https://images.unsplash.com/photo-1552554752-c07dd7ae4739?auto=format&fit=crop&q=80&w=200',
-    tags: ['Interior', 'Leather']
-  },
-  {
-    id: 'CA-004',
-    sku: 'CA-1004',
-    name: 'Car Air Freshener - Ocean',
-    costPrice: 1.20,
-    sellPrice: 4.99,
-    stock: 100,
-    category: 'Car Accessories',
-    image: 'https://images.unsplash.com/photo-1545622692-021021223932?auto=format&fit=crop&q=80&w=200',
-    tags: ['Fragrance']
-  },
-
-  // --- CAR PARTS ---
-  {
     id: 'CP-001',
     sku: 'CP-2001',
-    name: 'Synthetic Motor Oil 5W-30 (1L)',
+    name: 'Synthetic Motor Oil 5W-30',
     costPrice: 8.00,
     sellPrice: 16.50,
     stock: 40,
     category: 'Car Parts',
     image: 'https://images.unsplash.com/photo-1593257853483-e070860473a2?auto=format&fit=crop&q=80&w=200',
     tags: ['Maintenance', 'Engine']
-  },
-  {
-    id: 'CP-002',
-    sku: 'CP-2002',
-    name: 'Oil Filter Type-A',
-    costPrice: 3.50,
-    sellPrice: 8.99,
-    stock: 50,
-    category: 'Car Parts',
-    image: 'https://images.unsplash.com/photo-1635773273932-c7c4c82b0e7a?auto=format&fit=crop&q=80&w=200',
-    tags: ['Maintenance']
-  },
-  {
-    id: 'CP-003',
-    sku: 'CP-2003',
-    name: 'Ceramic Brake Pads (Front)',
-    costPrice: 25.00,
-    sellPrice: 55.00,
-    stock: 10,
-    category: 'Car Parts',
-    image: 'https://images.unsplash.com/photo-1486262715619-01b80250e0dc?auto=format&fit=crop&q=80&w=200',
-    tags: ['Safety', 'Brakes']
-  },
-  {
-    id: 'CP-004',
-    sku: 'CP-2004',
-    name: 'Spark Plug Set (4pcs)',
-    costPrice: 12.00,
-    sellPrice: 28.00,
-    stock: 15,
-    category: 'Car Parts',
-    image: 'https://images.unsplash.com/photo-1632733711679-529326f6db12?auto=format&fit=crop&q=80&w=200',
-    tags: ['Engine', 'Electrical']
-  },
-
-  // --- CAR CARE ---
-  {
-    id: 'CC-001',
-    sku: 'CC-3001',
-    name: 'Microfiber Wash Mitt',
-    costPrice: 2.00,
-    sellPrice: 6.50,
-    stock: 60,
-    category: 'Car Care',
-    image: 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?auto=format&fit=crop&q=80&w=200',
-    tags: ['Cleaning']
   },
   {
     id: 'CC-002',

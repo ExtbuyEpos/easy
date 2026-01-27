@@ -63,6 +63,8 @@ export interface User {
   employeeId?: string;
   email?: string;
   avatar?: string;
+  customerAvatar?: string; // The "Real Avatar" image for try-ons
+  tryOnCache?: Record<string, string>; // Maps ProductID -> GeneratedResultBase64
 }
 
 export interface StoreSettings {

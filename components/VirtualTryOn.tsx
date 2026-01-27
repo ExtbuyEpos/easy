@@ -1,32 +1,51 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Product, Language } from '../types';
 import { GoogleGenAI } from "@google/genai";
-// Added missing formatCurrency import from utils/format
 import { formatCurrency } from '../utils/format';
-import { Camera, Upload, X, Sparkles, Loader2, RefreshCw, ChevronLeft, Download, ShieldCheck, Zap } from 'lucide-react';
+import { Camera, Upload, X, Sparkles, Loader2, RefreshCw, ChevronLeft, Download, ShieldCheck, Zap, ScanFace, CheckCircle } from 'lucide-react';
 
 interface VirtualTryOnProps {
-  product: Product;
+  product: Product | null;
   onClose: () => void;
   language: Language;
   t: (key: string) => string;
+  initialAvatar?: string;
+  tryOnCache?: Record<string, string>;
+  onCaptureAvatar?: (avatarData: string, cache?: Record<string, string>) => void;
 }
 
 export const VirtualTryOn: React.FC<VirtualTryOnProps> = ({
   product,
   onClose,
   language,
-  t
+  t,
+  initialAvatar,
+  tryOnCache = {},
+  onCaptureAvatar
 }) => {
-  const [userImage, setUserImage] = useState<string | null>(null);
+  const [userImage, setUserImage] = useState<string | null>(initialAvatar || null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [setupMode, setSetupMode] = useState(!product && !initialAvatar);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // One-click logic: Check cache or auto-trigger AI on mount
+  useEffect(() => {
+    if (product && userImage && !resultImage) {
+        if (tryOnCache[product.id]) {
+            // Instant Retrieval from Cache
+            setResultImage(tryOnCache[product.id]);
+        } else {
+            // Auto-trigger if we have an avatar but no cached result
+            handleTryOn();
+        }
+    }
+  }, [product, userImage]);
 
   const startCamera = async () => {
     setShowCamera(true);
@@ -74,36 +93,53 @@ export const VirtualTryOn: React.FC<VirtualTryOnProps> = ({
   };
 
   const handleTryOn = async () => {
-    if (!userImage || !product.image) return;
+    if (!userImage || !product?.image) return;
     
     setIsProcessing(true);
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       
-      // We send both the product image and the customer image
+      const stripBase64 = (str: string) => {
+        if (str.includes('base64,')) return str.split('base64,')[1];
+        return str;
+      };
+
       const productPart = {
         inlineData: {
-          data: product.image.split(',')[1] || product.image,
+          data: stripBase64(product.image),
           mimeType: 'image/jpeg'
         }
       };
       const userPart = {
         inlineData: {
-          data: userImage.split(',')[1] || userImage,
+          data: stripBase64(userImage),
           mimeType: 'image/jpeg'
         }
       };
 
+      let scenarioPrompt = "";
+      const cat = (product.category || "").toLowerCase();
+
+      if (cat.includes("apparel") || cat.includes("clothing")) {
+        scenarioPrompt = `This is an Apparel Fitting. Please DRESS the customer in the provided ${product.name}. Replace their current clothes with this item while preserving their face, hair, and body shape.`;
+      } else if (cat.includes("automotive") || cat.includes("car")) {
+        scenarioPrompt = `This is a Vehicle Showroom. Please place the customer (the "Real Avatar") in or NEXT TO the ${product.name}. Make it look like a professional lifestyle photo of them with their new car.`;
+      } else if (cat.includes("parts") || cat.includes("accessories")) {
+        scenarioPrompt = `This is a Product Integration. Please show the ${product.name} being used or held by the customer, or naturally integrated into their environment.`;
+      } else {
+        scenarioPrompt = `Please perform a Virtual Try-On. Integrate the product "${product.name}" naturally into the photo of the customer.`;
+      }
+
       const prompt = `
-        This is a product named "${product.name}". 
-        I am providing two images:
-        1. A professional product shot featuring the item.
-        2. A photo of a customer.
+        Product: "${product.name}"
+        Task: ${scenarioPrompt}
         
-        Using AI magic, please perform a "Virtual Try-On". 
-        Replace the person or background in the product image with the customer's face/body while keeping the product perfectly clear and naturally integrated. 
-        If it's a car accessory, show it inside the customer's car context. 
-        Return ONLY the modified image.
+        Requirements:
+        1. IDENTITY PRESERVATION: The customer MUST look exactly like they do in their photo.
+        2. NATURAL LIGHTING: Match the lighting of the result to the customer's photo.
+        3. HIGH FIDELITY: The product itself must remain recognizable and high-quality.
+        
+        Return ONLY the modified image data as a raw base64 string.
       `;
 
       const response = await ai.models.generateContent({
@@ -122,48 +158,73 @@ export const VirtualTryOn: React.FC<VirtualTryOnProps> = ({
       }
 
       if (base64Result) {
-        setResultImage(`data:image/png;base64,${base64Result}`);
+        const finalImg = `data:image/png;base64,${base64Result}`;
+        setResultImage(finalImg);
+        
+        // Save to cache automatically
+        if (onCaptureAvatar) {
+            const newCache = { ...tryOnCache, [product.id]: finalImg };
+            onCaptureAvatar(userImage, newCache);
+        }
       } else {
-        alert("AI could not generate the look. Using fallback simulation.");
-        setResultImage(userImage); // Fallback for demo
+        setResultImage(userImage);
       }
     } catch (err) {
       console.error("AI Try-On failed", err);
-      alert("Try-on failed. Ensure your images are clear.");
     } finally {
       setIsProcessing(false);
     }
   };
 
+  const handleSaveAvatar = () => {
+    if (userImage && onCaptureAvatar) {
+        onCaptureAvatar(userImage, tryOnCache);
+    }
+  };
+
+  const isSetupMode = !product;
+
   return (
     <div className="fixed inset-0 z-[200] bg-slate-900 flex flex-col md:flex-row overflow-hidden font-sans">
-      
-      {/* Left: Product Reference & Controls */}
       <div className="md:w-1/3 bg-white dark:bg-slate-900 p-8 md:p-12 flex flex-col justify-between overflow-y-auto border-r border-slate-100 dark:border-slate-800">
         <div className="space-y-10">
           <div className="flex items-center gap-4">
             <button onClick={onClose} className="p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl text-slate-500 hover:text-red-500 transition-all active:scale-90"><ChevronLeft size={24} className="rtl:rotate-180"/></button>
-            <h2 className="text-xl font-black italic uppercase tracking-tighter dark:text-white">{t('magicMirror')}</h2>
+            <h2 className="text-xl font-black italic uppercase tracking-tighter dark:text-white">{isSetupMode ? 'AI Identity Scan' : t('magicMirror')}</h2>
           </div>
 
-          <div className="space-y-4">
-             <div className="aspect-square rounded-[3rem] bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 overflow-hidden shadow-2xl relative group">
-                {product.image ? (
-                  <img src={product.image} className="w-full h-full object-cover" alt={product.name} />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-200"><Sparkles size={48}/></div>
-                )}
-                <div className="absolute top-6 left-6 bg-brand-600 text-white px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-xl">Target Item</div>
-             </div>
-             <div className="text-center">
-                <h3 className="text-2xl font-black dark:text-white uppercase italic truncate">{product.name}</h3>
-                <p className="text-brand-600 font-black text-sm">{formatCurrency(product.sellPrice, language, '$')}</p>
-             </div>
-          </div>
+          {isSetupMode ? (
+              <div className="space-y-6">
+                <div className="w-20 h-20 bg-brand-600/10 rounded-3xl flex items-center justify-center text-brand-600 mx-auto">
+                    <ScanFace size={40} />
+                </div>
+                <div className="text-center space-y-2">
+                    <h3 className="text-2xl font-black dark:text-white uppercase italic">Setup Your Avatar</h3>
+                    <p className="text-xs font-medium text-slate-400 leading-relaxed">Scan your face or upload a clear photo to create your Real Avatar. You only need to do this once.</p>
+                </div>
+              </div>
+          ) : (
+            <div className="space-y-4">
+                <div className="aspect-square rounded-[3rem] bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 overflow-hidden shadow-2xl relative group">
+                    {product?.image ? (
+                    <img src={product.image} className="w-full h-full object-cover" alt={product.name} />
+                    ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-200"><Sparkles size={48}/></div>
+                    )}
+                    <div className="absolute top-6 left-6 bg-brand-600 text-white px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-xl">{product?.category}</div>
+                </div>
+                <div className="text-center">
+                    <h3 className="text-2xl font-black dark:text-white uppercase italic truncate">{product?.name}</h3>
+                    <p className="text-brand-600 font-black text-sm">{formatCurrency(product?.sellPrice || 0, language, '$')}</p>
+                </div>
+            </div>
+          )}
 
           <div className="bg-brand-50 dark:bg-brand-900/10 p-6 rounded-[2.5rem] border border-brand-100 dark:border-brand-900/20 space-y-3">
-             <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest flex items-center gap-2"><ShieldCheck size={14}/> {t('magicMirror')}</p>
-             <p className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-relaxed italic">{t('mirrorInstruction')}</p>
+             <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest flex items-center gap-2"><ShieldCheck size={14}/> Professional AI</p>
+             <p className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-relaxed italic">
+                 {isSetupMode ? "For best results, look directly at the camera in a bright room." : `AI will perform a "${(product?.category || "").toLowerCase().includes("apparel") ? "fitting" : "placement"}" scan of your identity with this product.`}
+             </p>
           </div>
         </div>
 
@@ -176,30 +237,35 @@ export const VirtualTryOn: React.FC<VirtualTryOnProps> = ({
                 </div>
             )}
             
-            {userImage && !resultImage && (
+            {userImage && !resultImage && !isSetupMode && !isProcessing && (
                 <button 
                   onClick={handleTryOn} 
-                  disabled={isProcessing}
                   className="w-full py-6 bg-brand-600 text-white rounded-[2.5rem] font-black uppercase tracking-widest text-xs shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 animate-fade-in italic"
                 >
-                   {isProcessing ? <Loader2 size={24} className="animate-spin" /> : <Sparkles size={20} />}
-                   {isProcessing ? t('aiGenerating') : t('tryItOn')}
+                   <Sparkles size={20} /> Force Re-Generate
+                </button>
+            )}
+
+            {userImage && !resultImage && isSetupMode && (
+                <button 
+                  onClick={handleSaveAvatar}
+                  className="w-full py-6 bg-emerald-600 text-white rounded-[2.5rem] font-black uppercase tracking-widest text-xs shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 animate-fade-in italic"
+                >
+                   <CheckCircle size={20} /> Use This Identity
                 </button>
             )}
 
             {resultImage && (
               <div className="space-y-3 animate-fade-in-up">
                 <button onClick={() => window.print()} className="w-full py-6 bg-slate-900 text-white rounded-[2.5rem] font-black uppercase tracking-widest text-xs shadow-xl flex items-center justify-center gap-3 active:scale-95"><Download size={20}/> {t('downloadLook')}</button>
-                <button onClick={() => { setUserImage(null); setResultImage(null); }} className="w-full py-5 bg-slate-100 dark:bg-slate-800 dark:text-white rounded-[2.5rem] font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 active:scale-95"><RefreshCw size={16}/> New Session</button>
+                <button onClick={() => { setResultImage(null); }} className="w-full py-5 bg-slate-100 dark:bg-slate-800 dark:text-white rounded-[2.5rem] font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 active:scale-95"><RefreshCw size={16}/> New Session</button>
               </div>
             )}
         </div>
       </div>
 
-      {/* Right: Camera / Result Canvas */}
       <div className="flex-1 bg-slate-100 dark:bg-black relative flex items-center justify-center p-6 md:p-12">
         <div className="w-full max-w-2xl aspect-square md:aspect-video rounded-[4rem] bg-white dark:bg-slate-900 shadow-2xl overflow-hidden relative border-[16px] border-slate-800">
-            
             {showCamera && (
               <div className="absolute inset-0 z-10 bg-black flex flex-col items-center justify-center">
                   <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
@@ -212,10 +278,10 @@ export const VirtualTryOn: React.FC<VirtualTryOnProps> = ({
 
             {!userImage && !resultImage && !showCamera && (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 gap-6">
-                  <div className="w-32 h-32 rounded-[3rem] bg-slate-50 dark:bg-slate-800 flex items-center justify-center shadow-inner"><Camera size={48} strokeWidth={1} /></div>
+                  <div className="w-32 h-32 rounded-[3rem] bg-slate-50 dark:bg-slate-800 flex items-center justify-center shadow-inner"><ScanFace size={48} strokeWidth={1} /></div>
                   <div className="text-center space-y-2">
-                    <p className="font-black text-sm uppercase tracking-widest">Ready to Launch</p>
-                    <p className="text-[10px] uppercase font-bold tracking-widest opacity-40">Please provide your visual context</p>
+                    <p className="font-black text-sm uppercase tracking-widest">Awaiting Capture</p>
+                    <p className="text-[10px] uppercase font-bold tracking-widest opacity-40">Scan or Upload your Identity</p>
                   </div>
               </div>
             )}
@@ -227,7 +293,7 @@ export const VirtualTryOn: React.FC<VirtualTryOnProps> = ({
                   <div className="absolute inset-x-10 bottom-10 py-6 px-10 bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-brand-600 rounded-2xl flex items-center justify-center text-white"><ShieldCheck size={20}/></div>
-                        <span className="font-black text-[10px] uppercase tracking-widest dark:text-white">Session Secure</span>
+                        <span className="font-black text-[10px] uppercase tracking-widest dark:text-white">Active Profile</span>
                       </div>
                       <button onClick={() => setUserImage(null)} className="p-3 bg-red-50 text-red-500 rounded-2xl active:scale-90"><RefreshCw size={18}/></button>
                   </div>
@@ -238,7 +304,7 @@ export const VirtualTryOn: React.FC<VirtualTryOnProps> = ({
                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 animate-fade-in">
                   <img src={resultImage} className="w-full h-full object-cover shadow-2xl" alt="Try-on Result" />
                   <div className="absolute top-10 right-10 flex items-center gap-3 px-6 py-3 bg-emerald-500 text-white rounded-[2rem] font-black text-[10px] uppercase tracking-widest shadow-2xl">
-                    <Zap size={14} className="animate-pulse" /> AI Enhanced Preview
+                    <Zap size={14} className="animate-pulse" /> AI Avatar Result
                   </div>
                </div>
             )}
@@ -256,7 +322,6 @@ export const VirtualTryOn: React.FC<VirtualTryOnProps> = ({
               </div>
             )}
         </div>
-        
         <canvas ref={canvasRef} className="hidden" />
       </div>
     </div>

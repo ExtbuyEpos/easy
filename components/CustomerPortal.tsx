@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Product, Language, User } from '../types';
 import { CURRENCY } from '../constants';
-import { Search, ShoppingBag, User as UserIcon, Sparkles, LogIn, ChevronRight, LayoutGrid, List, Camera, ImageIcon } from 'lucide-react';
+import { Search, ShoppingBag, User as UserIcon, Sparkles, LogIn, ChevronRight, LayoutGrid, List, Camera, ImageIcon, UserCircle2, Settings2, RefreshCcw } from 'lucide-react';
 import { formatCurrency, formatNumber } from '../utils/format';
 import { VirtualTryOn } from './VirtualTryOn';
 
@@ -13,6 +13,7 @@ interface CustomerPortalProps {
   onLoginRequest: () => void;
   currentUser: User | null;
   onLogout: () => void;
+  onUpdateAvatar: (data: string, tryOnCache?: Record<string, string>) => void;
 }
 
 export const CustomerPortal: React.FC<CustomerPortalProps> = ({
@@ -21,12 +22,14 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
   t,
   onLoginRequest,
   currentUser,
-  onLogout
+  onLogout,
+  onUpdateAvatar
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [tryOnProduct, setTryOnProduct] = useState<Product | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [showAvatarSetup, setShowAvatarSetup] = useState(false);
 
   const categories = useMemo(() => ['All', ...Array.from(new Set(products.map(p => p.category))).sort()], [products]);
 
@@ -38,13 +41,21 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
     });
   }, [products, searchTerm, selectedCategory]);
 
-  if (tryOnProduct) {
+  const needsAvatarSetup = currentUser && !currentUser.customerAvatar && !showAvatarSetup;
+
+  if (tryOnProduct || needsAvatarSetup || showAvatarSetup) {
     return (
       <VirtualTryOn 
         product={tryOnProduct} 
-        onClose={() => setTryOnProduct(null)} 
+        onClose={() => { setTryOnProduct(null); setShowAvatarSetup(false); }} 
         language={language} 
         t={t} 
+        initialAvatar={currentUser?.customerAvatar}
+        tryOnCache={currentUser?.tryOnCache}
+        onCaptureAvatar={(avatarData, cache) => {
+            onUpdateAvatar(avatarData, cache);
+            setShowAvatarSetup(false);
+        }}
       />
     );
   }
@@ -79,15 +90,25 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             {currentUser ? (
               <div className="flex items-center gap-3">
                 <div className="text-right hidden sm:block">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Signed in as</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Authenticated</p>
                   <p className="text-xs font-black dark:text-white">{currentUser.name}</p>
                 </div>
-                <button 
-                  onClick={onLogout}
-                  className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-red-500 transition-all active:scale-90"
-                >
-                  <UserIcon size={20} />
-                </button>
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700">
+                    <button 
+                      onClick={() => setShowAvatarSetup(true)}
+                      className="w-10 h-10 rounded-xl bg-white dark:bg-slate-700 flex items-center justify-center text-brand-600 hover:text-brand-400 transition-all active:scale-90 shadow-sm"
+                      title="Update AI Avatar"
+                    >
+                      <UserCircle2 size={20} />
+                    </button>
+                    <button 
+                      onClick={onLogout}
+                      className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 transition-all active:scale-90"
+                      title="Sign Out"
+                    >
+                      <UserIcon size={20} />
+                    </button>
+                </div>
               </div>
             ) : (
               <button 
@@ -121,6 +142,25 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
           <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-white/10 rounded-full blur-[100px]"></div>
           <div className="absolute -top-20 -left-20 w-80 h-80 bg-brand-400/20 rounded-full blur-[80px]"></div>
         </div>
+      )}
+
+      {/* Real Avatar Context Bar (Logged In Only) */}
+      {currentUser && currentUser.customerAvatar && (
+          <div className="bg-slate-900 dark:bg-brand-900/20 px-6 py-4 flex items-center justify-center gap-6 animate-fade-in border-b border-white/5">
+              <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full border-2 border-brand-500 overflow-hidden shadow-lg">
+                      <img src={currentUser.customerAvatar} className="w-full h-full object-cover" alt="My Avatar" />
+                  </div>
+                  <div className="hidden sm:block">
+                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Active Identity</p>
+                      <p className="text-[10px] font-black text-white uppercase italic tracking-tighter">AI Try-On Enabled</p>
+                  </div>
+              </div>
+              <div className="h-4 w-px bg-white/10"></div>
+              <button onClick={() => setShowAvatarSetup(true)} className="flex items-center gap-2 text-[9px] font-black text-brand-400 uppercase tracking-widest hover:text-white transition-colors">
+                  <RefreshCcw size={12} /> Rescan Face
+              </button>
+          </div>
       )}
 
       {/* Filter Bar */}
@@ -174,7 +214,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                       onClick={(e) => { e.stopPropagation(); setTryOnProduct(p); }}
                       className="absolute bottom-4 left-4 right-4 py-3 bg-white/80 backdrop-blur-xl text-brand-600 rounded-2xl font-black text-[10px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0 flex items-center justify-center gap-2 shadow-xl hover:bg-brand-600 hover:text-white"
                     >
-                      <Sparkles size={14} /> {t('tryItOn')}
+                      <Sparkles size={14} /> {currentUser.tryOnCache?.[p.id] ? 'View Instant Result' : 'Try on My Avatar'}
                     </button>
                   )}
                 </div>

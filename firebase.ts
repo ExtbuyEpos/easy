@@ -1,6 +1,12 @@
 
-import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import { initializeApp, FirebaseApp, getApps } from 'firebase/app';
+import { 
+  getFirestore, 
+  Firestore, 
+  initializeFirestore, 
+  persistentLocalCache, 
+  persistentMultipleTabManager 
+} from 'firebase/firestore';
 
 let app: FirebaseApp | undefined;
 let db: Firestore | undefined;
@@ -19,21 +25,28 @@ const savedConfigStr = localStorage.getItem('easyPOS_firebaseConfig');
 const finalConfig = savedConfigStr ? JSON.parse(savedConfigStr) : firebaseConfig;
 
 try {
-  app = initializeApp(finalConfig);
-  db = getFirestore(app);
+  // Check if an app is already initialized to avoid "duplicate app" errors
+  if (!getApps().length) {
+    app = initializeApp(finalConfig);
+  } else {
+    app = getApps()[0];
+  }
 
-  // Enable offline persistence for a seamless POS experience
-  enableIndexedDbPersistence(db).catch((err) => {
-    if (err.code === 'failed-precondition') {
-      // Multiple tabs open, persistence can only be enabled in one tab at a a time.
-      console.warn('Firebase offline persistence failed: Multiple tabs open');
-    } else if (err.code === 'unimplemented') {
-      // The current browser does not support all of the features required to enable persistence
-      console.warn('Firebase offline persistence not supported');
-    }
+  // Initialize Firestore with modernized persistent cache settings
+  // This replaces enableIndexedDbPersistence for a more robust multi-tab experience
+  db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager()
+    })
   });
 } catch (e) {
-  console.error("Failed to initialize Firebase:", e);
+  console.error("CRITICAL: Failed to initialize Firebase or Firestore:", e);
+  // Fallback to basic firestore if initialization fails (e.g. storage quota exceeded)
+  try {
+    if (app) db = getFirestore(app);
+  } catch (fallbackError) {
+    console.error("CRITICAL: Firebase fallback initialization also failed:", fallbackError);
+  }
 }
 
 export { db, app };

@@ -278,9 +278,29 @@ const App: React.FC = () => {
       }
   };
 
-  // Helper for app state
+  const handleUpdateUserAvatar = (avatarData: string, tryOnCache?: Record<string, string>) => {
+    if (user) {
+      const updatedUser = { 
+        ...user, 
+        customerAvatar: avatarData || user.customerAvatar,
+        tryOnCache: tryOnCache || user.tryOnCache 
+      };
+      setUser(updatedUser);
+      // Persist to storage
+      if (db) {
+        updateDoc(doc(db, 'users', user.id), { 
+          customerAvatar: updatedUser.customerAvatar,
+          tryOnCache: updatedUser.tryOnCache
+        });
+      } else {
+        const updatedUsers = users.map(u => u.id === user.id ? updatedUser : u);
+        setUsers(updatedUsers);
+        localStorage.setItem('easyPOS_users', JSON.stringify(updatedUsers));
+      }
+    }
+  };
+
   const isCustomer = user?.role === 'CUSTOMER';
-  const isGuest = currentView === AppView.CUSTOMER_PORTAL && !user;
 
   if (!user && currentView !== AppView.CUSTOMER_PORTAL) {
     return (
@@ -306,7 +326,6 @@ const App: React.FC = () => {
         <div className="fixed inset-0 bg-black/70 z-[60] lg:hidden backdrop-blur-md" onClick={() => setIsMobileMenuOpen(false)} />
       )}
 
-      {/* Hide Sidebar for Customers */}
       {!isCustomer && (
         <div className={`
           fixed inset-y-0 left-0 rtl:left-auto rtl:right-0 z-[70] w-72 transform transition-all duration-500 ease-out 
@@ -339,7 +358,6 @@ const App: React.FC = () => {
         ${!isCustomer && isSidebarVisible && window.innerWidth >= 1024 ? 'lg:rounded-l-[44px] rtl:lg:rounded-r-[44px] shadow-2xl' : 'rounded-none'}
       `}>
         
-        {/* Connection status (Only for Staff) */}
         {!isCustomer && (
           <div className="absolute top-0 left-0 right-0 z-50 pointer-events-none flex justify-center">
               {!isOnline && (
@@ -363,7 +381,6 @@ const App: React.FC = () => {
             </div>
         )}
 
-        {/* Mobile Header (Only for Staff) */}
         {!isCustomer && (
           <div className="lg:hidden bg-slate-900 text-white p-5 flex items-center justify-between shrink-0 shadow-lg z-30">
               <div className="flex items-center gap-4">
@@ -381,8 +398,9 @@ const App: React.FC = () => {
                 language={language} 
                 t={t} 
                 currentUser={user}
-                onLoginRequest={() => { setUser(null); setCurrentView(AppView.POS); }}
+                onLoginRequest={() => { setUser(null); setCurrentView(AppView.LOGIN); }}
                 onLogout={() => { setUser(null); setCurrentView(AppView.CUSTOMER_PORTAL); }}
+                onUpdateAvatar={handleUpdateUserAvatar}
               />
             )}
             {currentView === AppView.POS && (
@@ -415,9 +433,20 @@ const App: React.FC = () => {
             {currentView === AppView.PRINT_BARCODE && (
               <PrintBarcode products={products} storeSettings={storeSettings} onGoBack={() => setCurrentView(AppView.POS)} language={language} t={t} />
             )}
+            {currentView === AppView.LOGIN && !user && (
+              <Login 
+                onLogin={(u) => { setUser(u); setCurrentView(u.role === 'CUSTOMER' ? AppView.CUSTOMER_PORTAL : AppView.POS); }} 
+                users={users} 
+                t={t} 
+                isDarkMode={isDarkMode} 
+                toggleTheme={toggleTheme} 
+                language={language} 
+                toggleLanguage={toggleLanguage}
+                onEnterAsGuest={() => setCurrentView(AppView.CUSTOMER_PORTAL)}
+              />
+            )}
         </div>
 
-        {/* Global AI Assistant Button/Overlay (Only for Staff) */}
         {user && !isCustomer && (
             <AiAssistant 
                 products={products} 
