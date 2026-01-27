@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { Product, Sale, StoreSettings, User, Language } from '../types';
@@ -67,7 +66,8 @@ export const ClawdBot: React.FC<ClawdBotProps> = ({ products, sales, storeSettin
       const todaySales = sales.filter(s => s.timestamp >= today);
       return `You are easyPOS, the advanced AI logic for ${storeSettings.name}. You are helping ${currentUser.name} (${currentUser.role}). 
       STATUS: ${products.length} products loaded. Today's Revenue: ${formatCurrency(todaySales.reduce((a,s)=>a+s.total,0), language, CURRENCY)}.
-      PROTOCOL: Precise, analytical, robotic but helpful. Multi-language support (EN, AR, HI).`;
+      PROTOCOL: Precise, analytical, robotic but helpful. Multi-language support (EN, AR, HI). 
+      DO NOT share internal data with non-admin roles unless relevant to their tasks.`;
   };
 
   const startVoiceMode = async () => {
@@ -102,7 +102,9 @@ export const ClawdBot: React.FC<ClawdBotProps> = ({ products, sales, storeSettin
             source.connect(scriptProcessor); scriptProcessor.connect(inputCtx.destination);
           },
           onmessage: async (message: LiveServerMessage) => {
-            if (message.serverContent?.outputTranscription) setTranscription(prev => prev + message.serverContent!.outputTranscription!.text);
+            if (message.serverContent?.outputTranscription) {
+              setTranscription(prev => prev + message.serverContent!.outputTranscription!.text);
+            }
             if (message.serverContent?.turnComplete) { 
                 setMessages(prev => [...prev, { role: 'assistant', content: transcription }]); 
                 setTranscription(''); 
@@ -112,8 +114,10 @@ export const ClawdBot: React.FC<ClawdBotProps> = ({ products, sales, storeSettin
               nextStartTimeRef.current = Math.max(nextStartTimeRef.current, outputCtx.currentTime);
               const audioBuffer = await decodeAudioData(decode(base64Audio), outputCtx, 24000, 1);
               const source = outputCtx.createBufferSource();
-              source.buffer = audioBuffer; source.connect(outputCtx.destination);
-              source.start(nextStartTimeRef.current); nextStartTimeRef.current += audioBuffer.duration;
+              source.buffer = audioBuffer; 
+              source.connect(outputCtx.destination);
+              source.start(nextStartTimeRef.current); 
+              nextStartTimeRef.current += audioBuffer.duration;
               activeSourcesRef.current.add(source);
             }
           },
@@ -129,6 +133,7 @@ export const ClawdBot: React.FC<ClawdBotProps> = ({ products, sales, storeSettin
     if (liveSessionRef.current) liveSessionRef.current.close();
     if (audioContextRef.current) { audioContextRef.current.input.close(); audioContextRef.current.output.close(); }
     setIsVoiceActive(false); setIsVoiceConnecting(false);
+    setTranscription('');
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -144,9 +149,12 @@ export const ClawdBot: React.FC<ClawdBotProps> = ({ products, sales, storeSettin
         contents: userMsg,
         config: { systemInstruction: getSystemInstruction() }
       });
-      setMessages(prev => [...prev, { role: 'assistant', content: response.text || 'Logic cycle error.' }]);
-    } catch (err) { setMessages(prev => [...prev, { role: 'assistant', content: 'Connection failure.' }]); }
-    finally { setIsTyping(false); }
+      setMessages(prev => [...prev, { role: 'assistant', content: response.text || 'Protocol execution complete.' }]);
+    } catch (err) { 
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Connection severed. Re-establishing...' }]); 
+    } finally { 
+      setIsTyping(false); 
+    }
   };
 
   return (
@@ -173,30 +181,43 @@ export const ClawdBot: React.FC<ClawdBotProps> = ({ products, sales, storeSettin
             {isVoiceActive ? (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-12">
                     <div className="w-48 h-48 rounded-full bg-emerald-600 flex items-center justify-center text-white shadow-2xl animate-pulse"><Volume2 size={64} /></div>
-                    <p className="text-sm font-medium dark:text-white uppercase tracking-widest">{transcription || "Listening for cycle command..."}</p>
-                    <button onClick={stopVoiceMode} className="px-12 py-5 bg-red-500 text-white rounded-[2rem] font-black uppercase text-xs">Terminate Feed</button>
+                    <p className="text-sm font-medium dark:text-white uppercase tracking-widest leading-relaxed">
+                      {transcription || "Listening for secure voice command..."}
+                    </p>
+                    <button onClick={stopVoiceMode} className="px-12 py-5 bg-red-500 text-white rounded-[2rem] font-black uppercase text-xs shadow-xl active:scale-95 transition-all">Sever Voice Link</button>
                 </div>
             ) : (
                 <>
                     {messages.map((msg, idx) => (
                     <div key={idx} className={`flex gap-5 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-white ${msg.role === 'user' ? 'bg-slate-800' : 'bg-amber-600'}`}>{msg.role === 'user' ? <UserIcon size={20}/> : <Bot size={20}/>}</div>
-                        <div className={`p-6 rounded-[2rem] max-w-[85%] shadow-xl ${msg.role === 'user' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white' : 'bg-slate-900 text-slate-100'}`}>{msg.content}</div>
+                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-white shrink-0 ${msg.role === 'user' ? 'bg-slate-800' : 'bg-amber-600'}`}>
+                          {msg.role === 'user' ? <UserIcon size={20}/> : <Bot size={20}/>}
+                        </div>
+                        <div className={`p-6 rounded-[2rem] max-w-[85%] shadow-xl ${msg.role === 'user' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-tr-none' : 'bg-slate-900 text-slate-100 rounded-tl-none'}`}>
+                          {msg.content}
+                        </div>
                     </div>
                     ))}
-                    {isTyping && <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 text-[10px] font-black uppercase animate-pulse">Processing Cycle...</div>}
+                    {isTyping && (
+                      <div className="flex gap-5">
+                        <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shrink-0 bg-amber-600"><Bot size={20}/></div>
+                        <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 text-[10px] font-black uppercase animate-pulse flex items-center gap-2">
+                          <Loader2 size={12} className="animate-spin" /> Analyzing Logic Cycle...
+                        </div>
+                      </div>
+                    )}
                 </>
             )}
             <div ref={messagesEndRef} />
           </div>
           {!isVoiceActive && (
-          <div className="p-8 bg-white dark:bg-slate-950 border-t border-white/5 space-y-4">
+          <div className="p-8 bg-white dark:bg-slate-900 border-t border-white/5 space-y-4">
             <form onSubmit={handleSendMessage} className="flex gap-4">
-                <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Deploy command..." className="flex-1 px-6 py-5 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-[2rem] outline-none font-bold dark:text-white" />
-                <button type="submit" disabled={isTyping} className="w-16 h-16 bg-amber-600 text-white rounded-[1.8rem] flex items-center justify-center shadow-xl"><Send size={24}/></button>
+                <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Deploy tactical command..." className="flex-1 px-6 py-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-[2rem] outline-none font-bold dark:text-white shadow-inner" />
+                <button type="submit" disabled={isTyping} className="w-16 h-16 bg-amber-600 text-white rounded-[1.8rem] flex items-center justify-center shadow-xl active:scale-95 transition-all"><Send size={24}/></button>
             </form>
-            <button onClick={startVoiceMode} disabled={isVoiceConnecting} className="w-full py-5 rounded-[2rem] bg-emerald-600 text-white font-black uppercase text-[10px] tracking-widest italic flex items-center justify-center gap-3">
-                {isVoiceConnecting ? <Loader2 size={18} className="animate-spin" /> : <><Mic size={18} /> Initiate Real-Time Voice Link</>}
+            <button onClick={startVoiceMode} disabled={isVoiceConnecting} className="w-full py-5 rounded-[2rem] bg-emerald-600 text-white font-black uppercase text-[10px] tracking-widest italic flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-all">
+                {isVoiceConnecting ? <Loader2 size={18} className="animate-spin" /> : <><Mic size={18} /> Initiate Encrypted Voice Link</>}
             </button>
           </div>
           )}
