@@ -102,7 +102,13 @@ export const Login: React.FC<LoginProps> = ({
 
     if (method === 'CREDENTIALS') {
       await new Promise(resolve => setTimeout(resolve, 800));
-      const user = users.find(u => u.username.trim().toLowerCase() === username.trim().toLowerCase());
+      const userInput = username.trim().toLowerCase();
+      // Logic: Allow login by either Username or Email
+      const user = users.find(u => 
+        (u.username.toLowerCase() === userInput) || 
+        (u.email && u.email.toLowerCase() === userInput)
+      );
+
       if (user && user.password === password) {
          onLogin(user);
       } else {
@@ -234,7 +240,7 @@ export const Login: React.FC<LoginProps> = ({
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('username')}</label>
                       <div className="relative group">
                         <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none"><UserIcon className="text-slate-300 group-focus-within:text-brand-500 transition-colors" size={20} /></div>
-                        <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full pl-14 pr-5 py-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-2xl focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 outline-none transition-all text-slate-900 dark:text-white font-bold text-lg placeholder-slate-300" placeholder="admin" />
+                        <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full pl-14 pr-5 py-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-2xl focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 outline-none transition-all text-slate-900 dark:text-white font-bold text-lg placeholder-slate-300" placeholder="admin / email" />
                       </div>
                     </div>
                     <div className="space-y-2">
