@@ -46,7 +46,7 @@ export const Settings: React.FC<SettingsProps> = ({
       if (user) {
           // Rule: Admin no edit no change other admin. Only System Owner can edit other Admins.
           if (user.role === 'ADMIN' && !isSystemOwner && user.id !== currentUser.id) {
-              alert("CRITICAL: Access Denied. Only the System Owner can modify other Administrators.");
+              alert("CRITICAL: Access Denied. Only the System Owner (zahratalsawsen1@gmail.com) can modify other Administrators.");
               return;
           }
 
@@ -207,12 +207,14 @@ export const Settings: React.FC<SettingsProps> = ({
                 <thead className="bg-slate-50 dark:bg-slate-800 text-slate-400 font-black uppercase text-[9px] tracking-widest"><tr><th className="p-10">{t('employeeId')}</th><th className="p-10">{t('name')}</th><th className="p-10">{t('role')}</th><th className="p-10 text-right">{t('action')}</th></tr></thead>
                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                     {users.map(u => {
-                        const isProtected = PROTECTED_USER_IDS.includes(u.id);
+                        const isTargetOwner = u.email?.toLowerCase() === SYSTEM_OWNER_EMAIL || u.id === 'admin_1';
+                        const isProtected = PROTECTED_USER_IDS.includes(u.id) || isTargetOwner;
                         const isSelf = u.id === currentUser.id;
                         const isTargetAdmin = u.role === 'ADMIN';
                         
-                        // Rule: Admin no edit no change other admin. Only System Owner can see edit/delete for other admins.
-                        const canModify = isSelf || isSystemOwner || (!isTargetAdmin);
+                        // RULE: Admin no edit no change other admin. Only System Owner can see edit/delete for other admins.
+                        // But also allow people to edit themselves.
+                        const canModify = isSelf || isSystemOwner || !isTargetAdmin;
 
                         return (
                             <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all">
@@ -227,7 +229,7 @@ export const Settings: React.FC<SettingsProps> = ({
                                             <div className="p-3 text-slate-100 dark:text-slate-800 cursor-not-allowed"><Lock size={20}/></div>
                                         )}
                                         
-                                        {!isSelf && !isProtected && (isSystemOwner || !isTargetAdmin) && (
+                                        {!isSelf && (isSystemOwner || (!isTargetAdmin)) && !isTargetOwner && (
                                             <button onClick={() => onDeleteUser(u.id)} className="p-3 text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={20}/></button>
                                         )}
                                     </div>
@@ -256,7 +258,7 @@ export const Settings: React.FC<SettingsProps> = ({
                             value={userFormData.role} 
                             onChange={e => setUserFormData({...userFormData, role: e.target.value as UserRole})} 
                             className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black dark:text-white text-[10px] uppercase tracking-widest"
-                            disabled={!isSystemOwner && editingOperatorId && users.find(u => u.id === editingOperatorId)?.role === 'ADMIN'}
+                            disabled={editingOperatorId && users.find(u => u.id === editingOperatorId)?.role === 'ADMIN' && !isSystemOwner}
                           >
                             <option value="CASHIER">Cashier</option>
                             <option value="MANAGER">Manager</option>
@@ -267,7 +269,6 @@ export const Settings: React.FC<SettingsProps> = ({
                     </div>
                     <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('employeeId')} (Optional)</label><input type="text" value={userFormData.employeeId} onChange={e => setUserFormData({...userFormData, employeeId: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white" placeholder="E.g. EMP-101" /></div>
                     
-                    {/* RULE: SYSTEM OWNER ONLY CHANGE ADMIN PASSWORD */}
                     <div className="space-y-1">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('accessPassword')} {editingOperatorId && '(Optional)'}</label>
                         <input 

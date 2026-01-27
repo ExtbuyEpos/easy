@@ -49,6 +49,10 @@ const App: React.FC = () => {
     visitorAccessCode: '2026'
   });
 
+  // System Owner Identification
+  const SYSTEM_OWNER_EMAIL = 'zahratalsawsen1@gmail.com';
+  const isSystemOwner = user?.email?.toLowerCase() === SYSTEM_OWNER_EMAIL || user?.id === 'admin_1';
+
   // Track Page Views
   useEffect(() => {
     logPageView(currentView);
@@ -370,10 +374,18 @@ const App: React.FC = () => {
   };
 
   const handleDeleteUser = async (id: string) => {
-      // PROTECTED IDs (SYSTEM ADMINS) cannot be deleted
-      const PROTECTED_USER_IDS = ['admin_1', 'admin_req_1', 'bFNTudFaGscUVu30Mcswqp0D5Yj1', 'rZB128VtiNYx92BpG3fCU62l7Kr1'];
-      if (PROTECTED_USER_IDS.includes(id)) {
-          alert("SECURITY ALERT: System Admin nodes are protected and cannot be deleted.");
+      const targetUser = users.find(u => u.id === id);
+      if (!targetUser) return;
+
+      // RULE: Only System Owner can delete Admin accounts
+      if (targetUser.role === 'ADMIN' && !isSystemOwner) {
+          alert("SECURITY ALERT: Only the System Owner (zahratalsawsen1@gmail.com) can remove Admin nodes.");
+          return;
+      }
+
+      // Hardcoded protection for Owner Node
+      if (id === 'admin_1' || id === 'bFNTudFaGscUVu30Mcswqp0D5Yj1') {
+          alert("SECURITY ALERT: Primary System Admin nodes are immutable.");
           return;
       }
 
