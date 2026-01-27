@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Product, StoreSettings, Language } from '../types';
 import { CURRENCY } from '../constants';
-import { Search, Printer, Trash2, Plus, Minus, ChevronLeft, QrCode, X, Layers, AlertCircle, Info, Maximize, LayoutGrid } from 'lucide-react';
+import { Search, Printer, Trash2, Plus, Minus, ChevronLeft, QrCode, X, Layers, AlertCircle, Info, Maximize, LayoutGrid, Eye, Settings2, Check } from 'lucide-react';
 import QRCode from 'qrcode';
 import { formatNumber, formatCurrency } from '../utils/format';
 
@@ -26,6 +26,11 @@ export const PrintBarcode: React.FC<PrintBarcodeProps> = ({ products, storeSetti
   const [queue, setQueue] = useState<QueuedLabel[]>([]);
   const [qrCodes, setQrCodes] = useState<Record<string, string>>({});
   const [labelSize, setLabelSize] = useState<LabelSize>('medium');
+  
+  // Field customizers
+  const [showPrice, setShowPrice] = useState(true);
+  const [showSKU, setShowSKU] = useState(true);
+  const [showCompany, setShowCompany] = useState(true);
 
   const filteredProducts = useMemo(() => 
     products.filter(p => 
@@ -56,6 +61,8 @@ export const PrintBarcode: React.FC<PrintBarcodeProps> = ({ products, storeSetti
     if (confirm(t('clearQueue') + '?')) setQueue([]);
   };
 
+  const [previewQr, setPreviewQr] = useState<string>('');
+
   useEffect(() => {
     const generateCodes = async () => {
       const codes: Record<string, string> = {};
@@ -80,6 +87,10 @@ export const PrintBarcode: React.FC<PrintBarcodeProps> = ({ products, storeSetti
     generateCodes();
   }, [queue]);
 
+  useEffect(() => {
+    QRCode.toDataURL('SAMPLE-SKU-123', { margin: 0, width: 256 }).then(setPreviewQr);
+  }, []);
+
   const handlePrint = () => {
     window.print();
   };
@@ -87,6 +98,16 @@ export const PrintBarcode: React.FC<PrintBarcodeProps> = ({ products, storeSetti
   const labelsToPrint = queue.flatMap(item => 
     Array(item.quantity).fill(item.product)
   );
+
+  const getLabelDimensions = (size: LabelSize) => {
+    switch(size) {
+      case 'small': return { w: '140px', h: '160px', fontScale: '0.75' };
+      case 'large': return { w: '240px', h: '280px', fontScale: '1.2' };
+      default: return { w: '180px', h: '220px', fontScale: '1' };
+    }
+  };
+
+  const dims = getLabelDimensions(labelSize);
 
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 transition-all overflow-hidden">
@@ -105,19 +126,6 @@ export const PrintBarcode: React.FC<PrintBarcodeProps> = ({ products, storeSetti
             </div>
             
             <div className="flex flex-wrap gap-4 w-full lg:w-auto">
-              {/* Size Selector */}
-              <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700">
-                {(['small', 'medium', 'large'] as LabelSize[]).map((size) => (
-                  <button 
-                    key={size}
-                    onClick={() => setLabelSize(size)}
-                    className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${labelSize === size ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-md' : 'text-slate-400'}`}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-
               <button 
                 onClick={clearQueue} 
                 disabled={queue.length === 0}
@@ -143,7 +151,7 @@ export const PrintBarcode: React.FC<PrintBarcodeProps> = ({ products, storeSetti
               value={searchTerm} 
               onChange={e => setSearchTerm(e.target.value)}
               placeholder={t('searchProducts')} 
-              className="w-full pl-16 pr-6 py-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-[2rem] outline-none focus:border-brand-500 font-bold dark:text-white transition-all shadow-inner" 
+              className="w-full pl-16 pr-6 py-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-[2rem] outline-none focus:border-brand-500 font-bold dark:text-white transition-all shadow-inner text-sm" 
             />
             
             {searchTerm && filteredProducts.length > 0 && (
@@ -170,62 +178,141 @@ export const PrintBarcode: React.FC<PrintBarcodeProps> = ({ products, storeSetti
         </div>
 
         <div className="flex-1 overflow-auto p-6 md:p-12 custom-scrollbar">
-          <div className="max-w-5xl mx-auto space-y-8">
-            <div className="flex items-center justify-between text-slate-400">
-               <div className="flex items-center gap-3">
-                  <Layers size={20} /><h3 className="text-[11px] font-black uppercase tracking-[0.3em]">{t('printQueue')} ({labelsToPrint.length} labels)</h3>
-               </div>
-               <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
-                  <LayoutGrid size={14} /> Viewport Visualization
-               </div>
+          <div className="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-12 gap-10">
+            
+            {/* Left: Toggles and Preview */}
+            <div className="xl:col-span-4 space-y-8">
+              <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-8">
+                <div className="flex items-center gap-3 border-b border-slate-50 dark:border-slate-800 pb-4">
+                  <Settings2 size={20} className="text-brand-500" />
+                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Blueprint Config</h3>
+                </div>
+                
+                <div className="space-y-6">
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 block">Label Dimensions</label>
+                    <div className="flex bg-slate-50 dark:bg-slate-800 p-1 rounded-2xl border border-slate-100 dark:border-slate-700">
+                      {(['small', 'medium', 'large'] as LabelSize[]).map((size) => (
+                        <button 
+                          key={size}
+                          onClick={() => setLabelSize(size)}
+                          className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${labelSize === size ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-md border border-slate-100 dark:border-slate-600' : 'text-slate-400'}`}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 block">Active Data Layers</label>
+                    {[
+                      { id: 'company', label: 'Company Brand', state: showCompany, setter: setShowCompany },
+                      { id: 'sku', label: 'SKU Identifier', state: showSKU, setter: setShowSKU },
+                      { id: 'price', label: 'Financial Price', state: showPrice, setter: setShowPrice }
+                    ].map(field => (
+                      <button 
+                        key={field.id}
+                        onClick={() => field.setter(!field.state)}
+                        className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all ${field.state ? 'bg-brand-50/50 dark:bg-brand-900/10 border-brand-500 text-brand-600' : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-400'}`}
+                      >
+                        <span className="text-[10px] font-black uppercase tracking-widest">{field.label}</span>
+                        <div className={`w-5 h-5 rounded-lg flex items-center justify-center border-2 transition-all ${field.state ? 'bg-brand-500 border-brand-500 text-white' : 'border-slate-300 dark:border-slate-700'}`}>
+                          {field.state && <Check size={12} strokeWidth={4} />}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Dynamic Preview Box */}
+              <div className="bg-slate-900 p-8 rounded-[3.5rem] shadow-2xl relative overflow-hidden flex flex-col items-center justify-center text-center border border-white/5 min-h-[420px]">
+                <div className="absolute top-4 left-6 flex items-center gap-2">
+                   <Eye size={14} className="text-emerald-500" />
+                   <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 italic">Live Simulation</span>
+                </div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/10 rounded-full blur-[60px] -translate-y-1/2 translate-x-1/2"></div>
+                
+                {/* Scaled Label Component */}
+                <div 
+                  className="bg-white rounded-sm shadow-2xl p-4 flex flex-col items-center justify-between transition-all duration-500 overflow-hidden border border-black/10"
+                  style={{ 
+                    width: dims.w, 
+                    height: dims.h,
+                    transform: `scale(${dims.fontScale})`
+                  }}
+                >
+                  {showCompany && (
+                    <div className="w-full border-b border-black pb-1 mb-1 text-[10px] font-black uppercase tracking-tighter truncate">
+                      {storeSettings.name}
+                    </div>
+                  )}
+                  <div className="text-[9px] font-bold uppercase leading-tight line-clamp-2 mb-1 w-full text-center">
+                    Sample Product Name Logic 2.0
+                  </div>
+                  <div className="flex-1 w-full flex items-center justify-center p-1 bg-slate-50">
+                    <img src={previewQr} className="max-h-full max-w-full object-contain mix-blend-multiply" alt="QR Preview" />
+                  </div>
+                  <div className="w-full border-t border-black pt-1 mt-1 flex justify-between items-end">
+                    {showSKU ? <div className="text-[8px] font-mono font-black opacity-60">PRV-XYZ-001</div> : <div></div>}
+                    {showPrice && <div className="text-xs font-black bg-black text-white px-1.5 rounded-sm">$129.00</div>}
+                  </div>
+                </div>
+
+                <div className="mt-8 space-y-2">
+                  <p className="text-[10px] font-black text-brand-400 uppercase tracking-widest">Real-Time Blueprint</p>
+                  <p className="text-[8px] text-slate-500 font-bold uppercase max-w-[200px] mx-auto opacity-60">Visualizer reflects active field layers and thermal dimensions.</p>
+                </div>
+              </div>
             </div>
 
-            {queue.length === 0 ? (
-              <div className="py-24 flex flex-col items-center justify-center text-center space-y-6 opacity-30">
-                  <div className="w-40 h-40 bg-slate-100 dark:bg-slate-900 rounded-[4rem] flex items-center justify-center text-slate-400 shadow-inner"><QrCode size={80} strokeWidth={1}/></div>
-                  <p className="font-black text-[10px] uppercase tracking-[0.5em] italic">Queue Empty. Search to deploy.</p>
+            {/* Right: Actual Queue */}
+            <div className="xl:col-span-8 space-y-6">
+              <div className="flex items-center justify-between text-slate-400 px-2">
+                 <div className="flex items-center gap-3">
+                    <Layers size={20} /><h3 className="text-[11px] font-black uppercase tracking-[0.3em]">{t('printQueue')} ({labelsToPrint.length} labels)</h3>
+                 </div>
+                 <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+                    <LayoutGrid size={14} /> Grid Topology
+                 </div>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
-                  {queue.map(item => (
-                    <div key={item.product.id} className="bg-white dark:bg-slate-900 p-6 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all flex flex-col group relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700"></div>
-                        
-                        <div className="flex items-center gap-5 mb-6 relative">
-                            <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center overflow-hidden shrink-0 shadow-lg border border-slate-100 dark:border-slate-700">
-                               {qrCodes[item.product.sku] ? (
-                                 <img src={qrCodes[item.product.sku]} className="w-full h-full object-contain" />
-                               ) : <QrCode className="text-slate-200" />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <h4 className="font-black text-slate-900 dark:text-white truncate uppercase italic text-sm">{item.product.name}</h4>
-                                <p className="text-[10px] font-black text-brand-600 uppercase tracking-[0.2em] mt-1">{formatCurrency(item.product.sellPrice, language, CURRENCY)}</p>
-                            </div>
-                        </div>
 
-                        <div className="flex items-center justify-between relative mt-auto pt-4 border-t border-slate-50 dark:border-slate-800">
-                            <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 p-2 rounded-2xl border border-slate-100 dark:border-slate-700">
-                                <button onClick={() => updateQuantity(item.product.id, -1)} className="w-10 h-10 rounded-xl bg-white dark:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-red-500 active:scale-90 transition-all shadow-sm"><Minus size={16}/></button>
-                                <span className="font-black text-sm dark:text-white w-6 text-center">{item.quantity}</span>
-                                <button onClick={() => updateQuantity(item.product.id, 1)} className="w-10 h-10 rounded-xl bg-white dark:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-brand-600 active:scale-90 transition-all shadow-sm"><Plus size={16}/></button>
-                            </div>
-                            <button onClick={() => removeFromQueue(item.product.id)} className="w-12 h-12 flex items-center justify-center bg-red-50 text-red-300 hover:bg-red-500 hover:text-white rounded-2xl transition-all"><Trash2 size={20}/></button>
-                        </div>
-                    </div>
-                  ))}
-              </div>
-            )}
-            
-            <div className="bg-slate-900 text-white p-8 rounded-[3.5rem] shadow-2xl relative overflow-hidden flex flex-col md:flex-row gap-8 items-center border border-white/5">
-                <div className="absolute top-0 left-0 w-64 h-64 bg-brand-500/10 rounded-full blur-[80px] -translate-x-1/2 -translate-y-1/2"></div>
-                <div className="w-20 h-20 bg-white/10 rounded-[2.5rem] flex items-center justify-center shrink-0"><Info className="text-brand-400" size={40} /></div>
-                <div className="flex-1 text-center md:text-left">
-                   <h5 className="text-xl font-black uppercase italic tracking-tighter mb-2">Printing Protocol</h5>
-                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
-                     The <span className="text-brand-400">"Full Frame"</span> layout is optimized for thermal printers and high-resolution label sheets. 
-                     Ensure your system print dialogue has "Margins" set to <span className="text-white">None</span> and "Scale" set to <span className="text-white">100%</span>.
-                   </p>
+              {queue.length === 0 ? (
+                <div className="py-24 bg-white dark:bg-slate-900 rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-center space-y-6 opacity-30">
+                    <div className="w-40 h-40 bg-slate-50 dark:bg-slate-950 rounded-full flex items-center justify-center text-slate-300 shadow-inner"><QrCode size={80} strokeWidth={1}/></div>
+                    <p className="font-black text-[10px] uppercase tracking-[0.5em] italic">Search and Select Items to Add to Queue</p>
                 </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in pb-20">
+                    {queue.map(item => (
+                      <div key={item.product.id} className="bg-white dark:bg-slate-900 p-6 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all flex flex-col group relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700"></div>
+                          
+                          <div className="flex items-center gap-5 mb-6 relative">
+                              <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center overflow-hidden shrink-0 shadow-lg border border-slate-100 dark:border-slate-700">
+                                 {qrCodes[item.product.sku] ? (
+                                   <img src={qrCodes[item.product.sku]} className="w-full h-full object-contain" />
+                                 ) : <QrCode className="text-slate-200" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                  <h4 className="font-black text-slate-900 dark:text-white truncate uppercase italic text-sm">{item.product.name}</h4>
+                                  <p className="text-[10px] font-black text-brand-600 uppercase tracking-[0.2em] mt-1">{formatCurrency(item.product.sellPrice, language, CURRENCY)}</p>
+                              </div>
+                          </div>
+
+                          <div className="flex items-center justify-between relative mt-auto pt-4 border-t border-slate-50 dark:border-slate-800">
+                              <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 p-2 rounded-2xl border border-slate-100 dark:border-slate-700">
+                                  <button onClick={() => updateQuantity(item.product.id, -1)} className="w-10 h-10 rounded-xl bg-white dark:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-red-500 active:scale-90 transition-all shadow-sm"><Minus size={16}/></button>
+                                  <span className="font-black text-sm dark:text-white w-6 text-center">{item.quantity}</span>
+                                  <button onClick={() => updateQuantity(item.product.id, 1)} className="w-10 h-10 rounded-xl bg-white dark:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-brand-600 active:scale-90 transition-all shadow-sm"><Plus size={16}/></button>
+                              </div>
+                              <button onClick={() => removeFromQueue(item.product.id)} className="w-12 h-12 flex items-center justify-center bg-red-50 text-red-300 hover:bg-red-500 hover:text-white rounded-2xl transition-all"><Trash2 size={20}/></button>
+                          </div>
+                      </div>
+                    ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -322,7 +409,7 @@ export const PrintBarcode: React.FC<PrintBarcodeProps> = ({ products, storeSetti
          <div className="print-grid">
            {labelsToPrint.map((product, idx) => (
              <div key={`${product.id}-${idx}`} className="barcode-label">
-                <div className="label-company">{storeSettings.name}</div>
+                {showCompany && <div className="label-company">{storeSettings.name}</div>}
                 <div className="label-product">{product.name}</div>
                 <div className="label-qr">
                     {qrCodes[product.sku] && (
@@ -330,8 +417,8 @@ export const PrintBarcode: React.FC<PrintBarcodeProps> = ({ products, storeSetti
                     )}
                 </div>
                 <div className="label-footer">
-                    <div className="label-sku">{product.sku}</div>
-                    <div className="label-price">{formatCurrency(product.sellPrice, language, CURRENCY)}</div>
+                    <div className="label-sku">{showSKU ? product.sku : ''}</div>
+                    {showPrice && <div className="label-price">{formatCurrency(product.sellPrice, language, CURRENCY)}</div>}
                 </div>
              </div>
            ))}

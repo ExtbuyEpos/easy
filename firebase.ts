@@ -1,12 +1,14 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
-import { getMessaging, Messaging, isSupported } from 'firebase/messaging';
+import { getMessaging, Messaging, isSupported as isMessagingSupported } from 'firebase/messaging';
+import { getAnalytics, Analytics, isSupported as isAnalyticsSupported } from 'firebase/analytics';
 
 let app: FirebaseApp | undefined;
 let db: Firestore | null = null;
 let auth: Auth | null = null;
 let messaging: Messaging | null = null;
+let analytics: Analytics | null = null;
 
 // Use the provided Firebase configuration
 const firebaseConfig = {
@@ -33,9 +35,14 @@ const initFirebase = async () => {
       db = getFirestore(app);
       auth = getAuth(app);
       
-      const supported = await isSupported();
-      if (supported) {
+      const msgSupported = await isMessagingSupported();
+      if (msgSupported) {
         messaging = getMessaging(app);
+      }
+
+      const analyticsSupported = await isAnalyticsSupported();
+      if (analyticsSupported) {
+        analytics = getAnalytics(app);
       }
     }
   } catch (e) {
@@ -44,13 +51,14 @@ const initFirebase = async () => {
     db = null;
     auth = null;
     messaging = null;
+    analytics = null;
   }
 };
 
 // Immediate invocation
 initFirebase();
 
-export { db, app, auth, messaging };
+export { db, app, auth, messaging, analytics };
 
 export const saveFirebaseConfig = (configStr: string) => {
   try {
@@ -69,4 +77,5 @@ export const clearFirebaseConfig = () => {
   db = null;
   auth = null;
   messaging = null;
+  analytics = null;
 };

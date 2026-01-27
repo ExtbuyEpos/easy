@@ -17,6 +17,7 @@ import { AppView, Product, Sale, CartItem, User, StoreSettings, Language, Bookin
 import { INITIAL_PRODUCTS, INITIAL_USERS } from './constants';
 import { translations } from './translations';
 import { Menu, CloudOff, AlertTriangle, PanelLeftOpen } from 'lucide-react';
+import { logPageView, logPurchase, logUserLogin } from './services/analyticsService';
 
 import { db } from './firebase';
 import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
@@ -44,6 +45,11 @@ const App: React.FC = () => {
     name: 'easyPOS', address: 'Retail Management System', phone: '', footerMessage: 'Thank you!',
     receiptSize: '80mm', whatsappTemplate: '', whatsappPhoneNumber: '', taxEnabled: false, taxRate: 0, taxName: 'Tax', autoPrint: false
   });
+
+  // Track Page Views
+  useEffect(() => {
+    logPageView(currentView);
+  }, [currentView]);
 
   useEffect(() => {
     if (isDarkMode) document.documentElement.classList.add('dark');
@@ -210,6 +216,9 @@ const App: React.FC = () => {
       customerPhone
     };
     
+    // Log to Analytics
+    logPurchase(items, total);
+
     if (db) {
         const batch = writeBatch(db);
         batch.set(doc(db, 'sales', saleId), newSale);
@@ -342,14 +351,21 @@ const App: React.FC = () => {
   if (!user && currentView !== AppView.CUSTOMER_PORTAL) {
     return (
       <Login 
-        onLogin={(u) => { setUser(u); setCurrentView(u.role === 'CUSTOMER' ? AppView.CUSTOMER_PORTAL : AppView.POS); }} 
+        onLogin={(u) => { 
+          setUser(u); 
+          setCurrentView(u.role === 'CUSTOMER' ? AppView.CUSTOMER_PORTAL : AppView.POS);
+          logUserLogin('CREDENTIALS');
+        }} 
         users={users} 
         t={t} 
         isDarkMode={isDarkMode} 
         toggleTheme={toggleTheme} 
         language={language} 
         toggleLanguage={toggleLanguage}
-        onEnterAsGuest={() => setCurrentView(AppView.CUSTOMER_PORTAL)}
+        onEnterAsGuest={() => {
+          setCurrentView(AppView.CUSTOMER_PORTAL);
+          logUserLogin('GUEST');
+        }}
       />
     );
   }
@@ -488,14 +504,21 @@ const App: React.FC = () => {
             )}
             {currentView === AppView.LOGIN && !user && (
               <Login 
-                onLogin={(u) => { setUser(u); setCurrentView(u.role === 'CUSTOMER' ? AppView.CUSTOMER_PORTAL : AppView.POS); }} 
+                onLogin={(u) => { 
+                  setUser(u); 
+                  setCurrentView(u.role === 'CUSTOMER' ? AppView.CUSTOMER_PORTAL : AppView.POS); 
+                  logUserLogin('CREDENTIALS');
+                }} 
                 users={users} 
                 t={t} 
                 isDarkMode={isDarkMode} 
                 toggleTheme={toggleTheme} 
                 language={language} 
                 toggleLanguage={toggleLanguage}
-                onEnterAsGuest={() => setCurrentView(AppView.CUSTOMER_PORTAL)}
+                onEnterAsGuest={() => {
+                  setCurrentView(AppView.CUSTOMER_PORTAL);
+                  logUserLogin('GUEST');
+                }}
               />
             )}
         </div>

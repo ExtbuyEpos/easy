@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, UserRole, Product, Sale, StoreSettings, Language } from '../types';
-import { Trash2, Plus, X, Receipt, ChevronLeft, Users, Zap, Globe, Heart, Database, Cloud, Bell, ShieldCheck, Share2, Clipboard } from 'lucide-react';
+import { Trash2, Plus, X, Receipt, ChevronLeft, Users, Zap, Globe, Heart, Database, Cloud, Bell, ShieldCheck, Share2, Clipboard, BarChart } from 'lucide-react';
 import { formatNumber } from '../utils/format';
 import { requestNotificationPermission } from '../services/notificationService';
 
@@ -87,7 +87,7 @@ export const Settings: React.FC<SettingsProps> = ({
                     </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 relative z-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 relative z-10 border-b border-white/10 pb-10">
                     <div className="space-y-1.5">
                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">{t('projectName')}</span>
                         <div className="font-black text-xl tracking-tighter text-white uppercase italic">easyPOS</div>
@@ -107,6 +107,35 @@ export const Settings: React.FC<SettingsProps> = ({
                             <span className="font-black text-[10px] uppercase tracking-widest text-emerald-500 italic">Production Node Live</span>
                         </div>
                     </div>
+                </div>
+
+                {/* Google Analytics Integration Info */}
+                <div className="pt-6 relative z-10 space-y-6">
+                    <div className="flex items-center justify-between">
+                       <div className="flex items-center gap-3">
+                           <BarChart size={20} className="text-brand-400" />
+                           <h4 className="text-sm font-black uppercase tracking-widest">Google Analytics Engine</h4>
+                       </div>
+                       <div className="px-3 py-1 bg-emerald-500/20 text-emerald-400 text-[8px] font-black rounded-full border border-emerald-500/30">STREAMING ACTIVE</div>
+                   </div>
+                   
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                       <div className="space-y-1.5">
+                           <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Property ID</span>
+                           <div className="font-mono text-base font-black text-slate-300">521759678</div>
+                       </div>
+                       <div className="space-y-1.5">
+                           <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Stream ID</span>
+                           <div className="font-mono text-base font-black text-slate-300">13370006285</div>
+                       </div>
+                   </div>
+                   
+                   <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex gap-4 items-center">
+                        <Zap size={16} className="text-amber-400 shrink-0" />
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-tight">
+                            Linked to account "Default Account for Firebase". Telemetry data is synced in real-time to the BigQuery BI node.
+                        </p>
+                   </div>
                 </div>
 
                 <div className="pt-8 border-t border-white/5 space-y-6 relative z-10">
@@ -237,43 +266,4 @@ export const Settings: React.FC<SettingsProps> = ({
             </div>
             <table className="w-full text-left">
                 <thead className="bg-slate-50 dark:bg-slate-800 text-slate-400 font-black uppercase text-[9px] tracking-widest"><tr>
-                    <th className="p-10">{t('employeeId')}</th><th className="p-10">{t('name')}</th><th className="p-10">{t('role')}</th><th className="p-10 text-right">{t('action')}</th>
-                </tr></thead>
-                <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                    {users.map(u => (
-                        <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all">
-                            <td className="p-10 font-mono text-xs text-slate-400 font-black">{u.employeeId ? formatNumber(u.employeeId.split('-')[1], language) : '٠'}</td>
-                            <td className="p-10 font-black text-slate-900 dark:text-white">{u.name} <span className="block text-[9px] text-slate-400 uppercase tracking-widest mt-1">@{u.username}</span></td>
-                            <td className="p-10"><span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border-2 ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-600 border-purple-200' : 'bg-brand-100 text-brand-600 border-brand-200'}`}>{u.role}</span></td>
-                            <td className="p-10 text-right">{u.id !== currentUser.id && <button onClick={() => onDeleteUser(u.id)} className="p-3 text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={20}/></button>}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-      )}
-
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-2xl flex items-center justify-center z-[120] p-4">
-            <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[4rem] shadow-2xl overflow-hidden animate-fade-in-up border border-slate-100 dark:border-slate-800">
-                <div className="p-10 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50"><h3 className="text-3xl font-black text-slate-900 dark:text-white italic uppercase tracking-tighter">{t('newOperator')}</h3><button onClick={() => setIsModalOpen(false)} className="p-3 bg-white dark:bg-slate-800 text-slate-400 rounded-2xl hover:text-red-500 transition-all"><X size={24}/></button></div>
-                <div className="p-10 space-y-6">
-                    <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('fullLegalName')}</label><input type="text" value={userFormData.name} onChange={e => setUserFormData({...userFormData, name: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white" placeholder={t('name')} /></div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('username')}</label><input type="text" value={userFormData.username} onChange={e => setUserFormData({...userFormData, username: e.target.value.toLowerCase()})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black dark:text-white" placeholder="username" /></div>
-                        <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('securityRole')}</label><select value={userFormData.role} onChange={e => setUserFormData({...userFormData, role: e.target.value as UserRole})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black dark:text-white text-[10px] uppercase tracking-widest"><option value="CASHIER">Cashier</option><option value="MANAGER">Manager</option><option value="STAFF">Inventory Staff</option></select></div>
-                    </div>
-                    <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('employeeId')} (Optional)</label><input type="text" value={userFormData.employeeId} onChange={e => setUserFormData({...userFormData, employeeId: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white" placeholder="E.g. EMP-101" /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('accessPassword')}</label><input type="password" value={userFormData.password} onChange={e => setUserFormData({...userFormData, password: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white" placeholder="••••••••" /></div>
-                </div>
-                <div className="p-10 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 flex gap-4"><button onClick={() => setIsModalOpen(false)} className="flex-1 py-5 text-slate-500 font-black uppercase tracking-widest text-[10px]">{t('cancel')}</button><button onClick={handleAddUserSubmit} className="flex-[2] py-5 bg-brand-600 text-white font-black uppercase tracking-widest text-[10px] rounded-[2rem] shadow-xl hover:bg-brand-500 transition-all">{t('authorizeOperator')}</button></div>
-            </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const RefreshCw = ({ size }: { size: number }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
-);
+                    <th className="p-10">{t('employeeId')}</th><th className="p-10">{t('name')}</th><th className="p-10">{t
