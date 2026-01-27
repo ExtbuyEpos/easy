@@ -72,10 +72,15 @@ export const Login: React.FC<LoginProps> = ({
       const result = await signInWithPopup(auth, provider);
       const fbUser = result.user;
       
-      // Admin Access Logic: Grant full system access to specific emails
+      // Admin Access Logic: Grant full system access to specific emails or UIDs
       const adminEmails = ['zahratalsawsen1@gmail.com', 'extbuy.om@gmail.com'];
+      const adminUids = [
+        'bFNTudFaGscUVu30Mcswqp0D5Yj1', 
+        'rZB128VtiNYx92BpG3fCU62l7Kr1'
+      ]; // Authorized Administrator UIDs
+      
       const userEmail = fbUser.email?.toLowerCase() || '';
-      const isSystemAdmin = adminEmails.includes(userEmail);
+      const isSystemAdmin = adminEmails.includes(userEmail) || adminUids.includes(fbUser.uid);
 
       const googleUser: User = {
         id: fbUser.uid,
@@ -109,7 +114,9 @@ export const Login: React.FC<LoginProps> = ({
     if (method === 'CREDENTIALS') {
       // Artificial delay for premium feel
       await new Promise(resolve => setTimeout(resolve, 800));
-      const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+      
+      // Strict password matching
+      const user = users.find(u => u.username.trim().toLowerCase() === username.trim().toLowerCase());
       if (user && user.password === password) {
          onLogin(user);
       } else {

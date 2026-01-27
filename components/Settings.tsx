@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { User, UserRole, Product, Sale, StoreSettings, Language, AppView } from '../types';
-import { Trash2, Plus, X, Receipt, ChevronLeft, Users, Zap, Globe, Heart, Database, Cloud, Bell, ShieldCheck, Share2, Clipboard, BarChart, MessageSquare, ExternalLink, RefreshCw, CheckCircle2, Upload, Image as ImageIcon, Key } from 'lucide-react';
+import { Trash2, Plus, X, Receipt, ChevronLeft, Users, Zap, Globe, Heart, Database, Cloud, Bell, ShieldCheck, Share2, Clipboard, BarChart, MessageSquare, ExternalLink, RefreshCw, CheckCircle2, Upload, Image as ImageIcon, Key, LogOut, ShieldEllipsis, ShieldAlert } from 'lucide-react';
 import { formatNumber } from '../utils/format';
 import { requestNotificationPermission } from '../services/notificationService';
 
@@ -11,6 +11,7 @@ interface SettingsProps {
   sales: Sale[];
   onAddUser: (u: User) => void;
   onDeleteUser: (id: string) => void;
+  onLogout: () => void;
   currentUser: User;
   storeSettings: StoreSettings;
   onUpdateStoreSettings: (settings: StoreSettings) => void;
@@ -22,7 +23,7 @@ interface SettingsProps {
 }
 
 export const Settings: React.FC<SettingsProps> = ({ 
-  users, onAddUser, onDeleteUser, currentUser, storeSettings, onUpdateStoreSettings, onGoBack,
+  users, onAddUser, onDeleteUser, onLogout, currentUser, storeSettings, onUpdateStoreSettings, onGoBack,
   language, toggleLanguage, t = (k) => k, onNavigate
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -48,16 +49,6 @@ export const Settings: React.FC<SettingsProps> = ({
       setUserFormData({ name: '', username: '', password: '', role: 'CASHIER', employeeId: '' });
   };
 
-  const handleEnableNotifications = async () => {
-    const token = await requestNotificationPermission();
-    if (token) {
-        setFcmToken(token);
-        alert("Push notifications enabled successfully.");
-    } else {
-        alert("Notification permission denied or FCM not supported.");
-    }
-  };
-
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -69,11 +60,6 @@ export const Settings: React.FC<SettingsProps> = ({
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    alert("Copied to clipboard");
-  };
-
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 p-4 lg:p-8 overflow-y-auto transition-colors custom-scrollbar">
        <div className="flex flex-col lg:flex-row justify-between lg:items-center mb-8 gap-4 shrink-0">
@@ -81,19 +67,64 @@ export const Settings: React.FC<SettingsProps> = ({
           <button onClick={onGoBack} className="p-3 -ml-3 rounded-2xl bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 shadow-sm transition-all active:scale-90"><ChevronLeft size={28} className="rtl:rotate-180" /></button>
           <div><h2 className="text-xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic leading-none">{t('systemTerminal')}</h2><p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mt-1">{t('controlConsole')}</p></div>
         </div>
-        <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-2xl">
-            <button onClick={() => setActiveSettingsTab('GENERAL')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSettingsTab === 'GENERAL' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-lg' : 'text-slate-500'}`}>{t('configuration')}</button>
-            <button onClick={() => setActiveSettingsTab('OPERATORS')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSettingsTab === 'OPERATORS' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-lg' : 'text-slate-500'}`}>{t('operatorAccess')}</button>
+        <div className="flex flex-wrap items-center gap-3">
+            <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-2xl">
+                <button onClick={() => setActiveSettingsTab('GENERAL')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSettingsTab === 'GENERAL' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-lg' : 'text-slate-50'}`}>{t('configuration')}</button>
+                <button onClick={() => setActiveSettingsTab('OPERATORS')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSettingsTab === 'OPERATORS' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-lg' : 'text-slate-500'}`}>{t('operatorAccess')}</button>
+            </div>
+            <button onClick={onLogout} className="px-6 py-3.5 bg-red-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center gap-2 italic">
+                <LogOut size={16} /> Logout
+            </button>
         </div>
       </div>
 
       {activeSettingsTab === 'GENERAL' ? (
         <div className="max-w-4xl space-y-8 animate-fade-in pb-20">
-            {/* Store Configuration Card */}
+            
+            {/* easyPOS System - Access Control Section */}
+            <div className="bg-slate-900 text-white p-10 rounded-[3.5rem] shadow-2xl border border-brand-500/20 space-y-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-12 opacity-10 rotate-12 transition-transform duration-1000"><ShieldEllipsis size={200} className="text-brand-500" /></div>
+                <div className="flex items-center gap-4 relative z-10 border-b border-white/10 pb-6">
+                    <div className="w-14 h-14 bg-brand-500/20 rounded-2xl flex items-center justify-center border border-brand-500/30">
+                        <Zap size={28} className="text-brand-400" />
+                    </div>
+                    <div>
+                        <h3 className="text-2xl font-black uppercase italic tracking-tighter">easyPOS System Config</h3>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none mt-1">Global Access Authorization</p>
+                    </div>
+                </div>
+                
+                <div className="relative z-10 space-y-6">
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black text-brand-500 uppercase tracking-[0.2em] ml-1">Enter Shop Access Code</label>
+                        <div className="relative group max-w-md">
+                            <input 
+                                type="text" 
+                                value={storeForm.visitorAccessCode || ''} 
+                                onChange={e => setStoreForm({...storeForm, visitorAccessCode: e.target.value})} 
+                                className="w-full p-5 bg-black/40 border-2 border-white/10 group-focus-within:border-brand-500 rounded-3xl font-black text-white text-2xl tracking-[0.3em] outline-none transition-all pl-14" 
+                                placeholder="e.g. 2026"
+                            />
+                            <Key className="absolute left-5 top-1/2 -translate-y-1/2 text-brand-500" size={24} />
+                        </div>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest italic leading-relaxed">
+                            Set the master security code for visitors entering the virtual showroom.
+                        </p>
+                    </div>
+                    
+                    <button 
+                        onClick={() => onUpdateStoreSettings(storeForm)} 
+                        className="px-10 py-5 bg-brand-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-2xl hover:bg-brand-500 transition-all active:scale-95 flex items-center justify-center gap-3 italic"
+                    >
+                        <RefreshCw size={16} /> Sync easyPOS Matrix
+                    </button>
+                </div>
+            </div>
+
+            {/* Store Identity Card */}
             <div className="bg-white dark:bg-slate-900 p-10 rounded-[3.5rem] shadow-xl border border-slate-100 dark:border-slate-800 space-y-10">
                 <div className="flex items-center gap-3 border-b border-slate-50 dark:border-slate-800 pb-6"><Receipt size={28} className="text-brand-500" /><h3 className="text-2xl font-black uppercase italic tracking-tighter dark:text-white">{t('storeIdentity')}</h3></div>
                 
-                {/* Store Branding / Logo Section */}
                 <div className="space-y-4">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('storeLogo')}</label>
                     <div className="flex flex-col md:flex-row gap-6 items-center">
@@ -122,9 +153,6 @@ export const Settings: React.FC<SettingsProps> = ({
                             >
                                 <Upload size={16} /> {t('uploadLogo')}
                             </button>
-                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest italic leading-relaxed">
-                                Square or transparent PNG recommended. This logo will appear at the top of all printed and digital invoices.
-                            </p>
                             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
                         </div>
                     </div>
@@ -133,112 +161,21 @@ export const Settings: React.FC<SettingsProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6">
                     <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('businessName')}</label><input type="text" value={storeForm.name} onChange={e => setStoreForm({...storeForm, name: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black dark:text-white" /></div>
                     <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('taxRate')}</label><input type="number" value={storeForm.taxRate} onChange={e => setStoreForm({...storeForm, taxRate: parseFloat(e.target.value) || 0})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black dark:text-white" /></div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-brand-600 uppercase tracking-widest ml-1">{t('visitorAccessCode')}</label>
-                        <div className="relative">
-                            <input type="text" value={storeForm.visitorAccessCode || ''} onChange={e => setStoreForm({...storeForm, visitorAccessCode: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-brand-100 dark:border-brand-900 rounded-2xl font-black dark:text-white pl-12" placeholder="e.g. 2026" />
-                            <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-500" size={18} />
-                        </div>
-                    </div>
                     <div className="md:col-span-2 space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('storeAddress')}</label><textarea value={storeForm.address} onChange={e => setStoreForm({...storeForm, address: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white h-24 resize-none" /></div>
                 </div>
 
-                <div className="flex flex-col md:flex-row gap-4 pt-6">
-                    <button onClick={() => onUpdateStoreSettings(storeForm)} className="flex-1 py-5 bg-brand-600 text-white rounded-3xl font-black uppercase tracking-widest shadow-2xl hover:bg-brand-500 transition-all active:scale-95 italic text-xs">{t('syncTerminal')}</button>
-                </div>
+                <button onClick={() => onUpdateStoreSettings(storeForm)} className="w-full py-5 bg-slate-900 dark:bg-brand-600 text-white rounded-3xl font-black uppercase tracking-widest shadow-2xl hover:bg-black transition-all active:scale-95 italic text-xs">{t('syncTerminal')}</button>
             </div>
 
-            {/* Cloud Infrastructure Details Card */}
-            <div className="bg-slate-900 text-white p-10 rounded-[3.5rem] shadow-2xl border border-white/5 space-y-8 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-12 opacity-5 rotate-12 transition-transform duration-1000"><Cloud size={200} /></div>
-                <div className="flex items-center gap-4 relative z-10 border-b border-white/10 pb-6">
-                    <div className="w-14 h-14 bg-brand-500/20 rounded-2xl flex items-center justify-center border border-brand-500/30">
-                        <Database size={28} className="text-brand-400" />
-                    </div>
-                    <div>
-                        <h3 className="text-2xl font-black uppercase italic tracking-tighter">{t('cloudInfrastructure')}</h3>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none mt-1">Backend Deployment Environment</p>
-                    </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 relative z-10 border-b border-white/10 pb-10">
-                    <div className="space-y-1.5">
-                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">{t('projectName')}</span>
-                        <div className="font-black text-xl tracking-tighter text-white uppercase italic">easyPOS</div>
-                    </div>
-                    <div className="space-y-1.5">
-                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">{t('projectId')}</span>
-                        <div className="font-mono text-base font-black text-brand-400">extbuy-flutter-ai</div>
-                    </div>
-                    <div className="space-y-1.5">
-                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">{t('projectNumber')}</span>
-                        <div className="font-mono text-base font-black text-slate-300">856022079884</div>
-                    </div>
-                    <div className="space-y-1.5">
-                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">{t('deploymentStatus')}</span>
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]"></div>
-                            <span className="font-black text-[10px] uppercase tracking-widest text-emerald-500 italic">Production Node Live</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* WhatsApp Baileys Engine Card */}
-                <div className="pt-6 relative z-10 space-y-6">
-                    <div className="flex items-center justify-between">
-                       <div className="flex items-center gap-3">
-                           <MessageSquare size={20} className="text-emerald-400" />
-                           <h4 className="text-sm font-black uppercase tracking-widest">WhatsApp Gateway</h4>
-                       </div>
-                       <div className={`px-3 py-1 text-[8px] font-black rounded-full border ${isWaConnected ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>
-                           {isWaConnected ? 'STABLE PROTOCOL v5.0.0' : 'OFFLINE'}
-                       </div>
-                   </div>
-                   
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                       <div className="space-y-1.5">
-                           <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Engine Core</span>
-                           <div className="font-mono text-base font-black text-slate-300">Baileys Multi-Device</div>
-                       </div>
-                       <div className="space-y-1.5">
-                           <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Bridge Status</span>
-                           <div className="flex items-center gap-2">
-                               <div className={`w-1.5 h-1.5 rounded-full ${isWaConnected ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                               <span className={`text-[10px] font-black uppercase italic ${isWaConnected ? 'text-emerald-500' : 'text-red-500'}`}>
-                                   {isWaConnected ? 'E2E Link Encrypted' : 'Authentication Required'}
-                               </span>
-                           </div>
-                       </div>
-                   </div>
-
-                   <button 
-                     onClick={() => onNavigate && onNavigate(AppView.BAILEYS_SETUP)}
-                     className="w-full flex items-center justify-center gap-3 py-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all font-black uppercase text-[10px] tracking-[0.2em] italic"
-                   >
-                       <ExternalLink size={16} /> Open Bridge Terminal
-                   </button>
-                </div>
-            </div>
-
-            {/* Language Selection Card */}
-            <div className="bg-white dark:bg-slate-900 p-10 rounded-[3.5rem] shadow-xl border border-slate-100 dark:border-slate-800 space-y-6">
-                <div className="flex items-center gap-3 border-b border-slate-50 dark:border-slate-800 pb-6">
-                    <Globe size={28} className="text-brand-500" />
-                    <h3 className="text-2xl font-black uppercase italic tracking-tighter dark:text-white">{t('languageSettings')}</h3>
-                </div>
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('language')}</p>
-                        <p className="text-lg font-black dark:text-white uppercase">{language === 'ar' ? 'العربية (Arabic)' : 'English'}</p>
-                    </div>
-                    <button 
-                        onClick={toggleLanguage}
-                        className="px-8 py-4 bg-slate-100 dark:bg-slate-800 hover:bg-brand-600 hover:text-white dark:text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-sm transition-all active:scale-95 flex items-center gap-3"
-                    >
-                        <RefreshCw size={18} />
-                        {t('switchLanguage')}
-                    </button>
-                </div>
+            {/* System Logout Card */}
+            <div className="pt-12">
+                <button 
+                    onClick={onLogout}
+                    className="w-full flex items-center justify-center gap-4 py-8 bg-red-50 dark:bg-red-950/20 text-red-600 hover:bg-red-600 hover:text-white transition-all duration-500 rounded-[3rem] font-black uppercase tracking-[0.3em] text-sm shadow-xl border border-red-100 dark:border-red-900/30 group"
+                >
+                    <LogOut size={28} className="group-hover:-translate-x-2 transition-transform" />
+                    <span>Terminate Session & Logout</span>
+                </button>
             </div>
         </div>
       ) : (

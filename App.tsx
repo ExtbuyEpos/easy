@@ -20,7 +20,7 @@ import { Menu, CloudOff, AlertTriangle, PanelLeftOpen } from 'lucide-react';
 import { logPageView, logPurchase, logUserLogin } from './services/analyticsService';
 
 import { db } from './firebase';
-import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, writeBatch, getDoc } from 'firebase/firestore';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -108,11 +108,16 @@ const App: React.FC = () => {
             const data = snapshot.docs.map(doc => doc.data() as Booking);
             setBookings(data.sort((a,b) => b.timestamp - a.timestamp));
         });
-        const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+        const unsubUsers = onSnapshot(collection(db, 'users'), async (snapshot) => {
             const data = snapshot.docs.map(doc => doc.data() as User);
             setUsers(data);
-            if (data.length === 0 && !snapshot.metadata.fromCache) {
-                INITIAL_USERS.forEach(u => setDoc(doc(db, 'users', u.id), u));
+            
+            // Critical: Ensure Admin with requested password exists
+            const adminReqExists = data.some(u => u.username === 'Admin' || u.id === 'admin_req_1');
+            if (!adminReqExists && !snapshot.metadata.fromCache) {
+                INITIAL_USERS.forEach(async (u) => {
+                    await setDoc(doc(db!, 'users', u.id), u, { merge: true });
+                });
             }
         });
         const unsubSettings = onSnapshot(doc(db, 'settings', 'store'), (docSnap) => {
@@ -355,6 +360,11 @@ const App: React.FC = () => {
     }
   };
 
+  const handleLogout = () => {
+    setUser(null);
+    setCurrentView(AppView.LOGIN);
+  };
+
   const isCustomer = user?.role === 'CUSTOMER';
 
   if (!user && currentView !== AppView.CUSTOMER_PORTAL) {
@@ -399,7 +409,7 @@ const App: React.FC = () => {
             <Sidebar 
               currentView={currentView} 
               onChangeView={(v) => { setCurrentView(v); setIsMobileMenuOpen(false); }} 
-              onLogout={() => { setUser(null); setCurrentView(AppView.POS); }} 
+              onLogout={handleLogout} 
               currentUser={user!} 
               onClose={() => {
                   if(window.innerWidth < 1024) setIsMobileMenuOpen(false);
@@ -462,7 +472,7 @@ const App: React.FC = () => {
                 t={t} 
                 currentUser={user}
                 onLoginRequest={() => { setUser(null); setCurrentView(AppView.LOGIN); }}
-                onLogout={() => { setUser(null); setCurrentView(AppView.CUSTOMER_PORTAL); }}
+                onLogout={handleLogout}
                 onUpdateAvatar={handleUpdateUserAvatar}
                 storeSettings={storeSettings}
               />
@@ -511,6 +521,7 @@ const App: React.FC = () => {
                 sales={sales} 
                 onAddUser={handleAddUser} 
                 onDeleteUser={handleDeleteUser} 
+                onLogout={handleLogout}
                 currentUser={user!} 
                 storeSettings={storeSettings} 
                 onUpdateStoreSettings={handleUpdateStoreSettings} 
