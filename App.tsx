@@ -370,9 +370,23 @@ const App: React.FC = () => {
   };
 
   const handleDeleteUser = async (id: string) => {
-      if (!window.confirm('Delete operator access?')) return;
-      if (db) await deleteDoc(doc(db, 'users', id));
-      else {
+      // PROTECTED IDs (SYSTEM ADMINS) cannot be deleted
+      const PROTECTED_USER_IDS = ['admin_1', 'admin_req_1', 'bFNTudFaGscUVu30Mcswqp0D5Yj1', 'rZB128VtiNYx92BpG3fCU62l7Kr1'];
+      if (PROTECTED_USER_IDS.includes(id)) {
+          alert("SECURITY ALERT: System Admin nodes are protected and cannot be deleted.");
+          return;
+      }
+
+      if (!window.confirm('PERMANENT ACTION: Delete operator access? This cannot be undone.')) return;
+      
+      if (db) {
+          try {
+              await deleteDoc(doc(db, 'users', id));
+          } catch (e) {
+              console.error("User deletion error:", e);
+              alert("Error deleting user from cloud. Please try again.");
+          }
+      } else {
           const updated = users.filter(u => u.id !== id);
           setUsers(updated);
           localStorage.setItem('easyPOS_users', JSON.stringify(updated));
