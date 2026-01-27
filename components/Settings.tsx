@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { User, UserRole, Product, Sale, StoreSettings, Language, AppView, VendorRequest } from '../types';
-// Add missing Phone import from lucide-react
 import { Trash2, Plus, X, Receipt, ChevronLeft, Users, Zap, Globe, Heart, Database, Cloud, Bell, ShieldCheck, Share2, Clipboard, BarChart, MessageSquare, ExternalLink, RefreshCw, CheckCircle2, Upload, Image as ImageIcon, Key, LogOut, ShieldEllipsis, ShieldAlert, Edit2, Lock, Store, Mail, Send, Inbox, Check, Slash, AlertCircle, Phone } from 'lucide-react';
 import { formatNumber } from '../utils/format';
 

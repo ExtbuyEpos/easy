@@ -1,20 +1,19 @@
-
 import { Language, Translations } from './types';
 
 export const translations: Record<Language, Translations> = {
   en: {
-    // ... existing translations ...
     'vendorPanel': 'Vendor Panel',
     'vendorDashboard': 'Vendor Dashboard',
     'vendorStats': 'Vendor Performance',
     'myInventory': 'My Inventory',
     'vendorName': 'Vendor Name',
     'vendorId': 'Vendor ID',
+    'vendorCode': 'Vendor Code',
+    'vendorNotFound': 'Vendor Code not found.',
     'totalSales': 'Total Sales',
     'stockUnits': 'Stock Units',
     'revenue': 'Revenue',
     'addVendorProduct': 'Add New Vendor Product',
-    // ... existing entries ...
     'welcomeBack': 'Welcome Back',
     'signInToAccess': 'Please sign in to access your terminal',
     'username': 'Username or Email',
@@ -50,8 +49,6 @@ export const translations: Record<Language, Translations> = {
     'emailAddress': 'Email Address',
     'sendResetLink': 'Send Recovery Email',
     'backToLogin': 'Back to Login',
-
-    // AI Assistant (easyPOS)
     'clawdbotName': 'easyPOS',
     'clawdbotGreeting': 'System Online. I am easyPOS. How shall we optimize your business today?',
     'clawdbotPlaceholder': 'Deploy command or ask easyPOS...',
@@ -59,8 +56,6 @@ export const translations: Record<Language, Translations> = {
     'clawdbotContext': 'Direct Neural Link to Ledger & Stock',
     'customerBotName': 'Support Assistant',
     'customerBotGreeting': 'Hello! I am your Support Assistant. How can I help you with your shopping today?',
-
-    // Bookings
     'bookings': 'Customer Bookings',
     'addBooking': 'New Booking',
     'editBooking': 'Edit Booking',
@@ -76,8 +71,6 @@ export const translations: Record<Language, Translations> = {
     'cancelled': 'Cancelled',
     'saveBooking': 'Commit Booking',
     'noBookings': 'No bookings found',
-
-    // Settings
     'systemTerminal': 'System Terminal',
     'controlConsole': 'Control Console',
     'configuration': 'Configuration',
@@ -105,8 +98,6 @@ export const translations: Record<Language, Translations> = {
     'languageSettings': 'Language Settings',
     'switchLanguage': 'Switch to Arabic',
     'visitorAccessCode': 'Shop Access Code',
-
-    // AI Engines
     'generateAiImage': 'AI Generate Image',
     'aiGeneratingImage': 'AI generating...',
     'cfAiUrl': 'Cloudflare AI Gateway URL',
@@ -115,8 +106,6 @@ export const translations: Record<Language, Translations> = {
     'hcAiPlaceholder': 'https://hc-ai.yourproxy.com',
     'useHackClub': 'Use Hack Club AI (Unlimited)',
     'useCloudflare': 'Use Cloudflare AI',
-
-    // Customer Portal
     'customerPortal': 'Shop',
     'virtualTryOn': 'Virtual Try-On',
     'tryItOn': 'Try It On',
@@ -128,8 +117,6 @@ export const translations: Record<Language, Translations> = {
     'mirrorInstruction': 'Show the product and your face for the best AI try-on result.',
     'downloadLook': 'Download Result',
     'backToShop': 'Back to Shop',
-
-    // Sidebar
     'posTerminal': 'POS Terminal',
     'ordersReturns': 'Orders & Returns',
     'inventory': 'Inventory',
@@ -145,8 +132,6 @@ export const translations: Record<Language, Translations> = {
     'logout': 'Logout',
     'synced': 'Data synced to cloud',
     'savedDevice': 'Data saved to device',
-
-    // POS
     'searchProducts': 'Search products...',
     'scan': 'Scan',
     'history': 'History',
@@ -172,8 +157,6 @@ export const translations: Record<Language, Translations> = {
     'dailySales': 'Daily Sales',
     'todayRevenue': "Today's Revenue",
     'todayOrders': "Today's Orders",
-    
-    // Inventory
     'inventoryMgmt': 'Inventory Management',
     'manageStock': 'Manage stock levels, pricing, images, and categories.',
     'addProduct': 'Add Product',
@@ -195,8 +178,6 @@ export const translations: Record<Language, Translations> = {
     'imageUrl': 'Image URL',
     'size': 'Size',
     'color': 'Color',
-
-    // General
     'search': 'Search',
     'action': 'Action',
     'confirm': 'Confirm',
@@ -211,11 +192,12 @@ export const translations: Record<Language, Translations> = {
     'myInventory': 'مخزوني',
     'vendorName': 'اسم المورد',
     'vendorId': 'رقم المورد',
+    'vendorCode': 'رمز المورد',
+    'vendorNotFound': 'رمز المورد غير موجود.',
     'totalSales': 'إجمالي المبيعات',
     'stockUnits': 'وحدات المخزون',
     'revenue': 'الدخل',
     'addVendorProduct': 'إضافة منتج مورد جديد',
-    // ... (existing Arabic translations)
     'welcomeBack': 'مرحباً بعودتك',
     'signInToAccess': 'الرجاء تسجيل الدخول للوصول إلى النظام',
     'username': 'اسم المستخدم أو البريد',
@@ -251,8 +233,6 @@ export const translations: Record<Language, Translations> = {
     'emailAddress': 'البريد الإلكتروني',
     'sendResetLink': 'إرسال بريد الاستعادة',
     'backToLogin': 'العودة لتسجيل الدخول',
-
-    // AI Assistant (easyPOS)
     'clawdbotName': 'إيزي بوس',
     'clawdbotGreeting': 'النظام متصل. أنا إيزي بوس. كيف يمكنني تحسين عملك اليوم؟',
     'clawdbotPlaceholder': 'أرسل أمراً أو اسأل إيزي بوس...',
@@ -260,8 +240,6 @@ export const translations: Record<Language, Translations> = {
     'clawdbotContext': 'رابط عصبي مباشر للمخزون والمالية',
     'customerBotName': 'مساعد الدعم',
     'customerBotGreeting': 'مرحباً! أنا مساعد الدعم الخاص بك. كيف يمكنني مساعدتك في تسوقك اليوم؟',
-
-    // Bookings
     'bookings': 'الحجوزات',
     'addBooking': 'حجز جديد',
     'editBooking': 'تعديل الحجز',
@@ -277,8 +255,6 @@ export const translations: Record<Language, Translations> = {
     'cancelled': 'ملغى',
     'saveBooking': 'تأكيد الحجز',
     'noBookings': 'لا يوجد حجوزات',
-
-    // Settings
     'systemTerminal': 'محطة النظام',
     'controlConsole': 'لوحة التحكم',
     'configuration': 'الإعدادات',
@@ -306,8 +282,6 @@ export const translations: Record<Language, Translations> = {
     'languageSettings': 'إعدادات اللغة',
     'switchLanguage': 'التبديل إلى الإنجليزية',
     'visitorAccessCode': 'رمز دخول الزوار',
-
-    // AI Engines
     'generateAiImage': 'إنشاء صورة بالذكاء الاصطناعي',
     'aiGeneratingImage': 'جاري الإنشاء بالذكاء الاصطناعي...',
     'cfAiUrl': 'رابط بوابة Cloudflare AI',
@@ -316,8 +290,6 @@ export const translations: Record<Language, Translations> = {
     'hcAiPlaceholder': 'https://hc-ai.yourproxy.com',
     'useHackClub': 'استخدام Hack Club AI (غير محدود)',
     'useCloudflare': 'استخدام Cloudflare AI',
-
-    // Customer Portal
     'customerPortal': 'المتجر',
     'virtualTryOn': 'تجربة افتراضية',
     'tryItOn': 'جرب الآن',
@@ -329,8 +301,6 @@ export const translations: Record<Language, Translations> = {
     'mirrorInstruction': 'أظهر المنتج ووجهك للحصول على أفضل نتيجة للتجربة.',
     'downloadLook': 'تحميل النتيجة',
     'backToShop': 'العودة للمتجر',
-
-    // Sidebar
     'posTerminal': 'نقطة البيع',
     'ordersReturns': 'الطلبات والمرتجعات',
     'inventory': 'المخزون',
@@ -346,8 +316,6 @@ export const translations: Record<Language, Translations> = {
     'logout': 'تسجيل خروج',
     'synced': 'تمت المزامنة سحابياً',
     'savedDevice': 'محفوظ على الجهاز',
-
-    // POS
     'searchProducts': 'بحث عن منتجات...',
     'scan': 'مسح',
     'history': 'السجل',
@@ -373,8 +341,6 @@ export const translations: Record<Language, Translations> = {
     'dailySales': 'مبيعات اليوم',
     'todayRevenue': 'دخل اليوم',
     'todayOrders': 'طلبات اليوم',
-
-    // Inventory
     'inventoryMgmt': 'إدارة المخزون',
     'manageStock': 'إدارة مستويات المخزون، الأسعار، الصور والفئات.',
     'addProduct': 'إضافة منتج',
@@ -396,8 +362,6 @@ export const translations: Record<Language, Translations> = {
     'imageUrl': 'رابط الصورة',
     'size': 'المقاس',
     'color': 'اللون',
-
-    // General
     'search': 'بحث',
     'action': 'إجراء',
     'confirm': 'تأكيد',
