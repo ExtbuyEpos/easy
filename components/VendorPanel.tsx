@@ -1,9 +1,9 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Product, Sale, User, Language, UserRole } from '../types';
 import { CURRENCY } from '../constants';
 import { formatCurrency, formatNumber } from '../utils/format';
-import { Package, TrendingUp, DollarSign, Search, Plus, List, ChevronLeft, ArrowUpRight, ShoppingBag, Eye, Layers, Users, ShieldCheck, Trash2, Edit2, X, Save, Key, Mail, CheckCircle2 } from 'lucide-react';
+import { Package, TrendingUp, DollarSign, Search, Plus, List, ChevronLeft, ArrowUpRight, ShoppingBag, Eye, Layers, Users, ShieldCheck, Trash2, Edit2, X, Save, Key, Mail, CheckCircle2, Store, Upload, Image as ImageIcon, ExternalLink, Share2 } from 'lucide-react';
 import { Inventory } from './Inventory';
 
 interface VendorPanelProps {
@@ -27,7 +27,7 @@ export const VendorPanel: React.FC<VendorPanelProps> = ({
   products, sales, users, currentUser, onAddProduct, onUpdateProduct, onDeleteProduct, onBulkUpdateProduct, 
   onAddUser, onUpdateUser, onDeleteUser, language, t, onGoBack
 }) => {
-  const [activeSubView, setActiveSubView] = useState<'DASHBOARD' | 'INVENTORY' | 'TEAM'>('DASHBOARD');
+  const [activeSubView, setActiveSubView] = useState<'DASHBOARD' | 'INVENTORY' | 'TEAM' | 'STORE'>('DASHBOARD');
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
   const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
   const [staffFormData, setStaffFormData] = useState<Partial<User>>({ 
@@ -39,6 +39,30 @@ export const VendorPanel: React.FC<VendorPanelProps> = ({
   const myStaff = useMemo(() => users.filter(u => u.vendorId === vendorId && u.role === 'VENDOR_STAFF'), [users, vendorId]);
   const staffLimit = currentUser.vendorStaffLimit || 0;
   
+  const [vendorSettings, setVendorSettings] = useState(currentUser.vendorSettings || {
+      storeName: currentUser.name,
+      storeAddress: '',
+      storeLogo: '',
+      shopPasscode: '2026',
+      customUrlSlug: vendorId.toLowerCase()
+  });
+
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setVendorSettings({ ...vendorSettings, storeLogo: reader.result as string });
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveStoreProfile = () => {
+      onUpdateUser({ ...currentUser, vendorSettings });
+      alert("Store Profile Updated Locally and Synced.");
+  };
+
   const mySalesStats = useMemo(() => {
     let revenue = 0;
     let unitsSold = 0;
@@ -132,6 +156,7 @@ export const VendorPanel: React.FC<VendorPanelProps> = ({
         <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-2xl">
             <button onClick={() => setActiveSubView('DASHBOARD')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubView === 'DASHBOARD' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-lg' : 'text-slate-500'}`}>Stats</button>
             <button onClick={() => setActiveSubView('TEAM')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubView === 'TEAM' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-lg' : 'text-slate-500'}`}>My Team</button>
+            <button onClick={() => setActiveSubView('STORE')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubView === 'STORE' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-lg' : 'text-slate-500'}`}>Store Profile</button>
         </div>
         <button onClick={() => setActiveSubView('INVENTORY')} className="px-8 py-4 bg-brand-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 flex items-center gap-3 italic">
           <Package size={18} /> {t('inventory')}
@@ -225,7 +250,7 @@ export const VendorPanel: React.FC<VendorPanelProps> = ({
                 </div>
             </div>
         </>
-      ) : (
+      ) : activeSubView === 'TEAM' ? (
         <div className="animate-fade-in space-y-8">
             <div className="bg-slate-900 text-white p-10 rounded-[3.5rem] shadow-2xl relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-8">
                 <div className="absolute top-0 right-0 p-12 opacity-10 rotate-12"><Users size={200} className="text-brand-500" /></div>
@@ -291,12 +316,76 @@ export const VendorPanel: React.FC<VendorPanelProps> = ({
                 </table>
             </div>
         </div>
+      ) : (
+        <div className="animate-fade-in max-w-4xl space-y-10 pb-20">
+            <div className="bg-white dark:bg-slate-900 p-10 rounded-[3.5rem] shadow-xl border border-slate-100 dark:border-slate-800 space-y-10">
+                <div className="flex items-center gap-3 border-b border-slate-50 dark:border-slate-800 pb-6">
+                    <Store size={28} className="text-brand-500" />
+                    <h3 className="text-2xl font-black uppercase italic tracking-tighter dark:text-white">Store Identity Config</h3>
+                </div>
+
+                <div className="space-y-6">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Virtual Shop Brand</label>
+                    <div className="flex items-center gap-8">
+                        <div className="w-32 h-32 bg-slate-50 dark:bg-slate-800 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden shrink-0 shadow-inner group relative">
+                            {vendorSettings.storeLogo ? <img src={vendorSettings.storeLogo} className="w-full h-full object-contain p-4" /> : <ImageIcon size={32} className="text-slate-200" />}
+                            <button onClick={() => logoInputRef.current?.click()} className="absolute inset-0 bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Upload size={24}/></button>
+                            <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                        </div>
+                        <div className="flex-1 space-y-4">
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Store Display Name</label>
+                                <input type="text" value={vendorSettings.storeName} onChange={e => setVendorSettings({...vendorSettings, storeName: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Virtual Access Passcode</label>
+                        <div className="relative">
+                            <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                            <input type="text" value={vendorSettings.shopPasscode} onChange={e => setVendorSettings({...vendorSettings, shopPasscode: e.target.value})} className="w-full p-4 pl-12 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black text-xl tracking-[0.3em] dark:text-white" />
+                        </div>
+                        <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase ml-1">Required for guests to enter your shop.</p>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unique Store Slug</label>
+                        <input type="text" value={vendorSettings.customUrlSlug} readOnly className="w-full p-4 bg-slate-100 dark:bg-slate-900 border-2 border-transparent rounded-2xl font-mono text-xs dark:text-slate-400 cursor-not-allowed" />
+                    </div>
+                </div>
+
+                <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Store Address</label>
+                    <textarea value={vendorSettings.storeAddress} onChange={e => setVendorSettings({...vendorSettings, storeAddress: e.target.value})} className="w-full p-4 h-24 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white resize-none" />
+                </div>
+
+                <div className="bg-brand-50 dark:bg-brand-900/10 p-6 rounded-[2.5rem] border border-brand-100 dark:border-brand-900/30">
+                    <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest flex items-center gap-2 italic"><ExternalLink size={14}/> Shareable Store URL</p>
+                    <div className="mt-3 flex items-center gap-2">
+                        <code className="flex-1 p-3 bg-white dark:bg-slate-900 rounded-xl text-xs font-mono text-slate-500 truncate">
+                            {window.location.origin}/#/shop/{vendorId.toLowerCase()}
+                        </code>
+                        <button onClick={() => {
+                            const url = `${window.location.origin}/#/shop/${vendorId.toLowerCase()}`;
+                            navigator.clipboard.writeText(url);
+                            alert("Store link copied!");
+                        }} className="p-3 bg-white dark:bg-slate-800 rounded-xl text-brand-600 shadow-sm border border-slate-100 dark:border-slate-700"><Share2 size={16}/></button>
+                    </div>
+                </div>
+
+                <button onClick={handleSaveStoreProfile} className="w-full py-5 bg-brand-600 text-white rounded-3xl font-black uppercase tracking-widest shadow-2xl active:scale-95 italic text-xs flex items-center justify-center gap-3">
+                    <Save size={18}/> Sync Store Identity
+                </button>
+            </div>
+        </div>
       )}
 
       {isStaffModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-2xl flex items-center justify-center z-[120] p-4">
             <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[4rem] shadow-2xl overflow-hidden animate-fade-in-up border border-slate-100 dark:border-slate-800 flex flex-col">
-                <div className="p-10 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+                <div className="p-10 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/30 dark:bg-slate-900/10">
                     <div>
                         <h3 className="text-3xl font-black text-slate-900 dark:text-white italic uppercase tracking-tighter">{editingStaffId ? 'Update Staff' : 'New Staff Provision'}</h3>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Vendor Network Node</p>

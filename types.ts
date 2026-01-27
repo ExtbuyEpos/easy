@@ -12,7 +12,8 @@ export enum AppView {
   PRINT_BARCODE = 'PRINT_BARCODE',
   CUSTOMER_PORTAL = 'CUSTOMER_PORTAL',
   BOOKINGS = 'BOOKINGS',
-  VENDOR_PANEL = 'VENDOR_PANEL'
+  VENDOR_PANEL = 'VENDOR_PANEL',
+  VENDOR_REQUESTS = 'VENDOR_REQUESTS'
 }
 
 export type UserRole = 'ADMIN' | 'MANAGER' | 'STAFF' | 'CASHIER' | 'CUSTOMER' | 'VENDOR' | 'VENDOR_STAFF';
@@ -20,6 +21,18 @@ export type Language = 'en' | 'ar' | 'hi';
 
 export interface Translations {
   [key: string]: string;
+}
+
+export interface VendorRequest {
+  id: string;
+  name: string;
+  storeName: string;
+  email: string;
+  phone: string;
+  description?: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  rejectionReason?: string;
+  timestamp: number;
 }
 
 export interface ProductVariant {
@@ -81,6 +94,14 @@ export interface Booking {
   serviceType?: string;
 }
 
+export interface VendorSettings {
+  storeName: string;
+  storeAddress: string;
+  storeLogo?: string;
+  shopPasscode: string;
+  customUrlSlug: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -90,10 +111,11 @@ export interface User {
   employeeId?: string;
   email?: string;
   avatar?: string;
-  customerAvatar?: string; // The "Real Avatar" image for try-ons
-  tryOnCache?: Record<string, string>; // Maps ProductID -> GeneratedResultBase64
-  vendorId?: string; // For Vendor/Vendor Staff accounts
-  vendorStaffLimit?: number; // Quota set by Admin
+  customerAvatar?: string;
+  tryOnCache?: Record<string, string>;
+  vendorId?: string;
+  vendorStaffLimit?: number;
+  vendorSettings?: VendorSettings;
 }
 
 export interface StoreSettings {
@@ -109,9 +131,9 @@ export interface StoreSettings {
   taxRate: number;
   taxName: string;
   autoPrint: boolean;
-  cloudflareAiUrl?: string; // Endpoint for Cloudflare Workers AI
-  hackClubAiUrl?: string; // Endpoint for Hack Club AI
-  visitorAccessCode?: string; // Security code for direct shop entry
+  cloudflareAiUrl?: string; 
+  hackClubAiUrl?: string; 
+  visitorAccessCode?: string; 
 }
 
 export interface StockAdjustment {

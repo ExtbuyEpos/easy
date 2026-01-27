@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { POS } from './components/POS';
 import { Inventory } from './components/Inventory';
@@ -14,7 +14,7 @@ import { ClawdBot } from './components/ClawdBot';
 import { CustomerPortal } from './components/CustomerPortal';
 import { Bookings } from './components/Bookings';
 import { VendorPanel } from './components/VendorPanel';
-import { AppView, Product, Sale, CartItem, User, StoreSettings, Language, Booking } from './types';
+import { AppView, Product, Sale, CartItem, User, StoreSettings, Language, Booking, VendorRequest } from './types';
 import { INITIAL_PRODUCTS, INITIAL_USERS } from './constants';
 import { translations } from './translations';
 import { Menu, CloudOff, AlertTriangle, PanelLeftOpen, Loader2 } from 'lucide-react';
@@ -35,6 +35,7 @@ const App: React.FC = () => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [vendorRequests, setVendorRequests] = useState<VendorRequest[]>([]);
   
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => localStorage.getItem('easyPOS_theme') === 'dark');
   const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('easyPOS_language') as Language) || 'en');
@@ -52,8 +53,58 @@ const App: React.FC = () => {
     visitorAccessCode: '2026'
   });
 
+  // Multi-Vendor Routing Logic
+  const [activeVendorId, setActiveVendorId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      const match = hash.match(/#\/shop\/(.+)/);
+      if (match) {
+        const vId = match[1];
+        setActiveVendorId(vId);
+        setCurrentView(AppView.CUSTOMER_PORTAL);
+      } else if (!hash || hash === '#/') {
+        setActiveVendorId(null);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    handleHashChange();
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const activeVendor = useMemo(() => {
+    if (!activeVendorId) return null;
+    return users.find(u => u.vendorId === activeVendorId && u.role === 'VENDOR');
+  }, [activeVendorId, users]);
+
+  const vendorProducts = useMemo(() => {
+    if (!activeVendorId) return products;
+    return products.filter(p => p.vendorId === activeVendorId);
+  }, [products, activeVendorId]);
+
+  const currentStoreInfo = useMemo(() => {
+    if (activeVendor) {
+        return {
+            name: activeVendor.vendorSettings?.storeName || activeVendor.name,
+            address: activeVendor.vendorSettings?.storeAddress || '',
+            logo: activeVendor.vendorSettings?.storeLogo || '',
+            footerMessage: storeSettings.footerMessage
+        };
+    }
+    return {
+        name: storeSettings.name,
+        address: storeSettings.address,
+        logo: storeSettings.logo,
+        footerMessage: storeSettings.footerMessage
+    };
+  }, [activeVendor, storeSettings]);
+
   const SYSTEM_OWNER_EMAIL = 'zahratalsawsen1@gmail.com';
-  const isSystemOwner = user?.email?.toLowerCase() === SYSTEM_OWNER_EMAIL || user?.id === 'admin_1';
+  const isSystemOwner = useMemo(() => 
+    user?.email?.toLowerCase() === SYSTEM_OWNER_EMAIL || user?.id === 'admin_1',
+    [user]
+  );
 
   const navigateTo = useCallback((view: AppView) => {
     if (view === currentView) return;
@@ -144,11 +195,6 @@ const App: React.FC = () => {
         const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
             const data = snapshot.docs.map(doc => doc.data() as Product);
             setProducts(data);
-            if (data.length === 0 && !snapshot.metadata.fromCache) {
-                 const batch = writeBatch(db);
-                 INITIAL_PRODUCTS.forEach(p => batch.set(doc(db, 'products', p.id), p));
-                 batch.commit();
-            }
         });
         const unsubCategories = onSnapshot(collection(db, 'categories'), (snapshot) => {
             const data = snapshot.docs.map(doc => doc.id);
@@ -162,32 +208,33 @@ const App: React.FC = () => {
             const data = snapshot.docs.map(doc => doc.data() as Booking);
             setBookings(data.sort((a,b) => b.timestamp - a.timestamp));
         });
-        const unsubUsers = onSnapshot(collection(db, 'users'), async (snapshot) => {
+        const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
             const data = snapshot.docs.map(doc => doc.data() as User);
             setUsers(data);
-            if (data.length === 0 && !snapshot.metadata.fromCache) {
-                INITIAL_USERS.forEach(async (u) => {
-                    await setDoc(doc(db!, 'users', u.id), u, { merge: true });
-                });
-            }
+        });
+        const unsubRequests = onSnapshot(collection(db, 'vendor_requests'), (snapshot) => {
+            const data = snapshot.docs.map(doc => doc.data() as VendorRequest);
+            setVendorRequests(data.sort((a,b) => b.timestamp - a.timestamp));
         });
         const unsubSettings = onSnapshot(doc(db, 'settings', 'store'), (docSnap) => {
             if (docSnap.exists()) setStoreSettings(docSnap.data() as StoreSettings);
             setIsSyncing(false);
         });
-        return () => { unsubProducts(); unsubCategories(); unsubSales(); unsubBookings(); unsubUsers(); unsubSettings(); };
+        return () => { unsubProducts(); unsubCategories(); unsubSales(); unsubBookings(); unsubUsers(); unsubRequests(); unsubSettings(); };
     } else {
         const savedProducts = localStorage.getItem('easyPOS_products');
         const savedCategories = localStorage.getItem('easyPOS_categories');
         const savedSales = localStorage.getItem('easyPOS_sales');
         const savedBookings = localStorage.getItem('easyPOS_bookings');
         const savedUsers = localStorage.getItem('easyPOS_users');
+        const savedRequests = localStorage.getItem('easyPOS_vendorRequests');
         const savedSettings = localStorage.getItem('easyPOS_storeSettings');
         setProducts(savedProducts ? JSON.parse(savedProducts) : INITIAL_PRODUCTS);
         setCategories(savedCategories ? JSON.parse(savedCategories) : Array.from(new Set(INITIAL_PRODUCTS.map(p => p.category))).sort());
         setSales(savedSales ? JSON.parse(savedSales) : []);
         setBookings(savedBookings ? JSON.parse(savedBookings) : []);
         setUsers(savedUsers ? JSON.parse(savedUsers) : INITIAL_USERS);
+        setVendorRequests(savedRequests ? JSON.parse(savedRequests) : []);
         if (savedSettings) setStoreSettings(prev => ({ ...prev, ...JSON.parse(savedSettings) }));
     }
   }, []);
@@ -435,6 +482,75 @@ const App: React.FC = () => {
       }
   };
 
+  const handleAddVendorRequest = async (req: VendorRequest) => {
+      if (db) await setDoc(doc(db, 'vendor_requests', req.id), req);
+      else {
+          const updated = [req, ...vendorRequests];
+          setVendorRequests(updated);
+          localStorage.setItem('easyPOS_vendorRequests', JSON.stringify(updated));
+      }
+  };
+
+  const handleReviewRequest = async (id: string, status: 'APPROVED' | 'REJECTED', reason?: string) => {
+      const req = vendorRequests.find(r => r.id === id);
+      if (!req) return;
+
+      if (db) {
+          const batch = writeBatch(db);
+          batch.update(doc(db, 'vendor_requests', id), { status, rejectionReason: reason || '' });
+          if (status === 'APPROVED') {
+              const vendorId = 'VND-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+              const newUser: User = {
+                  id: Date.now().toString(),
+                  name: req.name,
+                  username: req.email.split('@')[0].toLowerCase(),
+                  password: Math.random().toString(36).substring(2, 8).toUpperCase(),
+                  role: 'VENDOR',
+                  email: req.email,
+                  vendorId,
+                  vendorStaffLimit: 5,
+                  vendorSettings: {
+                      storeName: req.storeName,
+                      storeAddress: '',
+                      shopPasscode: '2026',
+                      customUrlSlug: vendorId.toLowerCase(),
+                      storeLogo: ''
+                  }
+              };
+              batch.set(doc(db, 'users', newUser.id), newUser);
+          }
+          await batch.commit();
+      } else {
+          const updatedRequests = vendorRequests.map(r => r.id === id ? { ...r, status, rejectionReason: reason || '' } : r);
+          setVendorRequests(updatedRequests);
+          localStorage.setItem('easyPOS_vendorRequests', JSON.stringify(updatedRequests));
+
+          if (status === 'APPROVED') {
+              const vendorId = 'VND-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+              const newUser: User = {
+                  id: Date.now().toString(),
+                  name: req.name,
+                  username: req.email.split('@')[0].toLowerCase(),
+                  password: Math.random().toString(36).substring(2, 8).toUpperCase(),
+                  role: 'VENDOR',
+                  email: req.email,
+                  vendorId,
+                  vendorStaffLimit: 5,
+                  vendorSettings: {
+                      storeName: req.storeName,
+                      storeAddress: '',
+                      shopPasscode: '2026',
+                      customUrlSlug: vendorId.toLowerCase(),
+                      storeLogo: ''
+                  }
+              };
+              const updatedUsers = [...users, newUser];
+              setUsers(updatedUsers);
+              localStorage.setItem('easyPOS_users', JSON.stringify(updatedUsers));
+          }
+      }
+  };
+
   const handleUpdateUserAvatar = (avatarData: string, tryOnCache?: Record<string, string>) => {
     if (user) {
       const updatedUser = { 
@@ -458,6 +574,8 @@ const App: React.FC = () => {
     setUser(null);
     setCurrentView(AppView.LOGIN);
     setNavigationHistory([]);
+    setActiveVendorId(null);
+    window.location.hash = '';
   };
 
   const isCustomer = user?.role === 'CUSTOMER';
@@ -492,6 +610,9 @@ const App: React.FC = () => {
           logUserLogin('GUEST');
         }}
         storeSettings={storeSettings}
+        activeVendorId={activeVendorId}
+        activeVendor={activeVendor}
+        onApplyVendor={handleAddVendorRequest}
       />
     );
   }
@@ -568,14 +689,19 @@ const App: React.FC = () => {
             )}
             {currentView === AppView.CUSTOMER_PORTAL && (
               <CustomerPortal 
-                products={products} 
+                products={vendorProducts} 
                 language={language} 
                 t={t} 
                 currentUser={user}
                 onLoginRequest={() => { setUser(null); navigateTo(AppView.LOGIN); }}
                 onLogout={handleLogout}
                 onUpdateAvatar={handleUpdateUserAvatar}
-                storeSettings={storeSettings}
+                storeSettings={{
+                    ...storeSettings,
+                    name: currentStoreInfo.name,
+                    address: currentStoreInfo.address,
+                    logo: currentStoreInfo.logo
+                }}
               />
             )}
             {currentView === AppView.POS && (
@@ -621,11 +747,13 @@ const App: React.FC = () => {
             {currentView === AppView.SETTINGS && (
               <Settings 
                 users={users} 
+                vendorRequests={vendorRequests}
                 products={products} 
                 sales={sales} 
                 onAddUser={handleAddUser} 
                 onUpdateUser={handleUpdateUser}
                 onDeleteUser={handleDeleteUser} 
+                onReviewRequest={handleReviewRequest}
                 onLogout={handleLogout}
                 currentUser={user!} 
                 storeSettings={storeSettings} 
