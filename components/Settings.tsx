@@ -1,8 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { User, StoreSettings, Language, VendorRequest, Product, Sale, UserRole } from '../types';
-import { Save, UserPlus, Trash2, Edit2, X, ShieldCheck, Database, HardDrive, User as UserIcon, ChevronLeft, CheckCircle2, AlertCircle, RefreshCw, Upload, Image as ImageIcon, Store, Key, Loader2 } from 'lucide-react';
-import { uploadImage } from '../supabase';
+import { Save, UserPlus, Trash2, Edit2, X, ShieldCheck, Database, HardDrive, User as UserIcon, ChevronLeft, CheckCircle2, AlertCircle, RefreshCw, Upload, Image as ImageIcon, Store, Key } from 'lucide-react';
 
 interface SettingsProps {
   users: User[];
@@ -30,7 +29,6 @@ export const Settings: React.FC<SettingsProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'store' | 'users' | 'database'>('store');
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [userFormData, setUserFormData] = useState<Partial<User>>({
     name: '', username: '', password: '', role: 'STAFF', vendorId: ''
@@ -43,18 +41,12 @@ export const Settings: React.FC<SettingsProps> = ({
     alert('Store settings synchronized successfully.');
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setIsUploading(true);
-      try {
-        const publicUrl = await uploadImage(file, 'branding');
-        onUpdateStoreSettings({ ...storeSettings, logo: publicUrl });
-      } catch (err) {
-        alert("Upload failed.");
-      } finally {
-        setIsUploading(false);
-      }
+      const reader = new FileReader();
+      reader.onloadend = () => onUpdateStoreSettings({ ...storeSettings, logo: reader.result as string });
+      reader.readAsDataURL(file);
     }
   };
 
@@ -76,6 +68,7 @@ export const Settings: React.FC<SettingsProps> = ({
     }
 
     const role = (userFormData.role as UserRole) || 'STAFF';
+    // Auto-generate Vendor ID if creating a new Vendor and not provided
     let finalVendorId = userFormData.vendorId;
     if (role === 'VENDOR' && !finalVendorId && !editingUser) {
         finalVendorId = `VND-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
@@ -89,6 +82,7 @@ export const Settings: React.FC<SettingsProps> = ({
       role: role,
       email: userFormData.email || '',
       vendorId: finalVendorId,
+      // Initialize default vendor settings if it's a vendor
       vendorSettings: role === 'VENDOR' ? (editingUser?.vendorSettings || {
           storeName: userFormData.name!,
           storeAddress: '',
@@ -134,13 +128,11 @@ export const Settings: React.FC<SettingsProps> = ({
                   <div className="aspect-video rounded-[3rem] bg-slate-50 dark:bg-slate-800 border-4 border-slate-100 dark:border-slate-700 flex items-center justify-center overflow-hidden relative shadow-inner group">
                     {storeSettings.logo ? (
                       <img src={storeSettings.logo} className="w-full h-full object-contain p-8" alt="Store Logo" />
-                    ) : isUploading ? (
-                      <Loader2 className="animate-spin text-brand-500" size={48} />
                     ) : (
                       <ImageIcon size={64} className="text-slate-200" />
                     )}
-                    <button disabled={isUploading} onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-slate-900/60 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all font-black text-xs uppercase tracking-widest gap-2">
-                       {isUploading ? <Loader2 size={20} className="animate-spin" /> : <Upload size={20}/>} {t('uploadLogo')}
+                    <button onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-slate-900/60 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all font-black text-xs uppercase tracking-widest gap-2">
+                       <Upload size={20}/> {t('uploadLogo')}
                     </button>
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
                   </div>
@@ -282,6 +274,15 @@ export const Settings: React.FC<SettingsProps> = ({
                             <button className="px-6 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2">Export CSV</button>
                         </div>
                     </div>
+                </div>
+                
+                <div className="bg-rose-50 dark:bg-rose-950/20 border-2 border-dashed border-rose-200 dark:border-rose-900/40 p-10 rounded-[3.5rem] flex flex-col items-center text-center space-y-6">
+                    <AlertCircle size={48} className="text-rose-500" />
+                    <div>
+                        <h4 className="text-xl font-black text-rose-600 uppercase italic">Factory Reset Node</h4>
+                        <p className="text-sm font-medium text-rose-500/80 max-w-md mx-auto mt-2 leading-relaxed">Wiping the local node data will disconnect this terminal from the cloud sync. This action is irreversible.</p>
+                    </div>
+                    <button className="px-10 py-5 bg-rose-600 text-white rounded-3xl font-black uppercase tracking-widest text-[10px] shadow-xl active:scale-95 transition-all">Destroy Local Ledger</button>
                 </div>
              </div>
           )}
