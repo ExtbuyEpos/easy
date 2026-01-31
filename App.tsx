@@ -31,11 +31,8 @@ const App: React.FC = () => {
   const [navigationHistory, setNavigationHistory] = useState<AppView[]>([]);
   
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
-  const [bookings, setBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [vendorRequests, setVendorRequests] = useState<VendorRequest[]>([]);
   
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => localStorage.getItem('easyPOS_theme') === 'dark');
   const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('easyPOS_language') as Language) || 'en');
@@ -45,16 +42,16 @@ const App: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
 
   const [storeSettings, setStoreSettings] = useState<StoreSettings>({
-    name: 'easyPOS', address: 'Retail Management System', phone: '', footerMessage: 'Thank you!',
+    name: 'easyPOS', address: 'Retail Management System', phone: '', footerMessage: 'System Operational.',
     receiptSize: '80mm', whatsappTemplate: '', whatsappPhoneNumber: '', taxEnabled: false, taxRate: 0, taxName: 'Tax', autoPrint: false,
     visitorAccessCode: '2026'
   });
 
   const [activeVendorId, setActiveVendorId] = useState<string | null>(null);
 
-  // Supreme System Admin - Full Access Authorization
-  const SYSTEM_ADMIN_EMAIL = 'nabeelkhan1007@gmail.com';
-  const isSupremeAdmin = useMemo(() => user?.email?.toLowerCase() === SYSTEM_ADMIN_EMAIL, [user]);
+  // SUPREME ADMIN AUTHORIZATION
+  const SYSTEM_MASTER_ID = 'nabeelkhan1007@gmail.com';
+  const isSupremeAdmin = useMemo(() => user?.email?.toLowerCase() === SYSTEM_MASTER_ID, [user]);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -72,11 +69,10 @@ const App: React.FC = () => {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  // Multi-Vendor Security: Filter products based on Vendor ID or Supreme Admin status
   const filteredProducts = useMemo(() => {
-    if (isSupremeAdmin) return products; // Admin sees everything
-    if (activeVendorId) return products.filter(p => p.vendorId === activeVendorId); // Shop visitors see specific vendor
-    if (user?.vendorId) return products.filter(p => p.vendorId === user.vendorId); // Vendor staff see their own shop
+    if (isSupremeAdmin) return products;
+    if (activeVendorId) return products.filter(p => p.vendorId === activeVendorId);
+    if (user?.vendorId) return products.filter(p => p.vendorId === user.vendorId);
     return products;
   }, [products, user, activeVendorId, isSupremeAdmin]);
 
@@ -122,7 +118,7 @@ const App: React.FC = () => {
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
       if (fbUser) {
         const userEmail = fbUser.email?.toLowerCase() || '';
-        const isAdmin = userEmail === SYSTEM_ADMIN_EMAIL || userEmail === 'zahratalsawsen1@gmail.com';
+        const isAdmin = userEmail === SYSTEM_MASTER_ID || userEmail === 'zahratalsawsen1@gmail.com';
         const restoredUser: User = {
           id: fbUser.uid,
           name: fbUser.displayName || (isAdmin ? 'System Master' : 'User'),
