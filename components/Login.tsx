@@ -2,8 +2,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Language, StoreSettings } from '../types';
 import { Lock, User as UserIcon, Loader2, Key, Store, Globe, LayoutDashboard, Sun, Moon, Zap, ShieldCheck, ShoppingCart, CreditCard, Wallet, Tag, Package, Smartphone, Layers, Boxes, LayoutGrid } from 'lucide-react';
-import { auth } from '../firebase';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 
 type LoginMethod = 'VISITOR_CODE' | 'CUSTOMER_GOOGLE' | 'CREDENTIALS';
 
@@ -43,12 +41,10 @@ export const Login: React.FC<LoginProps> = ({
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  // Physics engine state
   const [items, setItems] = useState<PhysicsItem[]>([]);
   const gravityRef = useRef({ x: 0, y: 1 });
 
   useEffect(() => {
-    // Generate icons for the gravity pit
     const colors = ['#0ea5e9', '#10b981', '#f43f5e', '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6'];
     const iconPool = [
         <ShoppingCart size={24} />, <CreditCard size={24} />, <Tag size={24} />, 
@@ -71,8 +67,6 @@ export const Login: React.FC<LoginProps> = ({
     setItems(initialItems);
 
     const handleMotion = (e: DeviceOrientationEvent) => {
-      // Gamma: Left/Right tilt (-90 to 90)
-      // Beta: Front/Back tilt (-180 to 180)
       const gx = (e.gamma || 0) / 45; 
       const gy = (e.beta || 0) / 45;
       gravityRef.current = { x: gx, y: gy };
@@ -84,28 +78,13 @@ export const Login: React.FC<LoginProps> = ({
       setItems(prev => prev.map(item => {
         let nvx = item.vx + (gravityRef.current.x * 0.15);
         let nvy = item.vy + (gravityRef.current.y * 0.15);
-        
-        // Friction
-        nvx *= 0.98;
-        nvy *= 0.98;
-
-        let nx = item.x + nvx;
-        let ny = item.y + nvy;
-
-        // Container Collision (Relative to bottom 40% of viewport)
+        nvx *= 0.98; nvy *= 0.98;
+        let nx = item.x + nvx; let ny = item.y + nvy;
         if (nx < 5) { nx = 5; nvx *= -0.6; }
         if (nx > 95) { nx = 95; nvx *= -0.6; }
         if (ny < 0) { ny = 0; nvy *= -0.6; }
         if (ny > 95) { ny = 95; nvy *= -0.6; }
-
-        return { 
-          ...item, 
-          x: nx, 
-          y: ny, 
-          vx: nvx, 
-          vy: nvy, 
-          rotation: item.rotation + item.rv + (nvx * 5) 
-        };
+        return { ...item, x: nx, y: ny, vx: nvx, vy: nvy, rotation: item.rotation + item.rv + (nvx * 5) };
       }));
       requestAnimationFrame(animate);
     };
@@ -116,24 +95,6 @@ export const Login: React.FC<LoginProps> = ({
       window.removeEventListener('deviceorientation', handleMotion);
     };
   }, []);
-
-  const handleGoogleLogin = async () => {
-    if (!auth) return;
-    setLoading(true);
-    try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const email = result.user.email?.toLowerCase() || '';
-      onLogin({
-        id: result.user.uid,
-        name: result.user.displayName || 'System User',
-        username: email.split('@')[0],
-        role: (email === 'nabeelkhan1007@gmail.com' || email === 'zahratalsawsen1@gmail.com') ? 'ADMIN' : 'CUSTOMER',
-        email: email,
-      });
-    } catch (err) { setError('Handshake failed.'); } 
-    finally { setLoading(false); }
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,9 +125,7 @@ export const Login: React.FC<LoginProps> = ({
   return (
     <div className="min-h-[100svh] bg-[#020617] flex flex-col items-center justify-start relative overflow-y-auto overflow-x-hidden font-sans custom-scrollbar">
       
-      {/* 
-          FIXED GRAVITY ICON PIT (Stays at viewport bottom while scrolling)
-      */}
+      {/* FIXED GRAVITY ICON PIT */}
       <div className="fixed inset-x-0 bottom-0 h-[40vh] pointer-events-none z-0">
           {items.map(item => (
               <div 
@@ -188,13 +147,13 @@ export const Login: React.FC<LoginProps> = ({
           ))}
       </div>
 
-      {/* Main Content Wrapper (Allows Scrolling) */}
-      <div className="w-full max-w-lg flex flex-col items-center z-10 px-6 py-12 min-h-full">
+      {/* Scrollable Content Container */}
+      <div className="w-full max-w-lg flex flex-col items-center z-10 px-6 py-12 min-h-[100svh]">
           
           {/* HERO LOGO */}
-          <div className="flex items-center gap-6 mb-12 animate-fade-in">
+          <div className="flex items-center gap-6 mb-12 animate-fade-in shrink-0">
               <div 
-                className="w-24 h-24 bg-[#0ea5e9] rounded-[2.5rem] flex items-center justify-center text-white shadow-[0_0_80px_rgba(14,165,233,0.6)] group transition-transform duration-500"
+                className="w-24 h-24 bg-[#0ea5e9] rounded-[2.5rem] flex items-center justify-center text-white shadow-[0_0_80px_rgba(14,165,233,0.6)]"
                 style={{
                   transform: `perspective(1000px) rotateY(${gravityRef.current.x * 20}deg) rotateX(${-gravityRef.current.y * 20}deg)`
                 }}
@@ -207,7 +166,7 @@ export const Login: React.FC<LoginProps> = ({
               </div>
           </div>
 
-          <div className="space-y-0 mb-16 text-center animate-fade-in">
+          <div className="space-y-0 mb-16 text-center animate-fade-in shrink-0">
               <h2 className="text-7xl md:text-9xl font-black text-white italic uppercase tracking-tighter leading-[0.75] opacity-95">SMART</h2>
               <h2 className="text-7xl md:text-9xl font-black text-slate-600 italic uppercase tracking-tighter leading-[0.75] opacity-40">RETAIL</h2>
               <p className="text-[10px] md:text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] pt-8 italic opacity-60">Professional Physical Inventory Logic.</p>
@@ -225,11 +184,11 @@ export const Login: React.FC<LoginProps> = ({
                       <>
                           <div className="relative group">
                               <UserIcon className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-brand-500 transition-colors" size={20} />
-                              <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full pl-16 pr-6 py-5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:border-brand-500 font-bold text-white transition-all shadow-inner placeholder:text-slate-600" placeholder="Operator ID" required />
+                              <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full pl-16 pr-6 py-5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:border-brand-500 font-bold text-white transition-all shadow-inner" placeholder="Operator ID" required />
                           </div>
                           <div className="relative group">
                               <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-brand-500 transition-colors" size={20} />
-                              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-16 pr-6 py-5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:border-brand-500 font-bold text-white transition-all shadow-inner placeholder:text-slate-600" placeholder="••••••••" required />
+                              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-16 pr-6 py-5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:border-brand-500 font-bold text-white transition-all shadow-inner" placeholder="••••••••" required />
                           </div>
                       </>
                   ) : (
@@ -254,16 +213,16 @@ export const Login: React.FC<LoginProps> = ({
               
               <div className="mt-10 pt-8 border-t border-white/5 flex items-center justify-between gap-4">
                   <button onClick={toggleLanguage} className="p-4 bg-white/5 hover:bg-white/10 rounded-2xl text-emerald-400 transition-all active:scale-90 shadow-xl border border-white/5"><Globe size={22}/></button>
-                  <button onClick={handleGoogleLogin} className="flex-1 py-4 bg-white text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all hover:bg-slate-100">
+                  <button onClick={() => alert('Connect with Supabase instead')} className="flex-1 py-4 bg-white text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all hover:bg-slate-100">
                       <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-5 h-5" alt="G" /> 
-                      Connect Identity
+                      Connect Secure
                   </button>
               </div>
           </div>
 
           {/* FOOTER SYSTEM META */}
           <div className="mt-auto py-8 flex flex-col items-center gap-2 opacity-30 pointer-events-none">
-              <p className="text-[9px] font-black uppercase tracking-[0.7em] text-white italic tracking-widest">ZAHRAT AL SAWSEN CORE v6.2</p>
+              <p className="text-[9px] font-black uppercase tracking-[0.7em] text-white italic tracking-widest">ZAHRAT AL SAWSEN CORE v6.5</p>
               <div className="h-0.5 w-12 bg-brand-500 rounded-full"></div>
           </div>
       </div>
@@ -274,7 +233,6 @@ export const Login: React.FC<LoginProps> = ({
           to { opacity: 1; transform: translateY(0); }
         }
         .animate-fade-in-up { animation: fade-in-up 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
           25% { transform: translateX(-6px); }

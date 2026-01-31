@@ -14,6 +14,7 @@ const firebaseConfig = {
   appId: "1:856022079884:web:bfb08ce547b42a50f31ea9"
 };
 
+// Singleton storage
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
@@ -21,15 +22,15 @@ let messaging: Messaging | null = null;
 let analytics: Analytics | null = null;
 
 try {
-  // Ensure app is initialized only once
+  // 1. Initialize core App
   app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
   
-  // Initialize services IMMEDIATELY to register components in the Firebase internal container
+  // 2. Initialize core services immediately to trigger internal component registration
   auth = getAuth(app);
   db = getFirestore(app);
 
-  // Background setup for optional features to prevent blocking
-  const initializeOptionalServices = async () => {
+  // 3. Setup optional services and persistence in background
+  const setupOptional = async () => {
     try {
       if (await isMessagingSupported()) messaging = getMessaging(app);
       if (await isAnalyticsSupported()) analytics = getAnalytics(app);
@@ -37,23 +38,22 @@ try {
       // Attempt to enable offline persistence for better POS performance
       await enableIndexedDbPersistence(db).catch((err) => {
         if (err.code === 'failed-precondition') {
-          console.warn("Persistence failed: Multiple tabs open.");
+          console.warn("Firebase: Persistence failed due to multiple tabs.");
         } else if (err.code === 'unimplemented') {
-          console.warn("Persistence failed: Browser not supported.");
+          console.warn("Firebase: Persistence not supported by browser.");
         }
       });
     } catch (e) {
-      console.warn("Optional Firebase services failed to load", e);
+      console.warn("Firebase: Optional services skipped.", e);
     }
   };
   
-  initializeOptionalServices();
+  setupOptional();
 } catch (error) {
-  console.error("Firebase Critical Init Error:", error);
+  console.error("Firebase: Initialization sequence failed critical check.", error);
 }
 
-// @ts-ignore - Exporting even if potentially uninitialized to avoid broken imports elsewhere, 
-// though try-block should ensure they exist for valid config.
+// Ensure exports are available
 export { db, app, auth, messaging, analytics };
 
 export const saveFirebaseConfig = (configStr: string) => {

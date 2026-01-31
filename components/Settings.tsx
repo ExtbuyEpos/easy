@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { User, StoreSettings, Language, VendorRequest, Product, Sale, UserRole } from '../types';
-import { Save, UserPlus, Trash2, Edit2, X, ShieldCheck, Database, HardDrive, User as UserIcon, ChevronLeft, CheckCircle2, AlertCircle, RefreshCw, Upload, Image as ImageIcon } from 'lucide-react';
+import { Save, UserPlus, Trash2, Edit2, X, ShieldCheck, Database, HardDrive, User as UserIcon, ChevronLeft, CheckCircle2, AlertCircle, RefreshCw, Upload, Image as ImageIcon, Store, Key } from 'lucide-react';
 
 interface SettingsProps {
   users: User[];
@@ -31,7 +31,7 @@ export const Settings: React.FC<SettingsProps> = ({
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [userFormData, setUserFormData] = useState<Partial<User>>({
-    name: '', username: '', password: '', role: 'STAFF'
+    name: '', username: '', password: '', role: 'STAFF', vendorId: ''
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -56,7 +56,7 @@ export const Settings: React.FC<SettingsProps> = ({
       setUserFormData(user);
     } else {
       setEditingUser(null);
-      setUserFormData({ name: '', username: '', password: '', role: 'STAFF' });
+      setUserFormData({ name: '', username: '', password: '', role: 'STAFF', vendorId: '' });
     }
     setIsUserModalOpen(true);
   };
@@ -67,14 +67,29 @@ export const Settings: React.FC<SettingsProps> = ({
       return;
     }
 
+    const role = (userFormData.role as UserRole) || 'STAFF';
+    // Auto-generate Vendor ID if creating a new Vendor and not provided
+    let finalVendorId = userFormData.vendorId;
+    if (role === 'VENDOR' && !finalVendorId && !editingUser) {
+        finalVendorId = `VND-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    }
+
     const userData: User = {
       id: editingUser ? editingUser.id : `usr_${Date.now()}`,
       name: userFormData.name!,
-      username: userFormData.username!,
+      username: userFormData.username!.toLowerCase(),
       password: userFormData.password!,
-      role: (userFormData.role as UserRole) || 'STAFF',
+      role: role,
       email: userFormData.email || '',
-      vendorId: userFormData.vendorId
+      vendorId: finalVendorId,
+      // Initialize default vendor settings if it's a vendor
+      vendorSettings: role === 'VENDOR' ? (editingUser?.vendorSettings || {
+          storeName: userFormData.name!,
+          storeAddress: '',
+          shopPasscode: '2026',
+          customUrlSlug: finalVendorId?.toLowerCase() || ''
+      }) : undefined,
+      vendorStaffLimit: role === 'VENDOR' ? (editingUser?.vendorStaffLimit || 10) : undefined
     };
 
     if (editingUser) onUpdateUser(userData);
@@ -205,12 +220,12 @@ export const Settings: React.FC<SettingsProps> = ({
                                           <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center font-black text-slate-400 uppercase italic">{u.name.charAt(0)}</div>
                                           <div>
                                               <div className="font-black text-slate-900 dark:text-white uppercase italic">{u.name}</div>
-                                              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">@{u.username}</div>
+                                              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">@{u.username} {u.vendorId && <span className="text-brand-500 ml-2">[{u.vendorId}]</span>}</div>
                                           </div>
                                       </div>
                                   </td>
                                   <td className="p-8 text-center">
-                                      <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border-2 ${u.role === 'ADMIN' ? 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/20' : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/20'}`}>
+                                      <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border-2 ${u.role === 'ADMIN' ? 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/20' : u.role === 'VENDOR' ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-950/20' : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/20'}`}>
                                           {u.role}
                                       </span>
                                   </td>
@@ -285,7 +300,7 @@ export const Settings: React.FC<SettingsProps> = ({
                       <button onClick={() => setIsUserModalOpen(false)} className="p-3 bg-white dark:bg-slate-800 text-slate-400 rounded-2xl hover:text-red-500 transition-all"><X size={24}/></button>
                   </div>
                   
-                  <div className="p-10 space-y-8">
+                  <div className="p-10 space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
                       <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('fullLegalName')}</label>
                           <input type="text" value={userFormData.name} onChange={e => setUserFormData({...userFormData, name: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white outline-none focus:border-brand-500" />
@@ -306,9 +321,23 @@ export const Settings: React.FC<SettingsProps> = ({
                               <option value="STAFF">Staff Operator</option>
                               <option value="MANAGER">Node Manager</option>
                               <option value="ADMIN">System Admin</option>
+                              <option value="VENDOR">Vendor Node Owner</option>
                               <option value="CASHIER">Cashier Terminal</option>
                           </select>
                       </div>
+
+                      {userFormData.role === 'VENDOR' && (
+                          <div className="p-6 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-3xl space-y-4 animate-fade-in">
+                              <div className="flex items-center gap-3">
+                                  <Store className="text-blue-600" size={20} />
+                                  <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Vendor Node Details</h4>
+                              </div>
+                              <div className="space-y-1">
+                                  <label className="text-[9px] font-black text-blue-400 uppercase tracking-widest ml-1">Static Node ID (Leave blank to auto-gen)</label>
+                                  <input type="text" value={userFormData.vendorId} onChange={e => setUserFormData({...userFormData, vendorId: e.target.value.toUpperCase()})} className="w-full p-3 bg-white dark:bg-slate-800 rounded-xl font-mono text-sm dark:text-white border border-blue-100 outline-none" placeholder="VND-XXXXXX" />
+                              </div>
+                          </div>
+                      )}
                   </div>
 
                   <div className="p-10 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 flex gap-4">

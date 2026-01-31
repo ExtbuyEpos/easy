@@ -13,7 +13,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
-        darkMode: 'class', // Enable manual dark mode toggling
+        darkMode: 'class',
         theme: {
           extend: {
             fontFamily: {
@@ -39,52 +39,30 @@
       }
     </script>
     <style>
-      /* Fluid UI & Scrollbar Improvements */
-      :root {
-        --app-height: 100%;
-      }
+      :root { --app-height: 100%; }
       html, body {
         height: 100svh;
         overflow: hidden;
         touch-action: manipulation;
       }
-      #root {
-        height: 100svh;
-      }
-      ::-webkit-scrollbar {
-        width: 5px;
-        height: 5px;
-      }
-      ::-webkit-scrollbar-track {
-        background: transparent;
-      }
-      .dark ::-webkit-scrollbar-track {
-        background: transparent;
-      }
+      #root { height: 100svh; }
+      ::-webkit-scrollbar { width: 5px; height: 5px; }
+      ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb {
         background: #334155;
         border-radius: 10px;
       }
-      .dark ::-webkit-scrollbar-thumb {
-        background: #475569;
+      .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.1);
+        border-radius: 20px;
       }
       @media print {
         .no-print { display: none !important; }
         .print-only { display: block !important; }
         body { background: white; height: auto; overflow: visible; }
       }
-      /* Prevent text selection on buttons for app-like feel */
-      button {
-        user-select: none;
-        -webkit-tap-highlight-color: transparent;
-      }
-      .custom-scrollbar::-webkit-scrollbar {
-        width: 4px;
-      }
-      .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(255,255,255,0.1);
-        border-radius: 20px;
-      }
+      button { user-select: none; -webkit-tap-highlight-color: transparent; }
     </style>
   <script type="importmap">
 {
@@ -103,11 +81,7 @@
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
     "qrcode": "https://esm.sh/qrcode@1.5.3",
     "vite-plugin-pwa": "https://esm.sh/vite-plugin-pwa@^1.2.0",
-    "firebase/app": "https://esm.sh/firebase@11.0.2/app",
-    "firebase/firestore": "https://esm.sh/firebase@11.0.2/firestore",
-    "firebase/auth": "https://esm.sh/firebase@11.0.2/auth",
-    "firebase/messaging": "https://esm.sh/firebase@11.0.2/messaging",
-    "firebase/analytics": "https://esm.sh/firebase@11.0.2/analytics",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.45.4",
     "firebase/": "https://esm.sh/firebase@^12.8.0/"
   }
 }

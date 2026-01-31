@@ -3,7 +3,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { Product, Sale, User, Language, VendorSettings } from '../types';
 import { CURRENCY } from '../constants';
 import { formatCurrency, formatNumber } from '../utils/format';
-import { Package, TrendingUp, DollarSign, Search, Plus, List, ChevronLeft, ArrowUpRight, ShoppingBag, Layers, Users, ShieldCheck, Trash2, Edit2, X, Save, Key, Mail, Store, Cloud, Calendar, RefreshCw, Loader2, Zap, UserCheck, ShieldAlert, MapPin, Type } from 'lucide-react';
+import { Package, TrendingUp, DollarSign, Search, Plus, List, ChevronLeft, ArrowUpRight, ShoppingBag, Layers, Users, ShieldCheck, Trash2, Edit2, X, Save, Key, Mail, Store, Cloud, Calendar, RefreshCw, Loader2, Zap, UserCheck, ShieldAlert, MapPin, Type, Copy } from 'lucide-react';
 import { Inventory } from './Inventory';
 
 interface VendorPanelProps {
@@ -58,7 +58,7 @@ export const VendorPanel: React.FC<VendorPanelProps> = ({
 
   const generateStaffId = () => {
       const count = myStaff.length + 1;
-      return `${vendorId}-STF-${count.toString().padStart(3, '0')}`;
+      return `${vendorId.split('-')[1] || vendorId}-${count.toString().padStart(3, '0')}`;
   };
 
   const generateStaffPassword = () => {
@@ -71,7 +71,7 @@ export const VendorPanel: React.FC<VendorPanelProps> = ({
         return;
     }
     
-    const autoUsername = generateStaffId();
+    const autoUsername = generateStaffId().toLowerCase();
     const autoPwd = generateStaffPassword();
 
     const staffData: User = {
@@ -84,14 +84,20 @@ export const VendorPanel: React.FC<VendorPanelProps> = ({
         vendorId: vendorId
     };
 
-    if (editingStaffId) onUpdateUser(staffData);
-    else {
+    if (editingStaffId) {
+        onUpdateUser(staffData);
+    } else {
         onAddUser(staffData);
         setLastProvisionedStaff(staffData);
     }
     
     setIsStaffModalOpen(false);
     setStaffFormData({ name: '', username: '', password: '', role: 'VENDOR_STAFF', email: '' });
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    alert("Copied to clipboard!");
   };
 
   const mySalesStats = useMemo(() => {
@@ -164,19 +170,28 @@ export const VendorPanel: React.FC<VendorPanelProps> = ({
                 <div className="bg-blue-50 dark:bg-blue-950/20 border-2 border-blue-500 p-8 rounded-[2.5rem] animate-fade-in-up relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-10"><UserCheck size={120} className="text-blue-500"/></div>
                     <div className="flex justify-between items-start relative z-10">
-                        <div>
+                        <div className="w-full">
                             <h4 className="text-blue-600 font-black uppercase tracking-widest text-xs flex items-center gap-2 italic"><Zap size={14}/> Staff Node Provisioned</h4>
-                            <p className="text-blue-700 dark:text-blue-400 font-bold mt-2 text-sm">Security credentials sent to <b>{lastProvisionedStaff.name}</b></p>
-                            <div className="mt-6 flex flex-wrap gap-4">
-                                <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-blue-200">
-                                    <span className="text-[9px] font-black uppercase text-slate-400 block">Operator ID</span>
-                                    <span className="text-sm font-black dark:text-white font-mono">{lastProvisionedStaff.username}</span>
+                            <p className="text-blue-700 dark:text-blue-400 font-bold mt-2 text-sm">Security credentials generated for <b>{lastProvisionedStaff.name}</b></p>
+                            
+                            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="bg-white dark:bg-slate-900 p-5 rounded-[1.8rem] border border-blue-200 shadow-sm flex items-center justify-between">
+                                    <div>
+                                        <span className="text-[9px] font-black uppercase text-slate-400 block mb-1">Operator Access ID</span>
+                                        <span className="text-lg font-black dark:text-white font-mono">{lastProvisionedStaff.username}</span>
+                                    </div>
+                                    <button onClick={() => copyToClipboard(lastProvisionedStaff.username)} className="p-3 bg-blue-50 dark:bg-slate-800 text-blue-600 rounded-xl hover:scale-110 transition-transform"><Copy size={18}/></button>
                                 </div>
-                                <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-blue-200">
-                                    <span className="text-[9px] font-black uppercase text-slate-400 block">Passkey</span>
-                                    <span className="text-sm font-black dark:text-white font-mono">{lastProvisionedStaff.password}</span>
+                                <div className="bg-white dark:bg-slate-900 p-5 rounded-[1.8rem] border border-blue-200 shadow-sm flex items-center justify-between">
+                                    <div>
+                                        <span className="text-[9px] font-black uppercase text-slate-400 block mb-1">System Passkey</span>
+                                        <span className="text-lg font-black dark:text-white font-mono">{lastProvisionedStaff.password}</span>
+                                    </div>
+                                    <button onClick={() => lastProvisionedStaff.password && copyToClipboard(lastProvisionedStaff.password)} className="p-3 bg-blue-50 dark:bg-slate-800 text-blue-600 rounded-xl hover:scale-110 transition-transform"><Copy size={18}/></button>
                                 </div>
                             </div>
+                            
+                            <p className="text-[9px] font-bold text-blue-400 uppercase tracking-widest mt-6 italic">* Note: For security, the passkey is only visible once during provisioning.</p>
                         </div>
                         <button onClick={() => setLastProvisionedStaff(null)} className="p-2 text-blue-500 hover:text-red-500 transition-colors"><X size={24}/></button>
                     </div>
@@ -205,13 +220,18 @@ export const VendorPanel: React.FC<VendorPanelProps> = ({
                                 <td className="p-10">
                                     <div className="flex items-center gap-4">
                                         <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center font-black text-slate-400 uppercase italic">{u.name.charAt(0)}</div>
-                                        <div><div className="font-black text-slate-900 dark:text-white uppercase italic">{u.name}</div><div className="text-[9px] font-bold text-slate-400 mt-1">{u.email}</div></div>
+                                        <div><div className="font-black text-slate-900 dark:text-white uppercase italic">{u.name}</div><div className="text-[9px] font-bold text-slate-400 mt-1">{u.email || 'No contact email'}</div></div>
                                     </div>
                                 </td>
                                 <td className="p-10"><span className="px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border-2 bg-brand-50 text-brand-600 border-brand-100 dark:bg-brand-900/10 dark:border-brand-900/30">@{u.username}</span></td>
                                 <td className="p-10 text-right"><div className="flex justify-end gap-2"><button onClick={() => { setEditingStaffId(u.id); setStaffFormData(u); setIsStaffModalOpen(true); }} className="p-3 text-slate-300 hover:text-brand-500 transition-colors"><Edit2 size={20}/></button><button onClick={() => onDeleteUser(u.id)} className="p-3 text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={20}/></button></div></td>
                             </tr>
                         ))}
+                        {myStaff.length === 0 && (
+                            <tr>
+                                <td colSpan={3} className="p-20 text-center text-slate-400 font-black uppercase tracking-widest text-[10px] opacity-20">No Personnel Records Found</td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>
@@ -284,10 +304,10 @@ export const VendorPanel: React.FC<VendorPanelProps> = ({
                       <button onClick={() => setIsStaffModalOpen(false)} className="p-2 bg-white/5 rounded-xl hover:text-red-500"><X size={24}/></button>
                   </div>
                   <div className="p-8 space-y-5">
-                      <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Legal Name</label><input type="text" value={staffFormData.name} onChange={e => setStaffFormData({...staffFormData, name: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white" /></div>
+                      <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Legal Name</label><input type="text" value={staffFormData.name} onChange={e => setStaffFormData({...staffFormData, name: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white outline-none focus:border-brand-500" /></div>
                       <div className="space-y-1">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Contact Email (for credentials)</label>
-                          <input type="email" value={staffFormData.email} onChange={e => setStaffFormData({...staffFormData, email: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white" placeholder="staff@vendor.com" />
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Contact Email (optional)</label>
+                          <input type="email" value={staffFormData.email} onChange={e => setStaffFormData({...staffFormData, email: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white outline-none focus:border-brand-500" placeholder="staff@vendor.com" />
                       </div>
                       
                       {!editingStaffId && (
@@ -298,12 +318,12 @@ export const VendorPanel: React.FC<VendorPanelProps> = ({
 
                       {editingStaffId && (
                           <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Staff Access ID</label><input type="text" value={staffFormData.username} onChange={e => setStaffFormData({...staffFormData, username: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white" /></div>
-                              <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Passkey</label><input type="password" value={staffFormData.password} onChange={e => setStaffFormData({...staffFormData, password: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white" /></div>
+                              <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Staff Access ID</label><input type="text" value={staffFormData.username} onChange={e => setStaffFormData({...staffFormData, username: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white outline-none focus:border-brand-500" /></div>
+                              <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Passkey</label><input type="password" value={staffFormData.password} onChange={e => setStaffFormData({...staffFormData, password: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white outline-none focus:border-brand-500" /></div>
                           </div>
                       )}
                   </div>
-                  <div className="p-8 bg-slate-50 dark:bg-slate-900/50 border-t border-white/5"><button onClick={handleSaveStaff} className="w-full py-5 bg-brand-600 text-white rounded-3xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 italic">Sync Staff Profile</button></div>
+                  <div className="p-8 bg-slate-50 dark:bg-slate-900/50 border-t border-white/5"><button onClick={handleSaveStaff} className="w-full py-5 bg-brand-600 text-white rounded-3xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 italic hover:bg-brand-500">Sync Staff Profile</button></div>
               </div>
           </div>
       )}
