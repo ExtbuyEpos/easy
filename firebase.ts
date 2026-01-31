@@ -1,16 +1,10 @@
+
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getFirestore, Firestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
 import { getMessaging, Messaging, isSupported as isMessagingSupported } from 'firebase/messaging';
 import { getAnalytics, Analytics, isSupported as isAnalyticsSupported } from 'firebase/analytics';
 
-let app: FirebaseApp | undefined;
-let db: Firestore | null = null;
-let auth: Auth | null = null;
-let messaging: Messaging | null = null;
-let analytics: Analytics | null = null;
-
-// Use the provided Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyCL8ue8SMmLdDVaj-dofxm_nYmJznaV4yI",
   authDomain: "extbuy-flutter-ai.firebaseapp.com",
@@ -20,52 +14,52 @@ const firebaseConfig = {
   appId: "1:856022079884:web:bfb08ce547b42a50f31ea9"
 };
 
-const initFirebase = async () => {
-  try {
-    const savedConfigStr = localStorage.getItem('easyPOS_firebaseConfig');
-    const finalConfig = savedConfigStr ? JSON.parse(savedConfigStr) : firebaseConfig;
+let app: FirebaseApp;
+let auth: Auth;
+let db: Firestore;
+let messaging: Messaging | null = null;
+let analytics: Analytics | null = null;
 
-    if (!getApps().length) {
-      app = initializeApp(finalConfig);
-    } else {
-      app = getApp();
-    }
+try {
+  // Ensure app is initialized only once
+  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+  
+  // Initialize services IMMEDIATELY to register components in the Firebase internal container
+  auth = getAuth(app);
+  db = getFirestore(app);
 
-    if (app) {
-      db = getFirestore(app);
-      auth = getAuth(app);
+  // Background setup for optional features to prevent blocking
+  const initializeOptionalServices = async () => {
+    try {
+      if (await isMessagingSupported()) messaging = getMessaging(app);
+      if (await isAnalyticsSupported()) analytics = getAnalytics(app);
       
-      const msgSupported = await isMessagingSupported();
-      if (msgSupported) {
-        messaging = getMessaging(app);
-      }
-
-      const analyticsSupported = await isAnalyticsSupported();
-      if (analyticsSupported) {
-        analytics = getAnalytics(app);
-      }
+      // Attempt to enable offline persistence for better POS performance
+      await enableIndexedDbPersistence(db).catch((err) => {
+        if (err.code === 'failed-precondition') {
+          console.warn("Persistence failed: Multiple tabs open.");
+        } else if (err.code === 'unimplemented') {
+          console.warn("Persistence failed: Browser not supported.");
+        }
+      });
+    } catch (e) {
+      console.warn("Optional Firebase services failed to load", e);
     }
-  } catch (e) {
-    console.warn("Firebase initialization skipped or failed. Operating in LocalStorage mode.", e);
-    app = undefined;
-    db = null;
-    auth = null;
-    messaging = null;
-    analytics = null;
-  }
-};
+  };
+  
+  initializeOptionalServices();
+} catch (error) {
+  console.error("Firebase Critical Init Error:", error);
+}
 
-// Immediate invocation
-initFirebase();
-
+// @ts-ignore - Exporting even if potentially uninitialized to avoid broken imports elsewhere, 
+// though try-block should ensure they exist for valid config.
 export { db, app, auth, messaging, analytics };
 
 export const saveFirebaseConfig = (configStr: string) => {
   try {
-    JSON.parse(configStr);
     localStorage.setItem('easyPOS_firebaseConfig', configStr);
-    // Re-initialize after config update
-    initFirebase();
+    window.location.reload();
     return true;
   } catch (e) {
     return false;
@@ -74,8 +68,5 @@ export const saveFirebaseConfig = (configStr: string) => {
 
 export const clearFirebaseConfig = () => {
   localStorage.removeItem('easyPOS_firebaseConfig');
-  db = null;
-  auth = null;
-  messaging = null;
-  analytics = null;
+  window.location.reload();
 };

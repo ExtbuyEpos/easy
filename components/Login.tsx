@@ -1,11 +1,24 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User, Language, StoreSettings } from '../types';
-import { Lock, User as UserIcon, Loader2, Key, Store, Globe, LayoutDashboard, Sun, Moon, Zap, ShieldCheck, Box, ShoppingCart, CreditCard, Wallet, Smartphone, Receipt } from 'lucide-react';
+import { Lock, User as UserIcon, Loader2, Key, Store, Globe, LayoutDashboard, Sun, Moon, Zap, ShieldCheck, ShoppingCart, CreditCard, Wallet, Tag, Package, Smartphone, Layers, Boxes, LayoutGrid } from 'lucide-react';
 import { auth } from '../firebase';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 
 type LoginMethod = 'VISITOR_CODE' | 'CUSTOMER_GOOGLE' | 'CREDENTIALS';
+
+interface PhysicsItem {
+  id: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  rotation: number;
+  rv: number;
+  size: number;
+  color: string;
+  icon: React.ReactNode;
+}
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -29,6 +42,80 @@ export const Login: React.FC<LoginProps> = ({
   const [visitorCode, setVisitorCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Physics engine state
+  const [items, setItems] = useState<PhysicsItem[]>([]);
+  const gravityRef = useRef({ x: 0, y: 1 });
+
+  useEffect(() => {
+    // Generate icons for the gravity pit
+    const colors = ['#0ea5e9', '#10b981', '#f43f5e', '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6'];
+    const iconPool = [
+        <ShoppingCart size={24} />, <CreditCard size={24} />, <Tag size={24} />, 
+        <Package size={24} />, <Zap size={24} />, <Boxes size={24} />, 
+        <LayoutGrid size={24} />, <Wallet size={24} />
+    ];
+
+    const initialItems: PhysicsItem[] = Array.from({ length: 32 }).map((_, i) => ({
+      id: i,
+      x: 10 + Math.random() * 80,
+      y: 80 + Math.random() * 20,
+      vx: (Math.random() - 0.5) * 2,
+      vy: (Math.random() - 0.5) * 2,
+      rotation: Math.random() * 360,
+      rv: (Math.random() - 0.5) * 10,
+      size: 44 + Math.random() * 12,
+      color: colors[i % colors.length],
+      icon: iconPool[i % iconPool.length]
+    }));
+    setItems(initialItems);
+
+    const handleMotion = (e: DeviceOrientationEvent) => {
+      // Gamma: Left/Right tilt (-90 to 90)
+      // Beta: Front/Back tilt (-180 to 180)
+      const gx = (e.gamma || 0) / 45; 
+      const gy = (e.beta || 0) / 45;
+      gravityRef.current = { x: gx, y: gy };
+    };
+
+    window.addEventListener('deviceorientation', handleMotion);
+
+    const animate = () => {
+      setItems(prev => prev.map(item => {
+        let nvx = item.vx + (gravityRef.current.x * 0.15);
+        let nvy = item.vy + (gravityRef.current.y * 0.15);
+        
+        // Friction
+        nvx *= 0.98;
+        nvy *= 0.98;
+
+        let nx = item.x + nvx;
+        let ny = item.y + nvy;
+
+        // Container Collision (Relative to bottom 40% of viewport)
+        if (nx < 5) { nx = 5; nvx *= -0.6; }
+        if (nx > 95) { nx = 95; nvx *= -0.6; }
+        if (ny < 0) { ny = 0; nvy *= -0.6; }
+        if (ny > 95) { ny = 95; nvy *= -0.6; }
+
+        return { 
+          ...item, 
+          x: nx, 
+          y: ny, 
+          vx: nvx, 
+          vy: nvy, 
+          rotation: item.rotation + item.rv + (nvx * 5) 
+        };
+      }));
+      requestAnimationFrame(animate);
+    };
+
+    const handleId = requestAnimationFrame(animate);
+    return () => {
+      cancelAnimationFrame(handleId);
+      window.removeEventListener('deviceorientation', handleMotion);
+    };
+  }, []);
 
   const handleGoogleLogin = async () => {
     if (!auth) return;
@@ -36,41 +123,36 @@ export const Login: React.FC<LoginProps> = ({
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      const userEmail = result.user.email?.toLowerCase() || '';
-      const isAdmin = userEmail === 'nabeelkhan1007@gmail.com' || userEmail === 'zahratalsawsen1@gmail.com';
+      const email = result.user.email?.toLowerCase() || '';
       onLogin({
         id: result.user.uid,
-        name: result.user.displayName || (isAdmin ? 'System Master' : 'User'),
-        username: result.user.email?.split('@')[0] || 'user',
-        role: isAdmin ? 'ADMIN' : 'CUSTOMER',
-        email: result.user.email || undefined,
+        name: result.user.displayName || 'System User',
+        username: email.split('@')[0],
+        role: (email === 'nabeelkhan1007@gmail.com' || email === 'zahratalsawsen1@gmail.com') ? 'ADMIN' : 'CUSTOMER',
+        email: email,
       });
-    } catch (err) { setError('Identity Sync Failed'); } 
+    } catch (err) { setError('Handshake failed.'); } 
     finally { setLoading(false); }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     if (method === 'CREDENTIALS') {
-      await new Promise(r => setTimeout(r, 800));
-      const user = users.find(u => 
-        (u.username.toLowerCase() === username.trim().toLowerCase() || u.email?.toLowerCase() === username.trim().toLowerCase()) && u.password === password
-      );
+      const user = users.find(u => (u.username.toLowerCase() === username.trim().toLowerCase()) && u.password === password);
       if (user) onLogin(user);
       else { setError(t('invalidCredentials')); setLoading(false); }
-    } else if (method === 'VISITOR_CODE') {
-      await new Promise(r => setTimeout(r, 1200));
-      const targetVendor = users.find(u => u.role === 'VENDOR' && u.vendorId?.toLowerCase() === vendorCodeInput.trim().toLowerCase());
-      if (targetVendor && visitorCode === (targetVendor.vendorSettings?.shopPasscode || '2026')) {
+    } else {
+      const vendor = users.find(u => u.role === 'VENDOR' && u.vendorId?.toLowerCase() === vendorCodeInput.trim().toLowerCase());
+      if (vendor && visitorCode === (vendor.vendorSettings?.shopPasscode || '2026')) {
         onLogin({
-          id: `guest_${Date.now()}`,
-          name: `${targetVendor.vendorSettings?.storeName || targetVendor.name} Guest`,
+          id: `vst_${Date.now()}`,
+          name: `${vendor.vendorSettings?.storeName || vendor.name} Visitor`,
           username: 'visitor',
           role: 'CUSTOMER',
-          vendorId: targetVendor.vendorId
+          vendorId: vendor.vendorId
         });
       } else {
         setError(t('invalidShopCode'));
@@ -80,157 +162,126 @@ export const Login: React.FC<LoginProps> = ({
   };
 
   return (
-    <div className="min-h-[100svh] bg-[#020617] flex flex-col items-center justify-center p-4 relative overflow-hidden transition-all duration-700 font-sans">
+    <div className="min-h-[100svh] bg-[#020617] flex flex-col items-center justify-start relative overflow-y-auto overflow-x-hidden font-sans custom-scrollbar">
       
       {/* 
-          MOTION MATRIX BACKGROUND 
-          - Floating boxes simulating gravity and depth 
+          FIXED GRAVITY ICON PIT (Stays at viewport bottom while scrolling)
       */}
-      <div className="absolute inset-0 pointer-events-none z-0">
-          <style>{`
-            @keyframes float-box-slow {
-              0%, 100% { transform: translate(0, 0) rotate(0deg); }
-              25% { transform: translate(10px, -20px) rotate(2deg); }
-              50% { transform: translate(-15px, -35px) rotate(-1deg); }
-              75% { transform: translate(20px, -15px) rotate(3deg); }
-            }
-            @keyframes pulse-glow {
-              0%, 100% { opacity: 0.3; transform: scale(1); }
-              50% { opacity: 0.6; transform: scale(1.1); }
-            }
-            .floating-element {
-              animation: float-box-slow 12s ease-in-out infinite;
-              will-change: transform;
-            }
-            .glow-pulse {
-              animation: pulse-glow 8s ease-in-out infinite;
-            }
-          `}</style>
-
-          {/* Background Gradient Orbs */}
-          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-brand-600/20 rounded-full blur-[120px] glow-pulse"></div>
-          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-600/10 rounded-full blur-[100px] glow-pulse" style={{ animationDelay: '-4s' }}></div>
-
-          {/* Floating Branding Items (Simulated Gravity) */}
-          <div className="absolute top-[15%] left-[10%] floating-element opacity-20 hidden md:block" style={{ animationDelay: '0s' }}>
-             <div className="bg-slate-800/40 p-6 rounded-[2rem] border border-white/10 backdrop-blur-xl rotate-12">
-                <ShoppingCart size={40} className="text-brand-400" />
-             </div>
-          </div>
-          <div className="absolute bottom-[20%] left-[5%] floating-element opacity-15 hidden md:block" style={{ animationDelay: '-3s' }}>
-             <div className="bg-slate-800/40 p-8 rounded-[2.5rem] border border-white/10 backdrop-blur-xl -rotate-6">
-                <CreditCard size={48} className="text-emerald-400" />
-             </div>
-          </div>
-          <div className="absolute top-[20%] right-[8%] floating-element opacity-20 hidden md:block" style={{ animationDelay: '-6s' }}>
-             <div className="bg-slate-800/40 p-5 rounded-[1.8rem] border border-white/10 backdrop-blur-xl -rotate-12">
-                <Receipt size={36} className="text-brand-300" />
-             </div>
-          </div>
-          <div className="absolute bottom-[15%] right-[10%] floating-element opacity-15 hidden md:block" style={{ animationDelay: '-9s' }}>
-             <div className="bg-slate-800/40 p-7 rounded-[2.2rem] border border-white/10 backdrop-blur-xl rotate-6">
-                <Wallet size={42} className="text-white" />
-             </div>
-          </div>
-
-          {/* Grid Pattern Layer */}
-          <div className="absolute inset-0 opacity-[0.03] bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:60px_60px]"></div>
+      <div className="fixed inset-x-0 bottom-0 h-[40vh] pointer-events-none z-0">
+          {items.map(item => (
+              <div 
+                key={item.id}
+                className="absolute flex items-center justify-center rounded-2xl shadow-2xl border border-white/10 transition-transform duration-75 ease-out"
+                style={{
+                    left: `${item.x}%`,
+                    top: `${item.y}%`,
+                    width: `${item.size}px`,
+                    height: `${item.size}px`,
+                    backgroundColor: item.color,
+                    transform: `translate(-50%, -50%) rotate(${item.rotation}deg)`,
+                    boxShadow: `0 0 40px ${item.color}66`,
+                    opacity: 0.9
+                }}
+              >
+                  <div className="text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]">{item.icon}</div>
+              </div>
+          ))}
       </div>
 
-      {/* Floating Header Controls */}
-      <div className="fixed top-8 right-8 flex gap-4 z-[100]">
-         <button onClick={toggleLanguage} className="flex items-center gap-3 px-8 py-4 bg-white/5 backdrop-blur-3xl rounded-[2rem] text-white border border-white/10 shadow-2xl hover:bg-white/10 transition-all font-black text-[11px] uppercase tracking-widest italic group">
-            <Globe size={20} className="text-emerald-400 group-hover:rotate-180 transition-transform duration-700" />
-            {language === 'en' ? 'Arabic' : 'English'}
-         </button>
-         <button onClick={toggleTheme} className="p-4 bg-white/5 backdrop-blur-3xl rounded-[1.5rem] text-white border border-white/10 shadow-2xl hover:bg-white/10 transition-all">
-            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-         </button>
-      </div>
-
-      {/* Main Container */}
-      <div className="bg-white/80 dark:bg-slate-900/90 backdrop-blur-2xl rounded-[4rem] shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden w-full max-w-7xl flex flex-col lg:flex-row animate-fade-in relative border border-white/5 min-h-[750px] z-10">
-        
-        {/* Left: Brand Gravity Box */}
-        <div className="bg-slate-950 p-12 lg:w-[45%] flex flex-col justify-center text-white relative overflow-hidden shrink-0 border-r border-white/5">
-          <div className="relative z-10 flex flex-col items-center text-center">
-            
-            {/* The Core Gravity Box */}
-            <div className="relative group">
-                <div className="floating-element w-72 h-72 bg-gradient-to-br from-slate-800 to-slate-950 rounded-[5rem] border-2 border-white/10 flex items-center justify-center relative shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)]">
-                    {/* Pulsing Outer Ring */}
-                    <div className="absolute inset-[-10px] border-2 border-brand-500/20 rounded-[5.5rem] animate-pulse"></div>
-                    <div className="absolute inset-[-20px] border border-brand-500/10 rounded-[6rem] animate-ping" style={{ animationDuration: '4s' }}></div>
-                    
-                    {/* Main Icon */}
-                    <div className="bg-brand-600 p-10 rounded-[3rem] text-white shadow-[0_0_60px_rgba(14,165,233,0.5)] transform group-hover:scale-110 transition-transform duration-1000">
-                        <LayoutDashboard size={100} strokeWidth={2.5} className="animate-pulse" />
-                    </div>
-
-                    {/* Orbiting Satellite Icons */}
-                    <div className="absolute -top-6 -right-6 bg-emerald-500 p-4 rounded-2xl shadow-xl border border-white/20 rotate-12 floating-element" style={{ animationDelay: '-2s' }}>
-                        <ShoppingCart size={24} className="text-white" />
-                    </div>
-                    <div className="absolute -bottom-8 -left-4 bg-brand-400 p-5 rounded-3xl shadow-xl border border-white/20 -rotate-6 floating-element" style={{ animationDelay: '-5s' }}>
-                        <CreditCard size={32} className="text-white" />
-                    </div>
-                </div>
-            </div>
-
-            <div className="mt-16 space-y-6">
-                <div className="flex flex-col items-center">
-                    <span className="text-6xl font-black tracking-tighter italic uppercase block bg-clip-text text-transparent bg-gradient-to-r from-white via-brand-300 to-slate-500">easyPOS</span>
-                    <span className="text-[11px] font-black tracking-[0.6em] text-brand-500 mt-3 block opacity-80 uppercase italic">Multi-Node Retail OS</span>
-                </div>
-                <div className="h-px w-48 bg-gradient-to-r from-transparent via-white/20 to-transparent mx-auto"></div>
-                <h1 className="text-4xl md:text-5xl font-black leading-tight tracking-tighter italic uppercase text-white/90">QUANTUM<br/>LEDGER HUB</h1>
-                <p className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.4em] leading-relaxed max-w-sm">{t('professionalSolution')}</p>
-            </div>
-          </div>
+      {/* Main Content Wrapper (Allows Scrolling) */}
+      <div className="w-full max-w-lg flex flex-col items-center z-10 px-6 py-12 min-h-full">
           
-          <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-brand-600/10 rounded-full blur-[120px]"></div>
-        </div>
+          {/* HERO LOGO */}
+          <div className="flex items-center gap-6 mb-12 animate-fade-in">
+              <div 
+                className="w-24 h-24 bg-[#0ea5e9] rounded-[2.5rem] flex items-center justify-center text-white shadow-[0_0_80px_rgba(14,165,233,0.6)] group transition-transform duration-500"
+                style={{
+                  transform: `perspective(1000px) rotateY(${gravityRef.current.x * 20}deg) rotateX(${-gravityRef.current.y * 20}deg)`
+                }}
+              >
+                  <LayoutGrid size={56} strokeWidth={2.5} className="animate-pulse" />
+              </div>
+              <div className="text-left">
+                  <h1 className="text-5xl font-black text-white italic tracking-tighter uppercase leading-none">EASYPOS</h1>
+                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.5em] mt-2 opacity-80 italic">Multi-Vendor Terminal</p>
+              </div>
+          </div>
 
-        {/* Right: Input Terminal */}
-        <div className="flex-1 p-8 md:p-20 flex flex-col justify-center bg-white dark:bg-slate-900">
-          <div className="max-w-md mx-auto w-full space-y-12">
-              <div className="text-center lg:text-left">
-                <div className="flex items-center gap-4 mb-3 justify-center lg:justify-start">
-                    <div className="w-12 h-12 rounded-2xl bg-brand-600/10 flex items-center justify-center text-brand-600"><Zap size={28} /></div>
-                    <h2 className="text-5xl font-black text-slate-900 dark:text-white tracking-tighter italic uppercase leading-none">Entry</h2>
-                </div>
-                <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.45em] mt-1 ml-1">{t('signInToAccess')}</p>
+          <div className="space-y-0 mb-16 text-center animate-fade-in">
+              <h2 className="text-7xl md:text-9xl font-black text-white italic uppercase tracking-tighter leading-[0.75] opacity-95">SMART</h2>
+              <h2 className="text-7xl md:text-9xl font-black text-slate-600 italic uppercase tracking-tighter leading-[0.75] opacity-40">RETAIL</h2>
+              <p className="text-[10px] md:text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] pt-8 italic opacity-60">Professional Physical Inventory Logic.</p>
+          </div>
+
+          {/* ENTRY TERMINAL */}
+          <div className="w-full max-w-sm mb-12 bg-white/5 backdrop-blur-3xl rounded-[3.5rem] border border-white/10 p-8 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)] animate-fade-in-up">
+              <div className="flex bg-black/40 p-1.5 rounded-[2.2rem] mb-8 border border-white/5 shadow-inner">
+                  <button onClick={() => setMethod('CREDENTIALS')} className={`flex-1 py-3.5 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all ${method === 'CREDENTIALS' ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-500 hover:text-white'}`}>Staff Access</button>
+                  <button onClick={() => setMethod('VISITOR_CODE')} className={`flex-1 py-3.5 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all ${method === 'VISITOR_CODE' ? 'bg-brand-600 text-white shadow-xl' : 'text-slate-500 hover:text-white'}`}>Shop Visitor</button>
               </div>
 
-              <div className="flex bg-slate-100 dark:bg-slate-800 p-2 rounded-[2.5rem] shadow-inner">
-                <button onClick={() => setMethod('CREDENTIALS')} className={`flex-1 py-4 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all ${method === 'CREDENTIALS' ? 'bg-slate-900 text-white shadow-xl scale-[1.02]' : 'text-slate-400'}`}>{t('staffLogin')}</button>
-                <button onClick={() => setMethod('CUSTOMER_GOOGLE')} className={`flex-1 py-4 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all ${method === 'CUSTOMER_GOOGLE' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-xl scale-[1.02]' : 'text-slate-400'}`}>GOOGLE</button>
-                <button onClick={() => setMethod('VISITOR_CODE')} className={`flex-1 py-4 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all ${method === 'VISITOR_CODE' ? 'bg-brand-600 text-white shadow-xl scale-[1.02]' : 'text-slate-400'}`}>{t('visitorAccess')}</button>
-              </div>
-
-              {error && <div className="p-5 bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-widest rounded-3xl border-2 border-red-100 animate-shake flex items-center gap-4"><ShieldCheck size={18}/> {error}</div>}
-
-              {method === 'CREDENTIALS' ? (
-                <form onSubmit={handleSubmit} className="space-y-8 animate-fade-in">
-                  <div className="space-y-3">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">{t('username')}</label>
-                    <div className="relative group">
-                        <UserIcon className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-brand-500 transition-colors" size={24} />
-                        <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full pl-16 pr-8 py-6 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent focus:border-brand-500 rounded-[2rem] outline-none font-bold text-xl dark:text-white transition-all shadow-inner" placeholder="operator_id" required />
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">{t('password')}</label>
-                    <div className="relative group">
-                        <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-brand-500 transition-colors" size={24} />
-                        <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-16 pr-8 py-6 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent focus:border-brand-500 rounded-[2rem] outline-none font-bold text-xl dark:text-white transition-all shadow-inner" placeholder="••••••••" required />
-                    </div>
-                  </div>
-                  <button type="submit" disabled={loading} className="w-full py-8 bg-slate-900 hover:bg-black text-white rounded-[2.5rem] font-black uppercase tracking-[0.35em] text-xs shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-4 group">
-                    {loading ? <Loader2 className="animate-spin" size={24} /> : <><ShieldCheck size={22} className="group-hover:scale-110 transition-transform"/> {t('accessTerminal')}</>}
+              <form onSubmit={handleSubmit} className="space-y-5">
+                  {method === 'CREDENTIALS' ? (
+                      <>
+                          <div className="relative group">
+                              <UserIcon className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-brand-500 transition-colors" size={20} />
+                              <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full pl-16 pr-6 py-5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:border-brand-500 font-bold text-white transition-all shadow-inner placeholder:text-slate-600" placeholder="Operator ID" required />
+                          </div>
+                          <div className="relative group">
+                              <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-brand-500 transition-colors" size={20} />
+                              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-16 pr-6 py-5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:border-brand-500 font-bold text-white transition-all shadow-inner placeholder:text-slate-600" placeholder="••••••••" required />
+                          </div>
+                      </>
+                  ) : (
+                      <>
+                          <div className="relative group">
+                              <Store className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
+                              <input type="text" value={vendorCodeInput} onChange={e => setVendorCodeInput(e.target.value)} className="w-full pl-16 pr-6 py-5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:border-brand-500 font-black uppercase text-white tracking-widest shadow-inner" placeholder="VND-XXXXX" required />
+                          </div>
+                          <div className="relative group">
+                              <Key className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
+                              <input type="password" value={visitorCode} onChange={e => setVisitorCode(e.target.value)} className="w-full pl-6 pr-6 py-5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:border-brand-500 font-black text-center text-4xl text-white tracking-[0.5em] shadow-inner" placeholder="••••" required maxLength={4} />
+                          </div>
+                      </>
+                  )}
+                  
+                  <button type="submit" disabled={loading} className="w-full py-6 bg-slate-900 hover:bg-black text-white rounded-[2.5rem] font-black uppercase tracking-[0.2em] text-xs shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-4 group border border-white/5 mt-4">
+                      {loading ? <Loader2 className="animate-spin" size={20} /> : <><ShieldCheck size={22} className="group-hover:scale-110 transition-transform"/> {method === 'CREDENTIALS' ? 'Login Node' : 'Enter Shop'}</>}
                   </button>
-                </form>
-              ) : method === 'CUSTOMER_GOOGLE' ? (
-                <div className="space-y-10 text-center py-6 animate-fade-in-up">
-                    <div className="py-16 px-8 bg-slate-50 dark:bg-slate-800/30 rounded-[4rem] border-2 border-dashed border-slate-200 dark:border-slate-800 relative group overflow-hidden">
-                        <div className="absolute inset-0 bg-brand-500/5 opacity-0 group-hover:opacity-
+              </form>
+
+              {error && <div className="mt-6 text-center text-[10px] font-black text-rose-500 uppercase tracking-widest animate-shake p-3 bg-rose-500/10 rounded-xl border border-rose-500/20">{error}</div>}
+              
+              <div className="mt-10 pt-8 border-t border-white/5 flex items-center justify-between gap-4">
+                  <button onClick={toggleLanguage} className="p-4 bg-white/5 hover:bg-white/10 rounded-2xl text-emerald-400 transition-all active:scale-90 shadow-xl border border-white/5"><Globe size={22}/></button>
+                  <button onClick={handleGoogleLogin} className="flex-1 py-4 bg-white text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all hover:bg-slate-100">
+                      <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-5 h-5" alt="G" /> 
+                      Connect Identity
+                  </button>
+              </div>
+          </div>
+
+          {/* FOOTER SYSTEM META */}
+          <div className="mt-auto py-8 flex flex-col items-center gap-2 opacity-30 pointer-events-none">
+              <p className="text-[9px] font-black uppercase tracking-[0.7em] text-white italic tracking-widest">ZAHRAT AL SAWSEN CORE v6.2</p>
+              <div className="h-0.5 w-12 bg-brand-500 rounded-full"></div>
+          </div>
+      </div>
+
+      <style>{`
+        @keyframes fade-in-up {
+          from { opacity: 0; transform: translateY(40px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up { animation: fade-in-up 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-6px); }
+          75% { transform: translateX(6px); }
+        }
+        .animate-shake { animation: shake 0.2s ease-in-out infinite; }
+      `}</style>
+    </div>
+  );
+};
