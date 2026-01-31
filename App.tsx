@@ -17,8 +17,7 @@ import { VendorPanel } from './components/VendorPanel';
 import { AppView, Product, Sale, CartItem, User, StoreSettings, Language, Booking, VendorRequest } from './types';
 import { INITIAL_PRODUCTS, INITIAL_USERS } from './constants';
 import { translations } from './translations';
-import { CloudOff, Loader2 } from 'lucide-react';
-import { logPageView, logPurchase, logUserLogin } from './services/analyticsService';
+import { CloudOff, Loader2, LogOut, ChevronLeft, Menu, Bell, Globe } from 'lucide-react';
 
 import { db, auth } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -49,46 +48,15 @@ const App: React.FC = () => {
 
   const [activeVendorId, setActiveVendorId] = useState<string | null>(null);
 
-  // SUPREME ADMIN AUTHORIZATION FOR NABEEL KHAN
-  const SYSTEM_MASTER_ID = 'nabeelkhan1007@gmail.com';
-  const isSupremeAdmin = useMemo(() => user?.email?.toLowerCase() === SYSTEM_MASTER_ID, [user]);
+  const isSupremeAdmin = useMemo(() => user?.email?.toLowerCase() === 'nabeelkhan1007@gmail.com', [user]);
 
-  useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash;
-      const match = hash.match(/#\/shop\/(.+)/);
-      if (match) {
-        setActiveVendorId(match[1]);
-        setCurrentView(AppView.CUSTOMER_PORTAL);
-      } else if (!hash || hash === '#/') {
-        setActiveVendorId(null);
-      }
-    };
-    window.addEventListener('hashchange', handleHashChange);
-    handleHashChange();
-    return () => window.removeEventListener('hashchange', handleHashChange);
+  const toggleLanguage = useCallback(() => {
+    setLanguage(prev => prev === 'en' ? 'ar' : 'en');
   }, []);
-
-  const filteredProducts = useMemo(() => {
-    if (isSupremeAdmin) return products;
-    if (activeVendorId) return products.filter(p => p.vendorId === activeVendorId);
-    if (user?.vendorId) return products.filter(p => p.vendorId === user.vendorId);
-    return products;
-  }, [products, user, activeVendorId, isSupremeAdmin]);
-
-  const filteredSales = useMemo(() => {
-    if (isSupremeAdmin) return sales;
-    if (user?.vendorId) return sales.filter(s => s.items.some(i => i.vendorId === user.vendorId));
-    return sales;
-  }, [sales, user, isSupremeAdmin]);
 
   const navigateTo = useCallback((view: AppView) => {
     if (view === currentView) return;
-    setNavigationHistory(prev => {
-        // Prevent duplicate consecutive entries in history
-        if (prev[prev.length - 1] === currentView) return prev;
-        return [...prev, currentView];
-    });
+    setNavigationHistory(prev => [...prev, currentView]);
     setCurrentView(view);
   }, [currentView]);
 
@@ -106,6 +74,14 @@ const App: React.FC = () => {
     }
   }, [navigationHistory, user]);
 
+  const handleLogout = async () => {
+    if (auth) await signOut(auth);
+    setUser(null);
+    setCurrentView(AppView.LOGIN);
+    setActiveVendorId(null);
+    setNavigationHistory([]);
+  };
+
   useEffect(() => {
     if (isDarkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
@@ -122,14 +98,13 @@ const App: React.FC = () => {
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
       if (fbUser) {
         const userEmail = fbUser.email?.toLowerCase() || '';
-        const isAdmin = userEmail === SYSTEM_MASTER_ID || userEmail === 'zahratalsawsen1@gmail.com';
+        const isAdmin = userEmail === 'nabeelkhan1007@gmail.com' || userEmail === 'zahratalsawsen1@gmail.com';
         const restoredUser: User = {
           id: fbUser.uid,
           name: fbUser.displayName || (isAdmin ? 'System Master' : 'User'),
           username: fbUser.email?.split('@')[0] || 'user',
           role: isAdmin ? 'ADMIN' : 'CUSTOMER',
           email: fbUser.email || undefined,
-          avatar: fbUser.photoURL || undefined
         };
         setUser(restoredUser);
         if (restoredUser.role === 'CUSTOMER') setCurrentView(AppView.CUSTOMER_PORTAL);
@@ -138,8 +113,6 @@ const App: React.FC = () => {
     });
     return () => unsubscribe();
   }, []);
-
-  const t = (key: string) => translations[language][key] || key;
 
   useEffect(() => {
     if (db) {
@@ -161,76 +134,79 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleCheckout = async (items: CartItem[], total: number, paymentMethod: 'CASH' | 'CARD', subTotal: number, discount: number, tax: number, discountType: 'percent' | 'fixed', customerName?: string, customerPhone?: string) => {
-    const saleId = Date.now().toString();
-    const newSale: Sale = { 
-      id: saleId, timestamp: Date.now(), items, subTotal, discount, discountType, tax, taxRate: storeSettings.taxRate, total, paymentMethod, status: 'COMPLETED', processedBy: user?.id, customerName, customerPhone
-    };
-    if (db) {
-        const batch = writeBatch(db);
-        batch.set(doc(db, 'sales', saleId), newSale);
-        items.forEach(item => {
-            const p = products.find(prod => prod.id === item.id);
-            if (p) batch.update(doc(db, 'products', item.id), { stock: p.stock - item.quantity });
-        });
-        await batch.commit();
-    }
-  };
-
-  const handleLogout = async () => {
-    if (auth) await signOut(auth);
-    setUser(null);
-    setCurrentView(AppView.LOGIN);
-    setActiveVendorId(null);
-    setNavigationHistory([]);
-  };
+  const t = (key: string) => translations[language][key] || key;
 
   if (isAuthChecking) {
-      return (
-          <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-              <Loader2 className="animate-spin text-brand-500" size={64} strokeWidth={3} />
-          </div>
-      );
+      return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="animate-spin text-brand-500" size={64} strokeWidth={3} /></div>;
   }
 
   if (!user && currentView !== AppView.CUSTOMER_PORTAL) {
     return (
       <Login 
-        onLogin={(u) => { 
-          setUser(u); 
-          let landing = u.role === 'CUSTOMER' ? AppView.CUSTOMER_PORTAL : (u.role === 'VENDOR' || u.role === 'VENDOR_STAFF' ? AppView.VENDOR_PANEL : AppView.POS);
-          setCurrentView(landing);
-        }} 
-        users={users} 
-        t={t} 
-        isDarkMode={isDarkMode} 
-        toggleTheme={() => setIsDarkMode(!isDarkMode)} 
-        language={language} 
-        toggleLanguage={() => setLanguage(language === 'en' ? 'ar' : 'en')}
-        storeSettings={storeSettings}
-        activeVendorId={activeVendorId}
+        onLogin={(u) => { setUser(u); setCurrentView(u.role === 'CUSTOMER' ? AppView.CUSTOMER_PORTAL : (u.role.includes('VENDOR') ? AppView.VENDOR_PANEL : AppView.POS)); }} 
+        users={users} t={t} isDarkMode={isDarkMode} toggleTheme={() => setIsDarkMode(!isDarkMode)} 
+        language={language} toggleLanguage={toggleLanguage} activeVendorId={activeVendorId}
       />
     );
   }
 
+  const getViewTitle = (view: AppView) => {
+    switch(view) {
+      case AppView.POS: return t('posTerminal');
+      case AppView.INVENTORY: return t('inventory');
+      case AppView.REPORTS: return t('reportsAi');
+      case AppView.VENDOR_PANEL: return t('vendorPanel');
+      case AppView.SETTINGS: return t('settings');
+      case AppView.ORDERS: return t('ordersReturns');
+      default: return 'System';
+    }
+  };
+
   return (
     <div className="flex h-[100svh] overflow-hidden bg-[#111827] font-sans flex-col lg:flex-row transition-colors">
       {!user?.role.includes('CUSTOMER') && (
-        <div className={`fixed inset-y-0 z-[70] w-72 transform transition-all duration-500 lg:static lg:w-72 lg:translate-x-0 ${isSidebarVisible ? 'translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'}`}>
-            <Sidebar currentView={currentView} onChangeView={navigateTo} onLogout={handleLogout} currentUser={user!} isOnline={true} isSyncing={isSyncing} isDarkMode={isDarkMode} toggleTheme={() => setIsDarkMode(!isDarkMode)} language={language} toggleLanguage={() => setLanguage(language === 'en' ? 'ar' : 'en')} t={t} onClose={() => setIsSidebarVisible(false)} />
+        <div className={`fixed inset-y-0 z-[100] w-72 transform transition-all duration-500 lg:static lg:w-72 lg:translate-x-0 ${isSidebarVisible ? 'translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'}`}>
+            <Sidebar currentView={currentView} onChangeView={navigateTo} onLogout={handleLogout} currentUser={user!} isOnline={true} isSyncing={isSyncing} isDarkMode={isDarkMode} toggleTheme={() => setIsDarkMode(!isDarkMode)} language={language} toggleLanguage={toggleLanguage} t={t} onClose={() => setIsSidebarVisible(false)} />
         </div>
       )}
       <main className={`flex-1 overflow-hidden relative flex flex-col bg-[#f8fafc] dark:bg-slate-950 transition-all duration-500 ${!user?.role.includes('CUSTOMER') && isSidebarVisible ? 'ltr:lg:rounded-l-[44px] rtl:lg:rounded-r-[44px] shadow-2xl' : ''}`}>
+        
+        {/* Simplified One-Click Multi-Button Header */}
+        {!user?.role.includes('CUSTOMER') && currentView !== AppView.LOGIN && (
+            <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center justify-between sticky top-0 z-50 no-print">
+                <div className="flex items-center gap-4">
+                    <button onClick={() => setIsSidebarVisible(!isSidebarVisible)} className="p-2 lg:hidden text-slate-500"><Menu size={24}/></button>
+                    {/* Primary Back Button for Each Page */}
+                    <button onClick={handleGoBack} className="p-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:text-brand-600 transition-all flex items-center gap-2 group">
+                        <ChevronLeft size={20} className="rtl:rotate-180 group-hover:-translate-x-0.5 transition-transform" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">{t('back')}</span>
+                    </button>
+                    <h2 className="text-sm font-black uppercase tracking-[0.2em] dark:text-white italic ml-2">{getViewTitle(currentView)}</h2>
+                </div>
+                <div className="flex items-center gap-3">
+                    <button onClick={toggleLanguage} className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-500 rounded-xl hover:bg-brand-500 hover:text-white transition-all">
+                        <Globe size={18}/>
+                    </button>
+                    <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
+                    {/* Top Logout Button for Each Page */}
+                    <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2.5 bg-red-50 dark:bg-red-950/20 text-red-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all group border border-red-100 dark:border-red-900/20">
+                        <LogOut size={16} className="group-hover:-translate-x-1 transition-transform"/>
+                        <span className="hidden md:inline">{t('logout')}</span>
+                    </button>
+                </div>
+            </header>
+        )}
+
         <div className="flex-1 overflow-hidden relative">
-            {currentView === AppView.CUSTOMER_PORTAL && <CustomerPortal products={filteredProducts} language={language} t={t} currentUser={user} onLoginRequest={() => { setUser(null); navigateTo(AppView.LOGIN); }} onLogout={handleLogout} onUpdateAvatar={() => {}} storeSettings={storeSettings} />}
-            {currentView === AppView.VENDOR_PANEL && <VendorPanel products={products} sales={sales} users={users} currentUser={user!} onAddProduct={(p) => setDoc(doc(db!, 'products', p.id), p)} onUpdateProduct={(p) => setDoc(doc(db!, 'products', p.id), p)} onDeleteProduct={(id) => deleteDoc(doc(db!, 'products', id))} onBulkUpdateProduct={() => {}} onAddUser={() => {}} onUpdateUser={() => {}} onDeleteUser={() => {}} language={language} t={t} onGoBack={handleGoBack} />}
-            {currentView === AppView.POS && <POS products={filteredProducts} sales={filteredSales} onCheckout={handleCheckout} storeSettings={storeSettings} onViewOrderHistory={() => navigateTo(AppView.ORDERS)} onUpdateStoreSettings={() => {}} t={t} language={language} currentUser={user!} onGoBack={handleGoBack} />}
-            {currentView === AppView.INVENTORY && <Inventory products={filteredProducts} onAddProduct={(p) => setDoc(doc(db!, 'products', p.id), p)} onUpdateProduct={(p) => setDoc(doc(db!, 'products', p.id), p)} onDeleteProduct={(id) => deleteDoc(doc(db!, 'products', id))} onBulkUpdateProduct={() => {}} onGoBack={handleGoBack} t={t} currentUser={user!} language={language} storeSettings={storeSettings} />}
-            {currentView === AppView.REPORTS && <Reports sales={filteredSales} products={products} users={users} onGoBack={handleGoBack} language={language} />}
-            {currentView === AppView.ORDERS && <Orders sales={filteredSales} onProcessReturn={() => {}} storeSettings={storeSettings} onGoBack={handleGoBack} language={language} />}
-            {currentView === AppView.SETTINGS && <Settings users={users} vendorRequests={[]} products={products} sales={sales} onAddUser={() => {}} onUpdateUser={() => {}} onDeleteUser={() => {}} onReviewRequest={() => {}} onLogout={handleLogout} currentUser={user!} storeSettings={storeSettings} onUpdateStoreSettings={() => {}} onGoBack={handleGoBack} language={language} toggleLanguage={() => setLanguage(language === 'en' ? 'ar' : 'en')} t={t} onNavigate={navigateTo} />}
+            {currentView === AppView.CUSTOMER_PORTAL && <CustomerPortal products={products} language={language} t={t} currentUser={user} onLoginRequest={() => navigateTo(AppView.LOGIN)} onLogout={handleLogout} onUpdateAvatar={() => {}} storeSettings={storeSettings} />}
+            {currentView === AppView.VENDOR_PANEL && <VendorPanel products={products} sales={sales} users={users} currentUser={user!} onAddProduct={(p) => setDoc(doc(db!, 'products', p.id), p)} onUpdateProduct={(p) => setDoc(doc(db!, 'products', p.id), p)} onDeleteProduct={(id) => deleteDoc(doc(db!, 'products', id))} onBulkUpdateProduct={() => {}} onAddUser={(u) => setDoc(doc(db!, 'users', u.id), u)} onUpdateUser={(u) => setDoc(doc(db!, 'users', u.id), u)} onDeleteUser={(id) => deleteDoc(doc(db!, 'users', id))} language={language} t={t} onGoBack={handleGoBack} />}
+            {currentView === AppView.POS && <POS products={products} sales={sales} onCheckout={() => {}} storeSettings={storeSettings} onViewOrderHistory={() => navigateTo(AppView.ORDERS)} onUpdateStoreSettings={() => {}} t={t} language={language} currentUser={user!} onGoBack={handleGoBack} />}
+            {currentView === AppView.INVENTORY && <Inventory products={products} onAddProduct={(p) => setDoc(doc(db!, 'products', p.id), p)} onUpdateProduct={(p) => setDoc(doc(db!, 'products', p.id), p)} onDeleteProduct={(id) => deleteDoc(doc(db!, 'products', id))} onBulkUpdateProduct={() => {}} onGoBack={handleGoBack} t={t} currentUser={user!} language={language} />}
+            {currentView === AppView.REPORTS && <Reports sales={sales} products={products} users={users} onGoBack={handleGoBack} language={language} />}
+            {currentView === AppView.ORDERS && <Orders sales={sales} onProcessReturn={() => {}} storeSettings={storeSettings} onGoBack={handleGoBack} language={language} />}
+            {currentView === AppView.SETTINGS && <Settings users={users} vendorRequests={[]} products={products} sales={sales} onAddUser={(u) => setDoc(doc(db!, 'users', u.id), u)} onUpdateUser={(u) => setDoc(doc(db!, 'users', u.id), u)} onDeleteUser={(id) => deleteDoc(doc(db!, 'users', id))} onReviewRequest={() => {}} onLogout={handleLogout} currentUser={user!} storeSettings={storeSettings} onUpdateStoreSettings={() => {}} onGoBack={handleGoBack} language={language} toggleLanguage={toggleLanguage} t={t} />}
         </div>
-        {user && !user.role.includes('CUSTOMER') && <ClawdBot products={products} sales={sales} storeSettings={storeSettings} currentUser={user} language={language} t={t} />}
+        {!user?.role.includes('CUSTOMER') && <ClawdBot products={products} sales={sales} storeSettings={storeSettings} currentUser={user!} language={language} t={t} />}
       </main>
     </div>
   );

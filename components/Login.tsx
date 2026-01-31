@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Language, StoreSettings } from '../types';
-import { Lock, User as UserIcon, AlertCircle, ChevronRight, Moon, Sun, LayoutDashboard, Loader2, Key, Store, ShoppingCart, Receipt, CreditCard, Package, ScanLine, Printer, Zap, Globe } from 'lucide-react';
+import { Lock, User as UserIcon, Loader2, Key, Store, Globe, LayoutDashboard, Sun, Moon } from 'lucide-react';
 import { auth } from '../firebase';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 
@@ -18,187 +18,6 @@ interface LoginProps {
   storeSettings?: StoreSettings;
   activeVendorId: string | null;
 }
-
-const GravityTerminal: React.FC = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const gravityRef = useRef({ x: 0, y: 0.5 }); 
-  const mouseRef = useRef({ x: -1000, y: -1000, isDown: false });
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let animationFrameId: number;
-    let width: number;
-    let height: number;
-
-    const colorPalette = [
-      { fill: '#0ea5e9', stroke: '#ffffff', glow: 'rgba(14, 165, 233, 0.6)' },
-      { fill: '#f59e0b', stroke: '#ffffff', glow: 'rgba(245, 158, 11, 0.6)' },
-      { fill: '#10b981', stroke: '#ffffff', glow: 'rgba(16, 185, 129, 0.6)' },
-      { fill: '#ef4444', stroke: '#ffffff', glow: 'rgba(239, 68, 68, 0.6)' },
-      { fill: '#8b5cf6', stroke: '#ffffff', glow: 'rgba(139, 92, 246, 0.6)' },
-    ];
-
-    const icons = ['cart', 'receipt', 'card', 'box', 'scan', 'printer', 'logo'];
-
-    class PhysObject {
-      x: number; y: number; vx: number; vy: number; 
-      size: number; rotation: number; vr: number;
-      type: string; palette: typeof colorPalette[0]; 
-      opacity: number; depth: number;
-
-      constructor(isLogo = false) {
-        const isMobile = window.innerWidth < 768;
-        this.depth = Math.random();
-        this.size = isLogo ? (isMobile ? 80 : 160) : (isMobile ? 40 : 70) + this.depth * (isMobile ? 20 : 40);
-        this.x = Math.random() * (width - this.size);
-        this.y = -200 - Math.random() * 800;
-        this.vx = (Math.random() - 0.5) * (isMobile ? 6 : 12);
-        this.vy = Math.random() * (isMobile ? 3 : 6);
-        this.rotation = Math.random() * Math.PI * 2;
-        this.vr = (Math.random() - 0.5) * 0.2;
-        this.type = isLogo ? 'logo' : icons[Math.floor(Math.random() * (icons.length - 1))];
-        this.palette = colorPalette[Math.floor(Math.random() * colorPalette.length)];
-        this.opacity = 0.85 + this.depth * 0.15;
-      }
-
-      update() {
-        this.vx += gravityRef.current.x;
-        this.vy += gravityRef.current.y;
-        this.vx *= 0.99;
-        this.vy *= 0.99;
-
-        if (mouseRef.current.isDown) {
-          const dx = (this.x + this.size / 2) - mouseRef.current.x;
-          const dy = (this.y + this.size / 2) - mouseRef.current.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          const isMobile = window.innerWidth < 768;
-          const activeRadius = isMobile ? 120 : 250;
-          
-          if (dist < activeRadius) {
-            const force = (activeRadius - dist) / 5;
-            this.vx += (dx / dist) * force;
-            this.vy += (dy / dist) * force;
-            this.vr += (dx / dist) * 0.2;
-          }
-        }
-
-        this.x += this.vx;
-        this.y += this.vy;
-        this.rotation += this.vr;
-
-        const bounce = 0.75;
-        if (this.y + this.size > height) {
-          this.y = height - this.size;
-          this.vy *= -bounce;
-          this.vx *= 0.96; 
-          this.vr *= 0.92;
-        } else if (this.y < 0) {
-          this.y = 0;
-          this.vy *= -bounce;
-        }
-
-        if (this.x + this.size > width) {
-          this.x = width - this.size;
-          this.vx *= -bounce;
-        } else if (this.x < 0) {
-          this.x = 0;
-          this.vx *= -bounce;
-        }
-      }
-
-      draw(ctx: CanvasRenderingContext2D) {
-        ctx.save();
-        ctx.translate(this.x + this.size / 2, this.y + this.size / 2);
-        ctx.rotate(this.rotation);
-        ctx.globalAlpha = this.opacity;
-        ctx.shadowBlur = window.innerWidth < 768 ? 10 : 30;
-        ctx.shadowColor = this.palette.glow;
-        ctx.fillStyle = this.palette.fill;
-        ctx.strokeStyle = this.palette.stroke;
-        ctx.lineWidth = window.innerWidth < 768 ? 2 : 4;
-
-        const r = this.size / 3.5; 
-        const s = this.size;
-        ctx.beginPath();
-        ctx.roundRect(-s/2, -s/2, s, s, r);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.strokeStyle = '#ffffff';
-        ctx.fillStyle = '#ffffff';
-        ctx.lineWidth = window.innerWidth < 768 ? 2 : 5;
-        ctx.shadowBlur = 0; 
-
-        const is = s * 0.55; 
-        if (this.type === 'logo') {
-          const gs = is * 0.42;
-          const gap = is * 0.12;
-          ctx.fillRect(-gs-gap/2, -gs-gap/2, gs, gs);
-          ctx.fillRect(gap/2, -gs-gap/2, gs, gs);
-          ctx.fillRect(-gs-gap/2, gap/2, gs, gs);
-          ctx.fillRect(gap/2, gap/2, gs, gs);
-        } else {
-          ctx.beginPath();
-          ctx.moveTo(0, -is/2); ctx.lineTo(-is/3, 0); ctx.lineTo(is/8, 0); 
-          ctx.lineTo(0, is/2); ctx.lineTo(is/3, 0); ctx.lineTo(-is/8, 0); ctx.closePath();
-          ctx.fill();
-        }
-        ctx.restore();
-      }
-    }
-
-    let objects: PhysObject[] = [];
-
-    const resize = () => {
-      width = canvas.parentElement?.clientWidth || window.innerWidth;
-      height = canvas.parentElement?.clientHeight || window.innerHeight;
-      canvas.width = width;
-      canvas.height = height;
-      const isMobile = window.innerWidth < 768;
-      objects = [
-        new PhysObject(true),
-        ...Array.from({ length: isMobile ? 6 : 14 }, () => new PhysObject(false)) 
-      ];
-    };
-
-    const handlePointerDown = (e: MouseEvent | TouchEvent) => {
-      mouseRef.current.isDown = true;
-      const rect = canvas.getBoundingClientRect();
-      const pos = 'touches' in e ? e.touches[0] : (e as MouseEvent);
-      mouseRef.current.x = pos.clientX - rect.left;
-      mouseRef.current.y = pos.clientY - rect.top;
-    };
-
-    const handlePointerUp = () => { mouseRef.current.isDown = false; };
-
-    const loop = () => {
-      ctx.clearRect(0, 0, width, height);
-      objects.forEach(obj => { obj.update(); obj.draw(ctx); });
-      animationFrameId = requestAnimationFrame(loop);
-    };
-
-    window.addEventListener('resize', resize);
-    canvas.addEventListener('mousedown', handlePointerDown);
-    canvas.addEventListener('touchstart', handlePointerDown, { passive: false });
-    window.addEventListener('mouseup', handlePointerUp);
-    window.addEventListener('touchend', handlePointerUp);
-
-    resize(); loop();
-
-    return () => {
-      window.removeEventListener('resize', resize);
-      window.removeEventListener('mouseup', handlePointerUp);
-      window.removeEventListener('touchend', handlePointerUp);
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, []);
-
-  return <canvas ref={canvasRef} className="absolute inset-0 z-0 cursor-crosshair touch-none" />;
-};
 
 export const Login: React.FC<LoginProps> = ({ 
   onLogin, users, t = (k) => k, isDarkMode, toggleTheme, language, toggleLanguage, activeVendorId
@@ -218,17 +37,13 @@ export const Login: React.FC<LoginProps> = ({
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const userEmail = result.user.email?.toLowerCase() || '';
-      
-      const supremeAdmin = 'nabeelkhan1007@gmail.com';
-      const isMaster = userEmail === supremeAdmin || userEmail === 'zahratalsawsen1@gmail.com';
-      
+      const isAdmin = userEmail === 'nabeelkhan1007@gmail.com' || userEmail === 'zahratalsawsen1@gmail.com';
       onLogin({
         id: result.user.uid,
-        name: result.user.displayName || (isMaster ? 'System Master' : 'User'),
+        name: result.user.displayName || (isAdmin ? 'System Master' : 'User'),
         username: result.user.email?.split('@')[0] || 'user',
-        role: isMaster ? 'ADMIN' : 'CUSTOMER',
+        role: isAdmin ? 'ADMIN' : 'CUSTOMER',
         email: result.user.email || undefined,
-        avatar: result.user.photoURL || undefined
       });
     } catch (err) { setError('Identity Sync Failed'); } 
     finally { setLoading(false); }
@@ -249,15 +64,7 @@ export const Login: React.FC<LoginProps> = ({
     } else if (method === 'VISITOR_CODE') {
       await new Promise(r => setTimeout(r, 1200));
       const targetVendor = users.find(u => u.role === 'VENDOR' && u.vendorId?.toLowerCase() === vendorCodeInput.trim().toLowerCase());
-
-      if (!targetVendor) {
-        setError('Invalid Vendor ID.');
-        setLoading(false);
-        return;
-      }
-
-      const correctCode = targetVendor.vendorSettings?.shopPasscode || '2026';
-      if (visitorCode === correctCode) {
+      if (targetVendor && visitorCode === (targetVendor.vendorSettings?.shopPasscode || '2026')) {
         onLogin({
           id: `guest_${Date.now()}`,
           name: `${targetVendor.vendorSettings?.storeName || targetVendor.name} Guest`,
@@ -273,101 +80,91 @@ export const Login: React.FC<LoginProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] dark:bg-black flex flex-col items-center justify-center p-4 md:p-10 transition-colors font-sans overflow-hidden">
+    <div className="min-h-[100svh] bg-[#020617] flex flex-col items-center justify-center p-4 relative overflow-hidden transition-all duration-500">
+      {/* "One Click" Language Toggle - Top Right */}
       <div className="fixed top-6 right-6 flex gap-3 z-[100]">
-         <button onClick={toggleLanguage} className="flex items-center gap-2 px-4 py-3 bg-white/5 backdrop-blur-2xl rounded-2xl text-white border border-white/10 shadow-2xl hover:bg-white/10 transition-all font-black text-[10px] uppercase tracking-widest italic">
-            <Globe size={18} className="text-emerald-400" />
-            {language === 'en' ? 'Arabic' : 'English'}
+         <button onClick={toggleLanguage} className="flex items-center gap-3 px-6 py-3.5 bg-white/5 backdrop-blur-2xl rounded-2xl text-white border border-white/10 shadow-2xl hover:bg-white/10 transition-all font-black text-xs uppercase tracking-widest italic group">
+            <Globe size={20} className="text-emerald-400 group-hover:rotate-180 transition-transform duration-500" />
+            {language === 'en' ? 'Arabic | العربية' : 'English | الإنجليزية'}
          </button>
-         <button onClick={toggleTheme} className="p-3 bg-white/5 backdrop-blur-2xl rounded-2xl text-white border border-white/10 shadow-2xl hover:bg-white/10 transition-all">
-            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+         <button onClick={toggleTheme} className="p-3.5 bg-white/5 backdrop-blur-2xl rounded-2xl text-white border border-white/10 shadow-2xl hover:bg-white/10 transition-all">
+            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
          </button>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-[3rem] md:rounded-[4rem] shadow-[0_0_80px_rgba(0,0,0,0.3)] overflow-hidden w-full max-w-7xl flex flex-col md:flex-row animate-fade-in h-auto md:h-[min(900px,94vh)] relative border border-white/5">
-        
-        <div className="bg-slate-950 p-8 md:p-24 md:w-[45%] flex flex-col justify-center text-white relative overflow-hidden shrink-0 h-[35vh] md:h-auto border-b md:border-b-0 md:border-r border-white/5">
-          <GravityTerminal />
-          <div className="relative z-10 space-y-4 md:space-y-12 pointer-events-none select-none">
-            <div className="flex items-center gap-4 md:gap-6">
-              <div className="bg-[#0ea5e9] p-4 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] text-white shadow-2xl rotate-12">
-                <LayoutDashboard size={window.innerWidth < 768 ? 32 : 64} strokeWidth={3} />
-              </div>
-              <div>
-                <span className="text-2xl md:text-5xl font-black tracking-tighter italic uppercase block leading-none">easyPOS</span>
-                <span className="text-[8px] md:text-[10px] font-black tracking-[0.3em] text-brand-400 mt-1 block opacity-80 uppercase">Root Matrix v2.0</span>
-              </div>
+      <div className="bg-white dark:bg-slate-900 rounded-[3rem] md:rounded-[4rem] shadow-2xl overflow-hidden w-full max-w-6xl flex flex-col md:flex-row animate-fade-in relative border border-white/5">
+        <div className="bg-slate-950 p-12 md:w-[40%] flex flex-col justify-center text-white relative overflow-hidden shrink-0 border-r border-white/5">
+          <div className="relative z-10 space-y-8">
+            <div className="flex items-center gap-4">
+              <div className="bg-brand-500 p-6 rounded-[2rem] text-white shadow-2xl rotate-12"><LayoutDashboard size={48} strokeWidth={3} /></div>
+              <div><span className="text-4xl font-black tracking-tighter italic uppercase block">easyPOS</span><span className="text-[10px] font-black tracking-[0.3em] text-brand-400 mt-1 block opacity-80 uppercase">Root Matrix v2.0</span></div>
             </div>
-            
-            <div className="space-y-2 md:space-y-10">
-                <h1 className="text-4xl md:text-8xl font-black leading-[0.85] tracking-tighter italic uppercase text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-500">
-                  SMART<br/>RETAIL
-                </h1>
-                <p className="text-slate-400 font-bold text-[10px] md:text-sm uppercase tracking-widest leading-relaxed max-w-xs md:max-w-sm">
-                  The professional choice for multi-vendor inventory and physical retail automation.
-                </p>
+            <div className="space-y-4">
+                <h1 className="text-5xl md:text-7xl font-black leading-none tracking-tighter italic uppercase text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-500">SMART<br/>RETAIL</h1>
+                <p className="text-slate-400 font-bold text-xs uppercase tracking-widest leading-relaxed max-w-xs">{t('professionalSolution')}</p>
             </div>
           </div>
+          <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-brand-500/20 rounded-full blur-[100px]"></div>
         </div>
 
-        <div className="flex-1 p-8 md:p-20 flex flex-col justify-center bg-white dark:bg-slate-900 relative z-20 overflow-y-auto custom-scrollbar">
-          <div className="max-w-md mx-auto w-full space-y-8 md:space-y-12">
+        <div className="flex-1 p-8 md:p-20 flex flex-col justify-center bg-white dark:bg-slate-900 overflow-y-auto">
+          <div className="max-w-md mx-auto w-full space-y-12">
               <div className="text-center md:text-left">
-                <h2 className="text-3xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tighter italic uppercase">ACCESS HUB</h2>
-                <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em]">SECURE SYSTEM LOGIN</p>
+                <h2 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tighter italic uppercase">ACCESS HUB</h2>
+                <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em] mt-1">{t('signInToAccess')}</p>
               </div>
 
               <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-3xl shadow-inner">
-                <button onClick={() => setMethod('CREDENTIALS')} className={`flex-1 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all ${method === 'CREDENTIALS' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}>STAFF</button>
-                <button onClick={() => setMethod('CUSTOMER_GOOGLE')} className={`flex-1 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all ${method === 'CUSTOMER_GOOGLE' ? 'bg-white dark:bg-slate-700 text-[#0ea5e9] shadow-lg' : 'text-slate-400'}`}>GOOGLE</button>
-                <button onClick={() => setMethod('VISITOR_CODE')} className={`flex-1 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all ${method === 'VISITOR_CODE' ? 'bg-[#0ea5e9] text-white shadow-lg' : 'text-slate-400'}`}>VISITOR</button>
+                <button onClick={() => setMethod('CREDENTIALS')} className={`flex-1 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all ${method === 'CREDENTIALS' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}>{t('staffLogin')}</button>
+                <button onClick={() => setMethod('CUSTOMER_GOOGLE')} className={`flex-1 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all ${method === 'CUSTOMER_GOOGLE' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-lg' : 'text-slate-400'}`}>GOOGLE</button>
+                <button onClick={() => setMethod('VISITOR_CODE')} className={`flex-1 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all ${method === 'VISITOR_CODE' ? 'bg-brand-600 text-white shadow-lg' : 'text-slate-400'}`}>{t('visitorAccess')}</button>
               </div>
 
               {error && <div className="p-4 bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-widest rounded-2xl border-2 border-red-100 animate-shake">{error}</div>}
 
               {method === 'CREDENTIALS' ? (
-                <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8 animate-fade-in">
+                <form onSubmit={handleSubmit} className="space-y-8 animate-fade-in">
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Identity Identifier</label>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('username')}</label>
                     <div className="relative">
                         <UserIcon className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" size={24} />
-                        <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full pl-16 pr-8 py-5 md:py-6 bg-slate-100/50 dark:bg-slate-800 border-2 border-transparent focus:border-brand-500 rounded-3xl outline-none font-bold text-lg md:text-xl dark:text-white transition-all" placeholder="operator_id" required />
+                        <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full pl-16 pr-8 py-6 bg-slate-100/50 dark:bg-slate-800 border-2 border-transparent focus:border-brand-500 rounded-3xl outline-none font-bold text-xl dark:text-white transition-all" placeholder="operator_id" required />
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Secure Passkey</label>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('password')}</label>
                     <div className="relative">
                         <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" size={24} />
-                        <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-16 pr-8 py-5 md:py-6 bg-slate-100/50 dark:bg-slate-800 border-2 border-transparent focus:border-brand-500 rounded-3xl outline-none font-bold text-lg md:text-xl dark:text-white transition-all" placeholder="••••••••" required />
+                        <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-16 pr-8 py-6 bg-slate-100/50 dark:bg-slate-800 border-2 border-transparent focus:border-brand-500 rounded-3xl outline-none font-bold text-xl dark:text-white transition-all" placeholder="••••••••" required />
                     </div>
                   </div>
-                  <button type="submit" disabled={loading} className="w-full py-6 md:py-8 bg-slate-900 text-white rounded-3xl font-black uppercase tracking-[0.2em] text-[10px] md:text-xs shadow-2xl active:scale-[0.98] transition-all">
-                    {loading ? <Loader2 className="animate-spin" size={24} /> : 'INITIALIZE SYNC'}
+                  <button type="submit" disabled={loading} className="w-full py-8 bg-slate-900 text-white rounded-3xl font-black uppercase tracking-[0.2em] text-xs shadow-2xl active:scale-[0.98] transition-all">
+                    {loading ? <Loader2 className="animate-spin mx-auto" size={24} /> : t('accessTerminal')}
                   </button>
                 </form>
               ) : method === 'CUSTOMER_GOOGLE' ? (
                 <div className="space-y-8 text-center py-6 animate-fade-in-up">
-                    <div className="py-12 md:py-20 px-6 bg-slate-50 dark:bg-slate-800/30 rounded-[3rem] md:rounded-[4rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
-                        <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-20 h-20 md:w-28 md:h-28 mx-auto mb-6 md:mb-10 shadow-2xl rounded-full p-3 bg-white" alt="Google" />
-                        <h4 className="text-xl md:text-3xl font-black dark:text-white uppercase italic tracking-tight">CLOUD IDENTITY</h4>
+                    <div className="py-20 px-6 bg-slate-50 dark:bg-slate-800/30 rounded-[4rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
+                        <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-28 h-28 mx-auto mb-10 shadow-2xl rounded-full p-3 bg-white" alt="Google" />
+                        <h4 className="text-3xl font-black dark:text-white uppercase italic tracking-tight">CLOUD IDENTITY</h4>
                     </div>
-                    <button onClick={handleGoogleLogin} className="w-full py-6 md:py-8 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-3xl font-black uppercase text-[10px] md:text-xs tracking-widest shadow-xl flex items-center justify-center gap-4 transition-all active:scale-95">
+                    <button onClick={handleGoogleLogin} className="w-full py-8 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-3xl font-black uppercase text-xs tracking-widest shadow-xl flex items-center justify-center gap-4 transition-all active:scale-95">
                         <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-6 h-6" alt="" />
-                        SIGN IN WITH GOOGLE CLOUD
+                        {t('loginWithGoogle')}
                     </button>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8 animate-fade-in-up">
+                <form onSubmit={handleSubmit} className="space-y-8 animate-fade-in-up">
                     <div className="relative">
-                        <input type="text" value={vendorCodeInput} onChange={e => setVendorCodeInput(e.target.value)} className="w-full p-6 md:p-8 bg-slate-100/50 dark:bg-slate-800 border-2 border-transparent focus:border-brand-500 rounded-3xl md:rounded-[2.5rem] outline-none font-bold text-xl md:text-2xl pl-16 md:pl-20 dark:text-white" placeholder="VENDOR ID" required />
-                        <Store className="absolute left-6 md:left-8 top-1/2 -translate-y-1/2 text-slate-300" size={28} />
+                        <input type="text" value={vendorCodeInput} onChange={e => setVendorCodeInput(e.target.value)} className="w-full p-8 bg-slate-100/50 dark:bg-slate-800 border-2 border-transparent focus:border-brand-500 rounded-[2.5rem] outline-none font-bold text-2xl pl-20 dark:text-white" placeholder={t('vendorId')} required />
+                        <Store className="absolute left-8 top-1/2 -translate-y-1/2 text-slate-300" size={28} />
                     </div>
                     <div className="relative">
-                        <input type="password" value={visitorCode} onChange={e => setVisitorCode(e.target.value)} className="w-full p-6 md:p-8 bg-slate-100/50 dark:bg-slate-800 border-2 border-transparent focus:border-brand-500 rounded-3xl md:rounded-[2.5rem] outline-none font-black text-3xl md:text-5xl tracking-[0.5em] pl-16 md:pl-20 dark:text-white" placeholder="••••" required />
-                        <Key className="absolute left-6 md:left-8 top-1/2 -translate-y-1/2 text-slate-300" size={32} />
+                        <input type="password" value={visitorCode} onChange={e => setVisitorCode(e.target.value)} className="w-full p-8 bg-slate-100/50 dark:bg-slate-800 border-2 border-transparent focus:border-brand-500 rounded-[2.5rem] outline-none font-black text-5xl tracking-[0.5em] pl-20 dark:text-white" placeholder="••••" required />
+                        <Key className="absolute left-8 top-1/2 -translate-y-1/2 text-slate-300" size={32} />
                     </div>
-                    <button type="submit" disabled={loading} className="w-full py-6 md:py-8 bg-brand-600 text-white rounded-3xl md:rounded-[2.5rem] font-black uppercase tracking-[0.2em] text-[10px] md:text-xs shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3">
-                      {loading ? <Loader2 className="animate-spin" size={24} /> : 'AUTHENTICATE VISITOR'}
+                    <button type="submit" disabled={loading} className="w-full py-8 bg-brand-600 text-white rounded-[2.5rem] font-black uppercase tracking-[0.2em] text-xs shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 italic">
+                      {loading ? <Loader2 className="animate-spin" size={24} /> : t('verify')}
                     </button>
                 </form>
               )}

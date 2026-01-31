@@ -1,7 +1,9 @@
+
 import { Language, Translations } from './types';
 
 export const translations: Record<Language, Translations> = {
   en: {
+    'back': 'Back',
     'vendorPanel': 'Vendor Panel',
     'vendorDashboard': 'Vendor Dashboard',
     'vendorStats': 'Vendor Performance',
@@ -22,7 +24,7 @@ export const translations: Record<Language, Translations> = {
     'invalidCredentials': 'Invalid identity or password.',
     'defaultLogin': 'Default',
     'smartRetail': 'Smart Retail Management',
-    'professionalSolution': 'The professional offline-capable solution for your business growth.',
+    'professionalSolution': 'The professional solution for your business growth.',
     'copyright': '© 2026 easyPOS. All Rights Reserved.',
     'poweredBy': 'Powered by ZAHRAT AL SAWSEN',
     'loginWithPhone': 'Login with Phone Number',
@@ -186,6 +188,7 @@ export const translations: Record<Language, Translations> = {
     'language': 'Language'
   },
   ar: {
+    'back': 'رجوع',
     'vendorPanel': 'لوحة الموردين',
     'vendorDashboard': 'لوحة تحكم المورد',
     'vendorStats': 'أداء المورد',
@@ -370,6 +373,7 @@ export const translations: Record<Language, Translations> = {
     'language': 'اللغة'
   },
   hi: {
+    'back': 'पीछे',
     'vendorPanel': 'विक्रेता पैनल',
     'username': 'उपयोगकर्ता नाम या ईमेल',
     'forgotPassword': 'पासवर्ड भूल गए?',
@@ -383,6 +387,7 @@ export const translations: Record<Language, Translations> = {
     'confirm': 'पुष्टि करें',
     'dark': 'डार्क',
     'light': 'लाइट',
-    'language': 'भाषा'
+    'language': 'भाषा',
+    'logout': 'लोग आउट'
   }
 };

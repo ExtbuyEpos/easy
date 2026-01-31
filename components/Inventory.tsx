@@ -196,15 +196,6 @@ export const Inventory: React.FC<InventoryProps> = ({
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 transition-colors">
       <div className="bg-white dark:bg-slate-900 p-6 lg:p-8 border-b border-slate-200 dark:border-slate-800 shrink-0">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
-            <div className="flex items-center gap-4">
-               <button onClick={onGoBack} className="p-3 -ml-3 rounded-2xl bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 shadow-sm border border-slate-100 dark:border-slate-700 transition-all active:scale-90 hover:text-brand-600">
-                   <ChevronLeft size={28} className="rtl:rotate-180" />
-               </button>
-               <div>
-                   <h2 className="text-xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic leading-none">{t('inventoryMgmt')}</h2>
-                   <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mt-1">{t('manageStock')}</p>
-               </div>
-            </div>
             <div className="flex items-center gap-3">
                 <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
                     <button onClick={() => setActiveTab('products')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'products' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-lg' : 'text-slate-400'}`}>Items</button>
@@ -233,7 +224,7 @@ export const Inventory: React.FC<InventoryProps> = ({
       </div>
 
       <div className="flex-1 overflow-auto p-4 md:p-8 custom-scrollbar">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 pb-10">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 pb-10">
               {filteredProducts.map(p => (
                   <div key={p.id} onClick={() => handleOpenModal(p)} className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-4 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all cursor-pointer group flex flex-col relative overflow-hidden">
                       <div className="aspect-square rounded-[1.8rem] bg-slate-50 dark:bg-slate-800 overflow-hidden mb-4 shrink-0 relative">
