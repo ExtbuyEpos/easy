@@ -55,7 +55,7 @@ export interface Product {
   color?: string;
   hasVariants?: boolean;
   variants?: ProductVariant[];
-  vendorId?: string; // Links product to a specific vendor
+  vendorId?: string; // Critical for multi-tenant isolation
 }
 
 export interface CartItem extends Product {
@@ -80,6 +80,7 @@ export interface Sale {
   processedBy?: string; // User ID
   customerName?: string;
   customerPhone?: string;
+  vendorId?: string; // Critical for multi-tenant isolation
 }
 
 export interface Booking {
@@ -92,6 +93,7 @@ export interface Booking {
   status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
   notes?: string;
   serviceType?: string;
+  vendorId?: string;
 }
 
 export interface VendorSettings {
@@ -113,7 +115,7 @@ export interface User {
   avatar?: string;
   customerAvatar?: string;
   tryOnCache?: Record<string, string>;
-  vendorId?: string;
+  vendorId?: string; // Links user to their specific business node
   vendorStaffLimit?: number;
   vendorSettings?: VendorSettings;
 }
@@ -134,15 +136,4 @@ export interface StoreSettings {
   cloudflareAiUrl?: string; 
   hackClubAiUrl?: string; 
   visitorAccessCode?: string; 
-}
-
-export interface StockAdjustment {
-  id: string;
-  timestamp: number;
-  sku: string;
-  name: string;
-  oldStock: number;
-  newStock: number;
-  variance: number;
-  processedBy?: string;
 }

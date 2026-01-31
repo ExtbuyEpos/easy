@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Sale, Product, Language, StockAdjustment, CartItem, User } from '../types';
+// Removed StockAdjustment as it is not exported from types and not used in this component
+import { Sale, Product, Language, CartItem, User } from '../types';
 import { CURRENCY } from '../constants';
 import { TrendingUp, Sparkles, PieChart, FileText, ChevronLeft, Activity, Target, History, ClipboardList, Loader2, FileSpreadsheet, Calendar as CalendarIcon, ArrowRight, Download, Package, ShoppingBag, BarChart3, Users, Zap, CalendarDays, Wallet, ReceiptText, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { generateBusinessInsight } from '../services/geminiService';
@@ -191,9 +192,9 @@ export const Reports: React.FC<ReportsProps> = ({ sales, products, onGoBack, lan
                 </div>
             </div>
             <div className="flex bg-white dark:bg-slate-900 rounded-[1.8rem] p-1.5 shadow-xl border border-slate-200 dark:border-slate-800">
-                <button onClick={() => setActiveTab('FINANCIAL')} className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'FINANCIAL' ? 'bg-brand-600 text-white shadow-lg' : 'text-slate-400'}`}>Ledger</button>
-                <button onClick={() => setActiveTab('PRODUCTS')} className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'PRODUCTS' ? 'bg-brand-600 text-white shadow-lg' : 'text-slate-400'}`}>Stock Performance</button>
-                <button onClick={() => setActiveTab('OPERATORS')} className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'OPERATORS' ? 'bg-brand-600 text-white shadow-lg' : 'text-slate-400'}`}>Personnel</button>
+                <button onClick={() => setActiveTab('FINANCIAL')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'FINANCIAL' ? 'bg-brand-600 text-white shadow-lg' : 'text-slate-400'}`}>Ledger</button>
+                <button onClick={() => setActiveTab('PRODUCTS')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'PRODUCTS' ? 'bg-brand-600 text-white shadow-lg' : 'text-slate-400'}`}>Stock Performance</button>
+                <button onClick={() => setActiveTab('OPERATORS')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'OPERATORS' ? 'bg-brand-600 text-white shadow-lg' : 'text-slate-400'}`}>Personnel</button>
             </div>
         </div>
 

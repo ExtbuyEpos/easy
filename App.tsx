@@ -49,7 +49,7 @@ const App: React.FC = () => {
 
   const [activeVendorId, setActiveVendorId] = useState<string | null>(null);
 
-  // SUPREME ADMIN AUTHORIZATION
+  // SUPREME ADMIN AUTHORIZATION FOR NABEEL KHAN
   const SYSTEM_MASTER_ID = 'nabeelkhan1007@gmail.com';
   const isSupremeAdmin = useMemo(() => user?.email?.toLowerCase() === SYSTEM_MASTER_ID, [user]);
 
@@ -84,7 +84,11 @@ const App: React.FC = () => {
 
   const navigateTo = useCallback((view: AppView) => {
     if (view === currentView) return;
-    setNavigationHistory(prev => [...prev, currentView]);
+    setNavigationHistory(prev => {
+        // Prevent duplicate consecutive entries in history
+        if (prev[prev.length - 1] === currentView) return prev;
+        return [...prev, currentView];
+    });
     setCurrentView(view);
   }, [currentView]);
 
@@ -178,6 +182,7 @@ const App: React.FC = () => {
     setUser(null);
     setCurrentView(AppView.LOGIN);
     setActiveVendorId(null);
+    setNavigationHistory([]);
   };
 
   if (isAuthChecking) {
