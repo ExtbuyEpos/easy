@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Product, CartItem, StoreSettings, Sale, Language, User, ProductVariant } from '../types';
 import { CURRENCY } from '../constants';
-import { ShoppingCart, Plus, Minus, Search, Image as ImageIcon, X, History, ShoppingBag, DollarSign, CheckCircle, Printer, MessageCircle, CreditCard, Receipt, Eye, ChevronLeft, Calendar, User as UserIcon, Tag, Percent, Contact, Layers, Sparkles } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Search, Image as ImageIcon, X, History, ShoppingBag, DollarSign, CheckCircle, Printer, MessageCircle, CreditCard, Receipt, Eye, ChevronLeft, Calendar, User as UserIcon, Tag, Percent, Contact, Layers, Sparkles, LayoutDashboard } from 'lucide-react';
 import QRCode from 'qrcode';
 import { formatNumber, formatCurrency } from '../utils/format';
 
@@ -207,8 +207,8 @@ export const POS: React.FC<POSProps> = ({
       <div className={`fixed inset-x-0 bottom-0 z-50 lg:static lg:inset-auto lg:z-auto w-full lg:w-[480px] h-[92%] lg:h-full bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-500 transform rounded-t-[40px] lg:rounded-none overflow-hidden flex flex-col ${isCartOpen ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}>
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
-             <div className="bg-brand-600 p-2.5 rounded-xl text-white shadow-lg"><Receipt size={22} /></div>
-             <h2 className="text-xl font-black uppercase tracking-tight dark:text-white italic">Current Checkout</h2>
+             <div className="bg-brand-600 p-2.5 rounded-xl text-white shadow-lg"><LayoutDashboard size={22} /></div>
+             <h2 className="text-xl font-black uppercase tracking-tight dark:text-white italic">easyPOS <span className="text-brand-600">Checkout</span></h2>
           </div>
           <div className="flex items-center gap-2">
             <button 
@@ -236,7 +236,7 @@ export const POS: React.FC<POSProps> = ({
                       <p className="font-black text-xl uppercase tracking-tighter">{storeSettings.name}</p>
                       <p className="opacity-60 text-[9px] uppercase tracking-widest leading-relaxed mt-1">{storeSettings.address}</p>
                       <div className="border-b border-dashed border-slate-300 my-4"></div>
-                      <p className="text-[10px] font-black uppercase tracking-widest italic">Live Order Draft</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest italic flex items-center justify-center gap-2 text-brand-600"><LayoutDashboard size={12}/> easyPOS SECURE DRAFT</p>
                    </div>
                    <div className="space-y-3 mb-6">
                       {cart.map((item, idx) => (
@@ -274,9 +274,9 @@ export const POS: React.FC<POSProps> = ({
            ) : (
              <div className="p-4 md:p-6 space-y-4">
                 {cart.length === 0 ? (
-                  <div className="h-full py-20 flex flex-col items-center justify-center opacity-20 text-slate-400 space-y-4">
-                    <ShoppingBag size={80} strokeWidth={1} />
-                    <p className="font-black text-[10px] uppercase tracking-[0.4em]">Ready for Orders</p>
+                  <div className="h-full py-20 flex flex-col items-center justify-center opacity-20 text-slate-400 space-y-6">
+                    <div className="w-32 h-32 bg-slate-100 dark:bg-slate-800 rounded-[3rem] flex items-center justify-center shadow-inner"><LayoutDashboard size={80} strokeWidth={1} /></div>
+                    <p className="font-black text-[10px] uppercase tracking-[0.5em] italic">easyPOS Terminal Ready</p>
                   </div>
                 ) : (
                   <div className="space-y-4 animate-fade-in">
@@ -284,8 +284,8 @@ export const POS: React.FC<POSProps> = ({
                       <div className="bg-brand-50/30 dark:bg-brand-900/10 p-5 rounded-[2.5rem] border border-brand-100 dark:border-brand-900/30 space-y-3">
                           <p className="text-[9px] font-black uppercase tracking-widest text-brand-600 flex items-center gap-2"><Contact size={12}/> Customer Record (Optional)</p>
                           <div className="grid grid-cols-2 gap-3">
-                              <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Full Name" className="w-full bg-white dark:bg-slate-800 p-3 rounded-xl text-xs font-bold outline-none border border-slate-100 dark:border-slate-700" />
-                              <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="Phone" className="w-full bg-white dark:bg-slate-800 p-3 rounded-xl text-xs font-bold outline-none border border-slate-100 dark:border-slate-700" />
+                              <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Full Name" className="w-full bg-white dark:bg-slate-800 p-3 rounded-xl text-xs font-bold outline-none border border-slate-100 dark:border-slate-700 shadow-sm" />
+                              <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="Phone" className="w-full bg-white dark:bg-slate-800 p-3 rounded-xl text-xs font-bold outline-none border border-slate-100 dark:border-slate-700 shadow-sm" />
                           </div>
                       </div>
 
@@ -302,9 +302,9 @@ export const POS: React.FC<POSProps> = ({
                                   </p>
                               </div>
                               <div className="flex items-center gap-3">
-                                  <button onClick={() => updateQuantity(item.id, item.selectedColor, item.selectedSize, -1)} className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-red-500 active:scale-90 transition-all"><Minus size={14}/></button>
+                                  <button onClick={() => updateQuantity(item.id, item.selectedColor, item.selectedSize, -1)} className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-red-500 active:scale-90 transition-all shadow-sm"><Minus size={14}/></button>
                                   <span className="font-black text-sm dark:text-white w-4 text-center">{item.quantity}</span>
-                                  <button onClick={() => updateQuantity(item.id, item.selectedColor, item.selectedSize, 1)} className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-brand-600 active:scale-90 transition-all"><Plus size={14}/></button>
+                                  <button onClick={() => updateQuantity(item.id, item.selectedColor, item.selectedSize, 1)} className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-brand-600 active:scale-90 transition-all shadow-sm"><Plus size={14}/></button>
                               </div>
                               <button onClick={() => removeFromCart(item.id, item.selectedColor, item.selectedSize)} className="p-2 text-slate-300 hover:text-red-500"><X size={18}/></button>
                           </div>
@@ -321,9 +321,9 @@ export const POS: React.FC<POSProps> = ({
               <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Tag size={12}/> Adjustment / Ledger Discount</label>
-                    <div className="flex bg-slate-50 dark:bg-slate-800 p-1 rounded-xl border border-slate-100 dark:border-slate-700">
-                        <button onClick={() => setDiscountType('percent')} className={`px-4 py-1.5 rounded-lg text-[9px] font-black transition-all ${discountType === 'percent' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-400'}`}>% Ratio</button>
-                        <button onClick={() => setDiscountType('fixed')} className={`px-4 py-1.5 rounded-lg text-[9px] font-black transition-all ${discountType === 'fixed' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-400'}`}>$ Flat</button>
+                    <div className="flex bg-slate-50 dark:bg-slate-800 p-1 rounded-xl border border-slate-100 dark:border-slate-700 shadow-inner">
+                        <button onClick={() => setDiscountType('percent')} className={`px-4 py-1.5 rounded-lg text-[9px] font-black transition-all ${discountType === 'percent' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-400'}`}>Ratio</button>
+                        <button onClick={() => setDiscountType('fixed')} className={`px-4 py-1.5 rounded-lg text-[9px] font-black transition-all ${discountType === 'fixed' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-400'}`}>Flat</button>
                     </div>
                   </div>
                   <div className="relative">
@@ -338,13 +338,12 @@ export const POS: React.FC<POSProps> = ({
                   </div>
               </div>
 
-              <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-[2.5rem] space-y-3 border border-slate-100 dark:border-slate-700">
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-[2.5rem] space-y-3 border border-slate-100 dark:border-slate-700 shadow-inner">
                   <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]"><span>Gross Subtotal</span><span>{formatCurrency(cartSubtotal, language, CURRENCY)}</span></div>
-                  {totalDiscountAmount > 0 && <div className="flex justify-between text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em]"><span>Discount Applied</span><span>-{formatCurrency(totalDiscountAmount, language, CURRENCY)}</span></div>}
-                  {storeSettings.taxEnabled && <div className="flex justify-between text-[10px] font-black text-orange-500 uppercase tracking-[0.2em]"><span>{storeSettings.taxName} ({storeSettings.taxRate}%)</span><span>+{formatCurrency(taxAmount, language, CURRENCY)}</span></div>}
+                  {totalDiscountAmount > 0 && <div className="flex justify-between text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em]"><span>Markdown Applied</span><span>-{formatCurrency(totalDiscountAmount, language, CURRENCY)}</span></div>}
                   <div className="pt-4 mt-2 border-t border-slate-200 dark:border-slate-700 flex justify-between items-end">
-                      <span className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-[0.3em] pb-1 italic">Total Payable</span>
-                      <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{formatCurrency(finalTotal, language, CURRENCY)}</span>
+                      <span className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-[0.35em] pb-1 italic leading-none">Net Total</span>
+                      <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">{formatCurrency(finalTotal, language, CURRENCY)}</span>
                   </div>
               </div>
 
@@ -352,6 +351,7 @@ export const POS: React.FC<POSProps> = ({
                 <button onClick={() => processPayment('CASH')} className="py-6 bg-slate-900 dark:bg-slate-800 text-white rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 flex items-center justify-center gap-3 transition-all"><DollarSign size={20}/> {t('cash')}</button>
                 <button onClick={() => processPayment('CARD')} className="py-6 bg-brand-600 text-white rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 flex items-center justify-center gap-3 transition-all"><CreditCard size={20}/> {t('card')}</button>
               </div>
+              <p className="text-[8px] text-center font-black text-slate-400 uppercase tracking-[0.4em] italic">Powered by easyPOS Enterprise Matrix</p>
             </div>
           )}
         </div>
@@ -440,10 +440,10 @@ export const POS: React.FC<POSProps> = ({
 
       {showInvoice && lastSale && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-3xl flex items-center justify-center z-[110] p-4 print:p-0 print:bg-white">
-          <div className="bg-white rounded-[3.5rem] w-full max-w-md relative animate-fade-in-up shadow-2xl overflow-hidden flex flex-col print:shadow-none print:max-h-none print:h-auto print:rounded-none">
+          <div className="bg-white rounded-[3.5rem] w-full max-w-md relative animate-fade-in-up shadow-2xl overflow-hidden flex flex-col print:shadow-none print:max-h-none print:h-auto print:rounded-none border-t-[12px] border-brand-600">
             <div className="p-8 pb-4 flex justify-between items-center no-print">
-                 <div className="flex items-center gap-3 text-emerald-600"><CheckCircle size={24} /><span className="font-black text-[10px] uppercase tracking-widest">Sale Authorized</span></div>
-                 <button onClick={() => setShowInvoice(false)} className="p-2 bg-slate-100 rounded-full text-slate-800"><X size={20}/></button>
+                 <div className="flex items-center gap-3 text-emerald-600"><CheckCircle size={24} /><span className="font-black text-[11px] uppercase tracking-widest">Digital Audit Logged</span></div>
+                 <button onClick={() => setShowInvoice(false)} className="p-2 bg-slate-100 rounded-full text-slate-800 hover:bg-red-50 transition-all"><X size={20}/></button>
             </div>
             <div className="p-10 flex-1 overflow-y-auto print:p-0 print:overflow-visible">
                 <div className="text-center mb-10">
@@ -453,7 +453,11 @@ export const POS: React.FC<POSProps> = ({
                      </div>
                    )}
                    <h1 className="text-3xl font-black uppercase tracking-tighter italic leading-none">{storeSettings.name}</h1>
-                   <p className="text-[9px] text-slate-400 uppercase tracking-widest font-bold mt-3 leading-relaxed">{storeSettings.address}</p>
+                   <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mt-3 leading-relaxed">{storeSettings.address}</p>
+                   <div className="mt-4 flex items-center justify-center gap-3 text-brand-600">
+                        <LayoutDashboard size={16} />
+                        <span className="text-[10px] font-black uppercase tracking-[0.4em] italic">easyPOS Official</span>
+                   </div>
                 </div>
                 {lastSale.customerName && (
                     <div className="mb-6 bg-slate-50 p-4 rounded-2xl border-2 border-dashed border-slate-200">
@@ -474,17 +478,18 @@ export const POS: React.FC<POSProps> = ({
                      </div>
                    ))}
                 </div>
-                <div className="bg-slate-50 p-8 rounded-[2.5rem] space-y-3 mb-10 border border-slate-100 font-mono text-xs">
-                    <div className="flex justify-between opacity-50"><span>INVOICE TOTAL</span><span>{formatCurrency(lastSale.subTotal, language, CURRENCY)}</span></div>
-                    {lastSale.discount > 0 && <div className="flex justify-between text-emerald-600"><span>MARKDOWN</span><span>-{formatCurrency(lastSale.discount, language, CURRENCY)}</span></div>}
-                    {lastSale.tax > 0 && <div className="flex justify-between text-orange-500"><span>TAX {lastSale.taxRate}%</span><span>+{formatCurrency(lastSale.tax, language, CURRENCY)}</span></div>}
-                    <div className="flex justify-between items-center pt-4 mt-4 border-t border-slate-200 text-lg font-black text-slate-900"><span>PAID TOTAL</span><span>{formatCurrency(lastSale.total, language, CURRENCY)}</span></div>
+                <div className="bg-slate-50 p-8 rounded-[2.5rem] space-y-3 mb-10 border border-slate-100 font-mono text-xs shadow-inner">
+                    <div className="flex justify-between opacity-50 uppercase font-black"><span>Subtotal</span><span>{formatCurrency(lastSale.subTotal, language, CURRENCY)}</span></div>
+                    {lastSale.discount > 0 && <div className="flex justify-between text-emerald-600 font-black"><span>Markdown</span><span>-{formatCurrency(lastSale.discount, language, CURRENCY)}</span></div>}
+                    {lastSale.tax > 0 && <div className="flex justify-between text-orange-500 font-black"><span>Tax {lastSale.taxRate}%</span><span>+{formatCurrency(lastSale.tax, language, CURRENCY)}</span></div>}
+                    <div className="flex justify-between items-center pt-6 mt-6 border-t-2 border-slate-200 text-xl font-black text-slate-900"><span>Paid Total</span><span>{formatCurrency(lastSale.total, language, CURRENCY)}</span></div>
                 </div>
                 {invoiceQr && <div className="flex flex-col items-center justify-center mb-10"><img src={invoiceQr} className="w-32 h-32" /><p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mt-6">ORD-{lastSale.id.slice(-6)}</p></div>}
-                <div className="text-center text-[9px] text-slate-400 font-black uppercase tracking-widest italic">{storeSettings.footerMessage || "Transaction logged successfully."}</div>
+                <div className="text-center text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] italic mb-4">{storeSettings.footerMessage || "Authorized via easyPOS Quantum."}</div>
+                <div className="text-center opacity-10 font-black text-[8px] uppercase tracking-[0.8em]">End of Transmission</div>
             </div>
             <div className="p-10 bg-slate-50 border-t border-slate-100 grid grid-cols-2 gap-4 no-print shrink-0">
-                <button onClick={() => window.print()} className="col-span-2 flex items-center justify-center gap-3 bg-slate-900 text-white py-5 rounded-[2rem] font-black uppercase tracking-widest text-[10px] shadow-xl active:scale-95 transition-all"><Printer size={18}/> Print Official Receipt</button>
+                <button onClick={() => window.print()} className="col-span-2 flex items-center justify-center gap-4 bg-slate-900 text-white py-6 rounded-[2.5rem] font-black uppercase tracking-[0.25em] text-[11px] shadow-2xl active:scale-95 transition-all group"><Printer size={20} className="group-hover:scale-110 transition-transform"/> Dispatch Official Receipt</button>
             </div>
           </div>
         </div>

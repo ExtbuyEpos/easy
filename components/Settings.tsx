@@ -1,8 +1,7 @@
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { User, UserRole, Product, Sale, StoreSettings, Language, AppView, VendorRequest } from '../types';
-import { Trash2, Plus, X, Receipt, ChevronLeft, Users, Zap, Globe, Database, Cloud, ShieldCheck, RefreshCw, Key, LogOut, Store, Mail, Check, AlertCircle, Save, Edit2, ShieldAlert, Copy, CheckCircle2 } from 'lucide-react';
-import { formatNumber } from '../utils/format';
+import React, { useState, useRef } from 'react';
+import { User, StoreSettings, Language, VendorRequest, Product, Sale, UserRole } from '../types';
+import { Save, UserPlus, Trash2, Edit2, X, ShieldCheck, Database, HardDrive, User as UserIcon, ChevronLeft, CheckCircle2, AlertCircle, RefreshCw, Upload, Image as ImageIcon } from 'lucide-react';
 
 interface SettingsProps {
   users: User[];
@@ -12,244 +11,311 @@ interface SettingsProps {
   onAddUser: (u: User) => void;
   onUpdateUser: (u: User) => void;
   onDeleteUser: (id: string) => void;
-  onReviewRequest: (requestId: string, status: 'APPROVED' | 'REJECTED', reason?: string) => void;
+  onReviewRequest: (id: string, status: 'APPROVED' | 'REJECTED', reason?: string) => void;
   onLogout: () => void;
   currentUser: User;
   storeSettings: StoreSettings;
   onUpdateStoreSettings: (settings: StoreSettings) => void;
-  onGoBack?: () => void;
+  onGoBack: () => void;
   language: Language;
   toggleLanguage: () => void;
-  t?: (key: string) => string;
-  onNavigate?: (view: AppView) => void;
+  t: (key: string) => string;
 }
 
-export const Settings: React.FC<SettingsProps> = ({ 
-  users, products, sales, onAddUser, onUpdateUser, onDeleteUser, onLogout, currentUser, storeSettings, onUpdateStoreSettings, onGoBack,
-  language, t = (k) => k
+export const Settings: React.FC<SettingsProps> = ({
+  users, onAddUser, onUpdateUser, onDeleteUser,
+  currentUser, storeSettings, onUpdateStoreSettings,
+  onGoBack, t, products, sales
 }) => {
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'GENERAL' | 'VENDORS' | 'BACKUP'>('GENERAL');
-  const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
-  const [isSyncingAll, setIsSyncingAll] = useState(false);
-  const [storeForm, setStoreForm] = useState<StoreSettings>(storeSettings);
-  const [lastCreatedVendor, setLastCreatedVendor] = useState<User | null>(null);
-  
-  const [vendorFormData, setVendorFormData] = useState<Partial<User>>({
-    name: '', email: '', username: '', password: '', role: 'VENDOR', vendorStaffLimit: 5
+  const [activeTab, setActiveTab] = useState<'store' | 'users' | 'database'>('store');
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [userFormData, setUserFormData] = useState<Partial<User>>({
+    name: '', username: '', password: '', role: 'STAFF'
   });
 
-  const isSupremeAdmin = currentUser.email?.toLowerCase() === 'nabeelkhan1007@gmail.com';
-  const allVendors = useMemo(() => users.filter(u => u.role === 'VENDOR'), [users]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const generateSecurePassword = () => {
-    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    let pwd = "";
-    for (let i = 0; i < 12; i++) pwd += chars.charAt(Math.floor(Math.random() * chars.length));
-    return pwd;
+  const handleSaveStoreSettings = () => {
+    onUpdateStoreSettings(storeSettings);
+    alert('Store settings synchronized successfully.');
   };
 
-  const handleCreateVendor = () => {
-    if (!vendorFormData.name || !vendorFormData.email || !vendorFormData.username) {
-        alert("All fields are required for Vendor Initialization.");
-        return;
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => onUpdateStoreSettings({ ...storeSettings, logo: reader.result as string });
+      reader.readAsDataURL(file);
     }
-    const autoPwd = generateSecurePassword();
-    const vendorId = `VND-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
-    
-    const newVendor: User = {
-        id: `vdr_${Date.now()}`,
-        name: vendorFormData.name!,
-        username: vendorFormData.username!,
-        password: autoPwd,
-        role: 'VENDOR',
-        email: vendorFormData.email!,
-        vendorId: vendorId,
-        vendorStaffLimit: vendorFormData.vendorStaffLimit || 5,
-        vendorSettings: {
-            storeName: vendorFormData.name!,
-            storeAddress: '',
-            shopPasscode: '2026',
-            customUrlSlug: vendorFormData.username!
-        }
-    };
-    onAddUser(newVendor);
-    setLastCreatedVendor(newVendor);
-    // Simulation of sending email
-    console.log(`[SYSTEM] Dispatching Vendor Credentials to ${newVendor.email}...`);
-    setIsVendorModalOpen(false);
-    setVendorFormData({ name: '', email: '', username: '', password: '', role: 'VENDOR', vendorStaffLimit: 5 });
   };
 
-  const handleGlobalBackup = async (interval: 'DAY' | 'WEEK' | 'MONTH') => {
-      setIsSyncingAll(true);
-      const fullSnapshot = {
-          protocol: 'SUPREME_ADMIN_GLOBAL_LEDGER',
-          timestamp: Date.now(),
-          interval,
-          environment: 'PRODUCTION_MAINFRAME',
-          globalUsers: users,
-          globalInventory: products,
-          globalLedger: sales
-      };
-      await new Promise(r => setTimeout(r, 3000));
-      const blob = new Blob([JSON.stringify(fullSnapshot, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `easyPOS_SUPREME_BACKUP_${Date.now()}.json`;
-      link.click();
-      setIsSyncingAll(false);
+  const handleOpenUserModal = (user?: User) => {
+    if (user) {
+      setEditingUser(user);
+      setUserFormData(user);
+    } else {
+      setEditingUser(null);
+      setUserFormData({ name: '', username: '', password: '', role: 'STAFF' });
+    }
+    setIsUserModalOpen(true);
+  };
+
+  const handleSaveUser = () => {
+    if (!userFormData.name || !userFormData.username || !userFormData.password) {
+      alert("All fields are required for operators.");
+      return;
+    }
+
+    const userData: User = {
+      id: editingUser ? editingUser.id : `usr_${Date.now()}`,
+      name: userFormData.name!,
+      username: userFormData.username!,
+      password: userFormData.password!,
+      role: (userFormData.role as UserRole) || 'STAFF',
+      email: userFormData.email || '',
+      vendorId: userFormData.vendorId
+    };
+
+    if (editingUser) onUpdateUser(userData);
+    else onAddUser(userData);
+    
+    setIsUserModalOpen(false);
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 p-4 lg:p-8 overflow-y-auto transition-colors custom-scrollbar">
-       <div className="flex flex-col lg:flex-row justify-between lg:items-center mb-8 gap-4 shrink-0">
-        <div className="flex items-center gap-4">
-          <button onClick={onGoBack} className="p-3 -ml-3 rounded-2xl bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 shadow-sm border border-slate-100 dark:border-slate-800 transition-all active:scale-90 hover:text-brand-600"><ChevronLeft size={28} className="rtl:rotate-180" /></button>
-          <div>
-              <h2 className="text-xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic leading-none">System Terminal</h2>
-              <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mt-1">Master Control Matrix</p>
+    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 transition-colors overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 p-6 shadow-sm border-b border-slate-100 dark:border-slate-800 shrink-0">
+        <div className="flex flex-col md:flex-row justify-between md:items-center mb-8 gap-6">
+          <div className="flex items-center gap-4">
+            <button onClick={onGoBack} className="p-3 -ml-3 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-all active:scale-90">
+                <ChevronLeft size={28} className="rtl:rotate-180" />
+            </button>
+            <div>
+                <h2 className="text-xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic leading-none">{t('settings')}</h2>
+                <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mt-1">Global System Configuration</p>
+            </div>
           </div>
-        </div>
-        <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-2xl overflow-x-auto no-scrollbar">
-            <button onClick={() => setActiveSettingsTab('GENERAL')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeSettingsTab === 'GENERAL' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-lg' : 'text-slate-500'}`}>Core Settings</button>
-            {isSupremeAdmin && (
-                <button onClick={() => setActiveSettingsTab('VENDORS')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeSettingsTab === 'VENDORS' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-lg' : 'text-slate-500'}`}>Manage Vendors</button>
-            )}
-            <button onClick={() => setActiveSettingsTab('BACKUP')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeSettingsTab === 'BACKUP' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-lg' : 'text-slate-500'}`}>Global Vault</button>
+          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl shadow-inner">
+            <button onClick={() => setActiveTab('store')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'store' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-md' : 'text-slate-400'}`}>{t('storeIdentity')}</button>
+            <button onClick={() => setActiveTab('users')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'users' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-md' : 'text-slate-400'}`}>{t('operatorAccess')}</button>
+            <button onClick={() => setActiveTab('database')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'database' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-md' : 'text-slate-400'}`}>System Data</button>
+          </div>
         </div>
       </div>
 
-      {activeSettingsTab === 'VENDORS' ? (
-        <div className="space-y-8 animate-fade-in pb-20">
-            {lastCreatedVendor && (
-                <div className="bg-emerald-50 dark:bg-emerald-950/20 border-2 border-emerald-500 p-8 rounded-[2.5rem] animate-fade-in-up relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10"><CheckCircle2 size={120} /></div>
-                    <div className="flex justify-between items-start relative z-10">
+      <div className="flex-1 overflow-auto p-4 md:p-8 custom-scrollbar">
+        <div className="max-w-4xl mx-auto space-y-12 pb-20">
+          {activeTab === 'store' && (
+            <div className="space-y-10 animate-fade-in">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="space-y-8">
+                  <div className="aspect-video rounded-[3rem] bg-slate-50 dark:bg-slate-800 border-4 border-slate-100 dark:border-slate-700 flex items-center justify-center overflow-hidden relative shadow-inner group">
+                    {storeSettings.logo ? (
+                      <img src={storeSettings.logo} className="w-full h-full object-contain p-8" alt="Store Logo" />
+                    ) : (
+                      <ImageIcon size={64} className="text-slate-200" />
+                    )}
+                    <button onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-slate-900/60 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all font-black text-xs uppercase tracking-widest gap-2">
+                       <Upload size={20}/> {t('uploadLogo')}
+                    </button>
+                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('businessName')}</label>
+                        <input type="text" value={storeSettings.name} onChange={e => onUpdateStoreSettings({...storeSettings, name: e.target.value})} className="w-full p-4 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl font-black text-lg dark:text-white" />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('storeAddress')}</label>
+                        <textarea value={storeSettings.address} onChange={e => onUpdateStoreSettings({...storeSettings, address: e.target.value})} className="w-full p-4 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl font-bold dark:text-white h-24 resize-none" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-8">
+                  <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+                    <div className="flex items-center gap-3 border-b border-slate-50 dark:border-slate-800 pb-4">
+                        <ShieldCheck size={20} className="text-emerald-500" />
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Security & Tax</h3>
+                    </div>
+                    <div className="flex items-center justify-between">
                         <div>
-                            <h4 className="text-emerald-600 font-black uppercase tracking-widest text-xs flex items-center gap-2 italic"><Zap size={14}/> Node Initialization Successful</h4>
-                            <p className="text-emerald-700 dark:text-emerald-400 font-bold mt-2 text-sm">Credentials have been dispatched to <b>{lastCreatedVendor.email}</b></p>
-                            <div className="mt-6 flex flex-wrap gap-4">
-                                <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-emerald-200">
-                                    <span className="text-[9px] font-black uppercase text-slate-400 block">Username</span>
-                                    <span className="text-sm font-black dark:text-white">{lastCreatedVendor.username}</span>
-                                </div>
-                                <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-emerald-200">
-                                    <span className="text-[9px] font-black uppercase text-slate-400 block">Auto-Passkey</span>
-                                    <span className="text-sm font-black dark:text-white font-mono">{lastCreatedVendor.password}</span>
-                                </div>
-                                <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-emerald-200">
-                                    <span className="text-[9px] font-black uppercase text-slate-400 block">Vendor ID</span>
-                                    <span className="text-sm font-black dark:text-white font-mono">{lastCreatedVendor.vendorId}</span>
-                                </div>
+                            <p className="text-xs font-black dark:text-white uppercase">Enable Tax Ledger</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Global item taxation</p>
+                        </div>
+                        <button onClick={() => onUpdateStoreSettings({...storeSettings, taxEnabled: !storeSettings.taxEnabled})} className={`w-14 h-8 rounded-full transition-all relative ${storeSettings.taxEnabled ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                            <div className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all ${storeSettings.taxEnabled ? 'right-1' : 'left-1'}`}></div>
+                        </button>
+                    </div>
+                    {storeSettings.taxEnabled && (
+                        <div className="grid grid-cols-2 gap-4 animate-fade-in-up">
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black text-slate-400 uppercase">Tax Rate (%)</label>
+                                <input type="number" value={storeSettings.taxRate} onChange={e => onUpdateStoreSettings({...storeSettings, taxRate: parseFloat(e.target.value) || 0})} className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl font-black" />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black text-slate-400 uppercase">Tax Name</label>
+                                <input type="text" value={storeSettings.taxName} onChange={e => onUpdateStoreSettings({...storeSettings, taxName: e.target.value})} className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl font-black" />
                             </div>
                         </div>
-                        <button onClick={() => setLastCreatedVendor(null)} className="p-2 text-emerald-500 hover:text-red-500 transition-colors"><X size={24}/></button>
+                    )}
+                    <div className="pt-4 border-t border-slate-50 dark:border-slate-800">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Receipt Footer Message</label>
+                        <input type="text" value={storeSettings.footerMessage} onChange={e => onUpdateStoreSettings({...storeSettings, footerMessage: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl font-bold dark:text-white text-xs" />
+                    </div>
+                  </div>
+                  
+                  <button onClick={handleSaveStoreSettings} className="w-full py-5 bg-slate-900 dark:bg-brand-600 text-white rounded-3xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 flex items-center justify-center gap-3 italic transition-all">
+                      <Save size={20}/> {t('syncTerminal')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'users' && (
+            <div className="space-y-8 animate-fade-in">
+              <div className="flex justify-between items-center bg-slate-900 text-white p-10 rounded-[3.5rem] shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-12 opacity-10"><UserIcon size={120} /></div>
+                <div className="relative z-10">
+                    <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-2">Personnel Node</h3>
+                    <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">Active Operators: {users.length}</p>
+                </div>
+                <button onClick={() => handleOpenUserModal()} className="relative z-10 px-8 py-4 bg-brand-600 hover:bg-brand-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-2xl active:scale-95 transition-all flex items-center gap-3 italic">
+                    <UserPlus size={18} /> {t('addNewOperator')}
+                </button>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 rounded-[3.5rem] shadow-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+                  <table className="w-full text-left">
+                      <thead className="bg-slate-50 dark:bg-slate-800 text-slate-400 font-black uppercase text-[9px] tracking-widest">
+                          <tr>
+                            <th className="p-8">Identity</th>
+                            <th className="p-8 text-center">Node Role</th>
+                            <th className="p-8 text-right">Actions</th>
+                          </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+                          {users.map(u => (
+                              <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all">
+                                  <td className="p-8">
+                                      <div className="flex items-center gap-4">
+                                          <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center font-black text-slate-400 uppercase italic">{u.name.charAt(0)}</div>
+                                          <div>
+                                              <div className="font-black text-slate-900 dark:text-white uppercase italic">{u.name}</div>
+                                              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">@{u.username}</div>
+                                          </div>
+                                      </div>
+                                  </td>
+                                  <td className="p-8 text-center">
+                                      <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border-2 ${u.role === 'ADMIN' ? 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/20' : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/20'}`}>
+                                          {u.role}
+                                      </span>
+                                  </td>
+                                  <td className="p-8 text-right">
+                                      <div className="flex justify-end gap-2">
+                                          <button onClick={() => handleOpenUserModal(u)} className="p-3 bg-slate-50 dark:bg-slate-800 text-slate-400 rounded-xl hover:text-brand-600 transition-all"><Edit2 size={18}/></button>
+                                          {currentUser.id !== u.id && <button onClick={() => onDeleteUser(u.id)} className="p-3 bg-slate-50 dark:bg-slate-800 text-slate-400 rounded-xl hover:text-rose-600 transition-all"><Trash2 size={18}/></button>}
+                                      </div>
+                                  </td>
+                              </tr>
+                          ))}
+                      </tbody>
+                  </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'database' && (
+             <div className="space-y-8 animate-fade-in">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
+                        <div className="flex items-center gap-3 mb-2">
+                            <Database size={24} className="text-brand-600" />
+                            <h4 className="text-lg font-black dark:text-white uppercase italic">Inventory Cache</h4>
+                        </div>
+                        <p className="text-sm font-medium text-slate-500 leading-relaxed">Local catalog data management and synchronization state.</p>
+                        <div className="pt-4 flex justify-between items-end">
+                            <div>
+                                <p className="text-4xl font-black dark:text-white tracking-tighter">{products.length}</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Master Records</p>
+                            </div>
+                            <button className="px-6 py-3 bg-slate-900 dark:bg-brand-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2"><RefreshCw size={14}/> Force Sync</button>
+                        </div>
+                    </div>
+                    <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
+                        <div className="flex items-center gap-3 mb-2">
+                            <HardDrive size={24} className="text-emerald-500" />
+                            <h4 className="text-lg font-black dark:text-white uppercase italic">Sales Ledger</h4>
+                        </div>
+                        <p className="text-sm font-medium text-slate-500 leading-relaxed">Historical transactional data and audit trails for the current node.</p>
+                        <div className="pt-4 flex justify-between items-end">
+                            <div>
+                                <p className="text-4xl font-black dark:text-white tracking-tighter">{sales.length}</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Logged Invoices</p>
+                            </div>
+                            <button className="px-6 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2">Export CSV</button>
+                        </div>
                     </div>
                 </div>
-            )}
-
-            <div className="bg-slate-900 text-white p-10 rounded-[3.5rem] shadow-2xl relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-8 border-4 border-brand-500/20">
-                <div className="absolute top-0 right-0 p-12 opacity-10 rotate-12"><Store size={200} className="text-brand-500" /></div>
-                <div className="relative z-10">
-                    <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-4">Vendor Ecosystem</h3>
-                    <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-xs">Total Registered Nodes: {allVendors.length}</p>
+                
+                <div className="bg-rose-50 dark:bg-rose-950/20 border-2 border-dashed border-rose-200 dark:border-rose-900/40 p-10 rounded-[3.5rem] flex flex-col items-center text-center space-y-6">
+                    <AlertCircle size={48} className="text-rose-500" />
+                    <div>
+                        <h4 className="text-xl font-black text-rose-600 uppercase italic">Factory Reset Node</h4>
+                        <p className="text-sm font-medium text-rose-500/80 max-w-md mx-auto mt-2 leading-relaxed">Wiping the local node data will disconnect this terminal from the cloud sync. This action is irreversible.</p>
+                    </div>
+                    <button className="px-10 py-5 bg-rose-600 text-white rounded-3xl font-black uppercase tracking-widest text-[10px] shadow-xl active:scale-95 transition-all">Destroy Local Ledger</button>
                 </div>
-                <button onClick={() => setIsVendorModalOpen(true)} className="relative z-10 px-10 py-5 bg-brand-600 hover:bg-brand-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-2xl active:scale-95 transition-all flex items-center gap-3 italic">
-                    <Plus size={18} strokeWidth={3} /> Create New Vendor Node
-                </button>
-            </div>
-
-            <div className="bg-white dark:bg-slate-900 rounded-[3.5rem] shadow-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
-                <table className="w-full text-left">
-                    <thead className="bg-slate-50 dark:bg-slate-800 text-slate-400 font-black uppercase text-[9px] tracking-widest">
-                        <tr><th className="p-10">Business Identity</th><th className="p-10">Vendor ID</th><th className="p-10">Staff Limit</th><th className="p-10 text-right">Actions</th></tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                        {allVendors.map((u) => (
-                            <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all">
-                                <td className="p-10">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center font-black text-slate-400 uppercase italic">{u.name.charAt(0)}</div>
-                                        <div>
-                                            <div className="font-black text-slate-900 dark:text-white uppercase italic">{u.name}</div>
-                                            <div className="text-[9px] font-bold text-slate-400 mt-1">{u.email}</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="p-10">
-                                    <span className="px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border-2 bg-brand-50 text-brand-600 border-brand-100 dark:bg-brand-900/10 dark:border-brand-900/30 font-mono">{u.vendorId}</span>
-                                </td>
-                                <td className="p-10 font-black text-slate-500">{u.vendorStaffLimit || 5} Slots</td>
-                                <td className="p-10 text-right">
-                                    <div className="flex justify-end gap-2">
-                                        <button onClick={() => onDeleteUser(u.id)} className="p-3 text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={20}/></button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+             </div>
+          )}
         </div>
-      ) : activeSettingsTab === 'BACKUP' ? (
-        <div className="max-w-4xl space-y-10 animate-fade-in pb-20">
-            <div className="bg-slate-900 text-white p-14 rounded-[4rem] shadow-2xl relative overflow-hidden flex flex-col items-center text-center gap-10 border-8 border-brand-500/20">
-                <div className="absolute top-0 right-0 p-12 opacity-10 rotate-45"><ShieldCheck size={400} className="text-brand-500" /></div>
-                <div className="relative z-10 w-32 h-32 bg-brand-600 rounded-[2.5rem] flex items-center justify-center shadow-[0_0_80px_rgba(14,165,233,0.4)]">
-                    {isSyncingAll ? <RefreshCw size={64} className="animate-spin" /> : <Database size={64} />}
-                </div>
-                <div className="relative z-10 space-y-4">
-                    <h3 className="text-5xl font-black italic uppercase tracking-tighter">SUPREME GLOBAL VAULT</h3>
-                    <p className="text-brand-400 font-black uppercase tracking-[0.5em] text-sm">System-Wide Multi-Vendor Backup Protocol</p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full relative z-10">
-                    {['DAY', 'WEEK', 'MONTH'].map(type => (
-                        <button key={type} disabled={isSyncingAll} onClick={() => handleGlobalBackup(type as any)} className="p-10 bg-white/5 border-2 border-white/10 rounded-[3rem] hover:bg-brand-600 hover:border-brand-400 transition-all group disabled:opacity-30">
-                            <Cloud size={48} className="text-brand-500 group-hover:text-white mx-auto mb-6" />
-                            <p className="font-black uppercase tracking-widest text-xs italic">{type} Dispatch</p>
-                        </button>
-                    ))}
-                </div>
-            </div>
-        </div>
-      ) : (
-        <div className="max-w-4xl space-y-8 animate-fade-in pb-20">
-            <div className="bg-white dark:bg-slate-900 p-10 rounded-[3.5rem] shadow-xl border border-slate-100 dark:border-slate-800 space-y-10">
-                <div className="flex items-center gap-3 border-b border-slate-50 dark:border-slate-800 pb-6"><Receipt size={28} className="text-brand-500" /><h3 className="text-2xl font-black uppercase italic tracking-tighter dark:text-white">Identity Config</h3></div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('businessName')}</label><input type="text" value={storeForm.name} onChange={e => setStoreForm({...storeForm, name: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black dark:text-white" /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tax Rate (%)</label><input type="number" value={storeForm.taxRate} onChange={e => setStoreForm({...storeForm, taxRate: parseFloat(e.target.value) || 0})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black dark:text-white" /></div>
-                </div>
-                <button onClick={() => onUpdateStoreSettings(storeForm)} className="w-full py-5 bg-slate-900 dark:bg-brand-600 text-white rounded-3xl font-black uppercase tracking-widest shadow-2xl active:scale-95 italic text-xs">Sync System Matrix</button>
-            </div>
-            <button onClick={onLogout} className="w-full flex items-center justify-center gap-4 py-8 bg-red-50 dark:bg-red-950/20 text-red-600 hover:bg-red-600 hover:text-white transition-all rounded-[3rem] font-black uppercase tracking-[0.3em] text-sm shadow-xl group border border-red-100 dark:border-red-900/30"><LogOut size={28} className="group-hover:-translate-x-2 transition-transform" /><span>Terminate Root Session</span></button>
-        </div>
-      )}
+      </div>
 
-      {isVendorModalOpen && (
-          <div className="fixed inset-0 bg-black/90 backdrop-blur-2xl z-[120] flex items-center justify-center p-4">
-              <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[4rem] shadow-2xl overflow-hidden animate-fade-in-up border border-white/10 flex flex-col">
-                  <div className="p-10 border-b border-white/5 flex justify-between items-center bg-slate-900 text-white">
+      {isUserModalOpen && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-2xl z-[120] flex items-center justify-center p-4">
+              <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[3rem] shadow-2xl overflow-hidden animate-fade-in-up border border-slate-100 dark:border-slate-800 flex flex-col">
+                  <div className="p-10 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
                       <div>
-                          <h3 className="text-3xl font-black italic uppercase tracking-tighter">Vendor Initialization</h3>
-                          <p className="text-[10px] font-black text-brand-400 uppercase tracking-widest mt-1">Multi-Vendor Deployment Protocol</p>
+                          <h3 className="text-3xl font-black text-slate-900 dark:text-white italic uppercase tracking-tighter">{editingUser ? 'Update Operator' : t('newOperator')}</h3>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Authorization Protocol</p>
                       </div>
-                      <button onClick={() => setIsVendorModalOpen(false)} className="p-3 bg-white/5 rounded-2xl hover:text-red-500 transition-all"><X size={24}/></button>
+                      <button onClick={() => setIsUserModalOpen(false)} className="p-3 bg-white dark:bg-slate-800 text-slate-400 rounded-2xl hover:text-red-500 transition-all"><X size={24}/></button>
                   </div>
-                  <div className="p-10 space-y-6">
-                      <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Business Name</label><input type="text" value={vendorFormData.name} onChange={e => setVendorFormData({...vendorFormData, name: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white" /></div>
-                          <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Vendor Username</label><input type="text" value={vendorFormData.username} onChange={e => setVendorFormData({...vendorFormData, username: e.target.value.toLowerCase()})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white" /></div>
+                  
+                  <div className="p-10 space-y-8">
+                      <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('fullLegalName')}</label>
+                          <input type="text" value={userFormData.name} onChange={e => setUserFormData({...userFormData, name: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white outline-none focus:border-brand-500" />
                       </div>
-                      <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Admin Email Address</label><input type="email" value={vendorFormData.email} onChange={e => setVendorFormData({...vendorFormData, email: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white" /></div>
-                      <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Auto-Generated Password</label><div className="w-full p-4 bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl font-black text-sm text-slate-400 italic">Secure Passkey Created on Deploy</div></div>
-                          <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Staff Access Limit</label><input type="number" value={vendorFormData.vendorStaffLimit} onChange={e => setVendorFormData({...vendorFormData, vendorStaffLimit: parseInt(e.target.value) || 5})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white" /></div>
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('username')}</label>
+                            <input type="text" value={userFormData.username} onChange={e => setUserFormData({...userFormData, username: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white outline-none focus:border-brand-500" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('accessPassword')}</label>
+                            <input type="password" value={userFormData.password} onChange={e => setUserFormData({...userFormData, password: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold dark:text-white outline-none focus:border-brand-500" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('securityRole')}</label>
+                          <select value={userFormData.role} onChange={e => setUserFormData({...userFormData, role: e.target.value as UserRole})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black uppercase text-[10px] tracking-widest dark:text-white outline-none focus:border-brand-500">
+                              <option value="STAFF">Staff Operator</option>
+                              <option value="MANAGER">Node Manager</option>
+                              <option value="ADMIN">System Admin</option>
+                              <option value="CASHIER">Cashier Terminal</option>
+                          </select>
                       </div>
                   </div>
-                  <div className="p-10 bg-slate-50 dark:bg-slate-900/50 border-t border-white/5">
-                      <button onClick={handleCreateVendor} className="w-full py-6 bg-brand-600 text-white rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3 italic"><Zap size={20}/> Deploy Vendor Node</button>
+
+                  <div className="p-10 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 flex gap-4">
+                      <button onClick={() => setIsUserModalOpen(false)} className="flex-1 py-5 text-slate-500 font-black uppercase tracking-widest text-[10px]">{t('cancel')}</button>
+                      <button onClick={handleSaveUser} className="flex-[2] py-5 bg-brand-600 text-white font-black uppercase tracking-widest text-[10px] rounded-[2rem] shadow-xl hover:bg-brand-500 transition-all italic flex items-center justify-center gap-2">
+                          <CheckCircle2 size={18} /> {t('authorizeOperator')}
+                      </button>
                   </div>
               </div>
           </div>
