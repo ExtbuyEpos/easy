@@ -4,8 +4,7 @@ import { Product, User, Language, StoreSettings, ProductVariant } from '../types
 import { Plus, Search, Trash2, Edit2, Save, X, Image as ImageIcon, RefreshCw, Upload, Package, AlertCircle, ChevronLeft, TrendingUp, DollarSign, List, Grid, Check, ArrowRightLeft, Sparkles, Loader2, Heart, Type, Palette, Ruler, Layers, Settings2, CheckCircle2 } from 'lucide-react';
 import { CURRENCY } from '../constants';
 import { formatNumber, formatCurrency } from '../utils/format';
-import { generateImageWithCloudflare } from '../services/cloudflareAiService';
-import { generateImageWithHackClub } from '../services/hackClubAiService';
+import { uploadImage } from '../firebase';
 
 interface InventoryProps {
   products: Product[];
@@ -55,8 +54,7 @@ export const Inventory: React.FC<InventoryProps> = ({
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [isGeneratingAiImage, setIsGeneratingAiImage] = useState(false);
-  const [aiEngine, setAiEngine] = useState<'CLOUDFLARE' | 'HACKCLUB'>('CLOUDFLARE');
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Variant Matrix state
@@ -65,19 +63,10 @@ export const Inventory: React.FC<InventoryProps> = ({
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [matrix, setMatrix] = useState<ProductVariant[]>([]);
 
-  // Custom additions
-  const [customColors, setCustomColors] = useState<{name: string, hex: string}[]>([]);
-  const [customSizes, setCustomSizes] = useState<string[]>([]);
-  const [isAddingCustomColor, setIsAddingCustomColor] = useState(false);
-  const [isAddingCustomSize, setIsAddingCustomSize] = useState(false);
-  const [newColorInput, setNewColorInput] = useState({ name: '', hex: '#6366f1' });
-  const [newSizeInput, setNewSizeInput] = useState('');
-
   const [formData, setFormData] = useState<Partial<Product>>({
     name: '', sku: '', costPrice: 0, sellPrice: 0, stock: 0, category: 'General', image: '', size: '', color: ''
   });
 
-  // Role Permissions Logic
   const canAdd = currentUser?.role === 'ADMIN' || currentUser?.role === 'VENDOR';
   const canDelete = currentUser?.role === 'ADMIN' || currentUser?.role === 'VENDOR';
   const canEditPricesAndMetadata = ['ADMIN', 'MANAGER', 'VENDOR'].includes(currentUser?.role || '');
@@ -123,17 +112,10 @@ export const Inventory: React.FC<InventoryProps> = ({
           const pSizes = Array.from(new Set(product.variants.map(v => v.size)));
           setSelectedColors(pColors);
           setSelectedSizes(pSizes);
-          
-          const pCustomColors = pColors.filter(pc => !COMMON_COLORS.some(cc => cc.name === pc)).map(c => ({ name: c, hex: '#cccccc' }));
-          const pCustomSizes = pSizes.filter(ps => !COMMON_SIZES.includes(ps));
-          setCustomColors(pCustomColors);
-          setCustomSizes(pCustomSizes);
       } else {
           setMatrix([]);
           setSelectedColors([]);
           setSelectedSizes([]);
-          setCustomColors([]);
-          setCustomSizes([]);
       }
     } else {
       if (!canAdd) return;
@@ -143,11 +125,7 @@ export const Inventory: React.FC<InventoryProps> = ({
       setMatrix([]);
       setSelectedColors([]);
       setSelectedSizes([]);
-      setCustomColors([]);
-      setCustomSizes([]);
     }
-    setIsAddingCustomColor(false);
-    setIsAddingCustomSize(false);
     setIsModalOpen(true);
   };
 
@@ -173,12 +151,19 @@ export const Inventory: React.FC<InventoryProps> = ({
     setIsModalOpen(false);
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setFormData({ ...formData, image: reader.result as string });
-      reader.readAsDataURL(file);
+      setIsUploading(true);
+      try {
+        const publicUrl = await uploadImage(file, 'products');
+        setFormData({ ...formData, image: publicUrl });
+      } catch (err) {
+        console.error("Upload failed", err);
+        alert("Image upload failed. Check connection.");
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -276,14 +261,19 @@ export const Inventory: React.FC<InventoryProps> = ({
                                         <img src={formData.image} className="w-full h-full object-cover" />
                                         {!canOnlyAdjustStock && <button onClick={() => setFormData({...formData, image: ''})} className="absolute inset-0 bg-red-600/60 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all"><X size={48}/></button>}
                                     </>
+                                ) : isUploading ? (
+                                    <div className="flex flex-col items-center gap-3">
+                                        <Loader2 className="animate-spin text-brand-500" size={48} />
+                                        <p className="text-[10px] font-black text-brand-500 uppercase tracking-widest">Uploading...</p>
+                                    </div>
                                 ) : <ImageIcon size={80} strokeWidth={1} className="text-slate-200" />}
                              </div>
                              {!canOnlyAdjustStock && (
-                                <button onClick={() => fileInputRef.current?.click()} className="w-full py-5 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-[2rem] font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 shadow-sm hover:bg-slate-50 transition-all">
-                                    <Upload size={18}/> {t('uploadImage')}
+                                <button disabled={isUploading} onClick={() => fileInputRef.current?.click()} className="w-full py-5 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-[2rem] font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 shadow-sm hover:bg-slate-50 transition-all disabled:opacity-50">
+                                    {isUploading ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18}/>} {t('uploadImage')}
                                 </button>
                              )}
-                             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
                           </div>
 
                           <div className="lg:col-span-8 space-y-10">

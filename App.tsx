@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { POS } from './components/POS';
 import { Inventory } from './components/Inventory';
@@ -17,7 +17,9 @@ import { VendorPanel } from './components/VendorPanel';
 import { AppView, Product, Sale, User, StoreSettings, Language } from './types';
 import { translations } from './translations';
 import { Loader2, Menu, Globe, ChevronLeft, LogOut } from 'lucide-react';
-import { supabase } from './supabase';
+import { auth, db } from './firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -62,34 +64,29 @@ const App: React.FC = () => {
   }, [navigationHistory, user]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut(auth);
     setUser(null);
     setCurrentView(AppView.LOGIN);
     setNavigationHistory([]);
   };
 
-  // --- USER PERSISTENCE HANDLERS (Supabase Ready) ---
+  // --- USER PERSISTENCE HANDLERS (Firebase Firestore) ---
   const handleAddUser = async (newUser: User) => {
     setIsSyncing(true);
     try {
-        // Optimistic Update
         setUsers(prev => [...prev, newUser]);
         
-        // Supabase DB Sync
-        const { error } = await supabase
-            .from('profiles')
-            .insert([{
-                id: newUser.id,
-                name: newUser.name,
-                username: newUser.username,
-                password: newUser.password, // In real apps, don't store plain passwords
-                role: newUser.role,
-                vendor_id: newUser.vendorId,
-                vendor_settings: newUser.vendorSettings,
-                vendor_staff_limit: newUser.vendorStaffLimit
-            }]);
-            
-        if (error) throw error;
+        await setDoc(doc(db, 'users', newUser.id), {
+            id: newUser.id,
+            name: newUser.name,
+            username: newUser.username,
+            password: newUser.password, 
+            role: newUser.role,
+            vendorId: newUser.vendorId || null,
+            vendorSettings: newUser.vendorSettings || null,
+            vendorStaffLimit: newUser.vendorStaffLimit || null,
+            email: newUser.email || null
+        });
     } catch (err) {
         console.error("User provisioning failed", err);
     } finally {
@@ -102,25 +99,19 @@ const App: React.FC = () => {
     try {
         setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
         
-        // Update currently logged in user if they updated themselves (e.g. Vendor updating store profile)
         if (user?.id === updatedUser.id) {
             setUser(updatedUser);
         }
 
-        const { error } = await supabase
-            .from('profiles')
-            .update({
-                name: updatedUser.name,
-                username: updatedUser.username,
-                password: updatedUser.password,
-                role: updatedUser.role,
-                vendor_id: updatedUser.vendorId,
-                vendor_settings: updatedUser.vendorSettings,
-                vendor_staff_limit: updatedUser.vendorStaffLimit
-            })
-            .eq('id', updatedUser.id);
-            
-        if (error) throw error;
+        await updateDoc(doc(db, 'users', updatedUser.id), {
+            name: updatedUser.name,
+            username: updatedUser.username,
+            password: updatedUser.password,
+            role: updatedUser.role,
+            vendorId: updatedUser.vendorId || null,
+            vendorSettings: updatedUser.vendorSettings || null,
+            vendorStaffLimit: updatedUser.vendorStaffLimit || null
+        });
     } catch (err) {
         console.error("User sync failed", err);
     } finally {
@@ -133,8 +124,7 @@ const App: React.FC = () => {
     setIsSyncing(true);
     try {
         setUsers(prev => prev.filter(u => u.id !== id));
-        const { error } = await supabase.from('profiles').delete().eq('id', id);
-        if (error) throw error;
+        await deleteDoc(doc(db, 'users', id));
     } catch (err) {
         console.error("Identity severance failed", err);
     } finally {
@@ -153,62 +143,71 @@ const App: React.FC = () => {
     document.documentElement.dir = (language === 'ar') ? 'rtl' : 'ltr';
   }, [language]);
 
-  // Auth & Data Sync via Supabase
+  // Auth & Data Sync via Firebase
   useEffect(() => {
-    const fetchSessionAndUsers = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        // Fetch all profiles from Supabase
-        const { data: profiles, error } = await supabase.from('profiles').select('*');
-        if (!error && profiles) {
-            const mappedUsers: User[] = profiles.map(p => ({
-                id: p.id,
-                name: p.name,
-                username: p.username,
-                password: p.password,
-                role: p.role,
-                vendorId: p.vendor_id,
-                vendorSettings: p.vendor_settings,
-                vendorStaffLimit: p.vendor_staff_limit,
-                email: p.email
-            }));
-            setUsers(mappedUsers);
+    const fetchUsers = async () => {
+        try {
+            const querySnapshot = await getDocs(collection(db, 'users'));
+            const fetchedUsers: User[] = [];
+            querySnapshot.forEach((doc) => {
+                const d = doc.data();
+                fetchedUsers.push({
+                    id: d.id,
+                    name: d.name,
+                    username: d.username,
+                    password: d.password,
+                    role: d.role,
+                    vendorId: d.vendorId,
+                    vendorSettings: d.vendorSettings,
+                    vendorStaffLimit: d.vendorStaffLimit,
+                    email: d.email
+                });
+            });
+            setUsers(fetchedUsers);
+            return fetchedUsers;
+        } catch (e) {
+            console.error("Error fetching users:", e);
+            return [];
         }
+    };
 
-        if (session?.user) {
-          const email = session.user.email?.toLowerCase() || '';
-          const isAdmin = email === 'nabeelkhan1007@gmail.com' || email === 'zahratalsawsen1@gmail.com';
-          
-          // Find full profile
-          const profile = profiles?.find(p => p.id === session.user.id);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        if (firebaseUser) {
+            const allUsers = await fetchUsers();
+            const email = firebaseUser.email?.toLowerCase() || '';
+            const isAdmin = email === 'nabeelkhan1007@gmail.com' || email === 'zahratalsawsen1@gmail.com';
+            
+            // Find existing profile or create basic one
+            let profile = allUsers.find(p => p.email === email || p.id === firebaseUser.uid);
 
-          setUser({
-            id: session.user.id,
-            name: profile?.name || session.user.user_metadata.full_name || (isAdmin ? 'System Master' : 'User'),
-            username: profile?.username || email.split('@')[0],
-            role: profile?.role || (isAdmin ? 'ADMIN' : 'CUSTOMER'),
-            email: email,
-            vendorId: profile?.vendor_id,
-            vendorSettings: profile?.vendor_settings,
-            vendorStaffLimit: profile?.vendor_staff_limit
-          });
-          
-          if (isAdmin) setCurrentView(AppView.POS);
-          else if (profile?.role === 'VENDOR' || profile?.role === 'VENDOR_STAFF') setCurrentView(AppView.VENDOR_PANEL);
-          else setCurrentView(AppView.CUSTOMER_PORTAL);
+            const activeUser: User = {
+                id: firebaseUser.uid,
+                name: profile?.name || firebaseUser.displayName || (isAdmin ? 'System Master' : 'User'),
+                username: profile?.username || email.split('@')[0],
+                role: profile?.role || (isAdmin ? 'ADMIN' : 'CUSTOMER'),
+                email: email,
+                vendorId: profile?.vendorId,
+                vendorSettings: profile?.vendorSettings,
+                vendorStaffLimit: profile?.vendorStaffLimit
+            };
+            
+            setUser(activeUser);
+            
+            // Sync user back to DB if missing
+            if (!profile) {
+                handleAddUser(activeUser);
+            }
+
+            if (activeUser.role === 'ADMIN') setCurrentView(AppView.POS);
+            else if (activeUser.role === 'VENDOR' || activeUser.role === 'VENDOR_STAFF') setCurrentView(AppView.VENDOR_PANEL);
+            else setCurrentView(AppView.CUSTOMER_PORTAL);
+        } else {
+            setUser(null);
         }
         setIsAuthChecking(false);
-    };
-
-    fetchSessionAndUsers();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) setUser(null);
     });
 
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
+    return () => unsubscribe();
   }, []);
 
   const t = (key: string) => translations[language][key] || key;
