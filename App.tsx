@@ -18,8 +18,6 @@ import { AppView, Product, Sale, User, StoreSettings, Language } from './types';
 import { translations } from './translations';
 import { Loader2, Menu, Globe, ChevronLeft, LogOut } from 'lucide-react';
 import { supabase } from './supabase';
-import { auth } from './firebase';
-import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -64,7 +62,6 @@ const App: React.FC = () => {
   }, [navigationHistory, user]);
 
   const handleLogout = async () => {
-    await firebaseSignOut(auth);
     await supabase.auth.signOut();
     setUser(null);
     setCurrentView(AppView.LOGIN);
@@ -156,9 +153,11 @@ const App: React.FC = () => {
     document.documentElement.dir = (language === 'ar') ? 'rtl' : 'ltr';
   }, [language]);
 
-  // Auth & Data Sync (Dual Strategy: Firebase for Session, Supabase for Data)
+  // Auth & Data Sync via Supabase
   useEffect(() => {
     const fetchSessionAndUsers = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        
         // Fetch all profiles from Supabase
         const { data: profiles, error } = await supabase.from('profiles').select('*');
         if (!error && profiles) {
@@ -175,65 +174,42 @@ const App: React.FC = () => {
             }));
             setUsers(mappedUsers);
         }
+
+        if (session?.user) {
+          const email = session.user.email?.toLowerCase() || '';
+          const isAdmin = email === 'nabeelkhan1007@gmail.com' || email === 'zahratalsawsen1@gmail.com';
+          
+          // Find full profile
+          const profile = profiles?.find(p => p.id === session.user.id);
+
+          setUser({
+            id: session.user.id,
+            name: profile?.name || session.user.user_metadata.full_name || (isAdmin ? 'System Master' : 'User'),
+            username: profile?.username || email.split('@')[0],
+            role: profile?.role || (isAdmin ? 'ADMIN' : 'CUSTOMER'),
+            email: email,
+            vendorId: profile?.vendor_id,
+            vendorSettings: profile?.vendor_settings,
+            vendorStaffLimit: profile?.vendor_staff_limit
+          });
+          
+          if (isAdmin) setCurrentView(AppView.POS);
+          else if (profile?.role === 'VENDOR' || profile?.role === 'VENDOR_STAFF') setCurrentView(AppView.VENDOR_PANEL);
+          else setCurrentView(AppView.CUSTOMER_PORTAL);
+        }
+        setIsAuthChecking(false);
     };
 
     fetchSessionAndUsers();
 
-    // Listen to Firebase Auth (Primary for this update)
-    const unsubscribeFirebase = onAuthStateChanged(auth, (firebaseUser) => {
-        if (firebaseUser) {
-            const email = firebaseUser.email?.toLowerCase() || '';
-            // Basic admin check for demo purposes
-            const isAdmin = email === 'nabeelkhan1007@gmail.com' || email === 'zahratalsawsen1@gmail.com';
-            
-            // Try to find extended profile in loaded users
-            const profile = users.find(u => u.email === email);
-
-            setUser({
-                id: firebaseUser.uid,
-                name: profile?.name || firebaseUser.displayName || (isAdmin ? 'System Master' : 'User'),
-                username: profile?.username || email.split('@')[0],
-                role: profile?.role || (isAdmin ? 'ADMIN' : 'CUSTOMER'),
-                email: email,
-                vendorId: profile?.vendorId,
-                vendorSettings: profile?.vendorSettings,
-                vendorStaffLimit: profile?.vendorStaffLimit,
-                avatar: firebaseUser.photoURL || undefined
-            });
-
-            if (isAdmin) setCurrentView(AppView.POS);
-            else if (profile?.role === 'VENDOR' || profile?.role === 'VENDOR_STAFF') setCurrentView(AppView.VENDOR_PANEL);
-            else if (!user) setCurrentView(AppView.CUSTOMER_PORTAL); // Only switch if not already set
-        } else {
-            // Fallback to checking Supabase session if Firebase is null
-            supabase.auth.getSession().then(({ data: { session } }) => {
-                if (session?.user) {
-                     const email = session.user.email?.toLowerCase() || '';
-                     const isAdmin = email === 'nabeelkhan1007@gmail.com';
-                     const profile = users.find(u => u.id === session.user.id);
-                     
-                     setUser({
-                        id: session.user.id,
-                        name: profile?.name || session.user.user_metadata.full_name || 'User',
-                        username: profile?.username || email.split('@')[0],
-                        role: profile?.role || (isAdmin ? 'ADMIN' : 'CUSTOMER'),
-                        email: email,
-                        vendorId: profile?.vendorId,
-                        vendorSettings: profile?.vendorSettings,
-                        vendorStaffLimit: profile?.vendorStaffLimit
-                     });
-                } else {
-                    setUser(null);
-                }
-            });
-        }
-        setIsAuthChecking(false);
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) setUser(null);
     });
 
     return () => {
-        unsubscribeFirebase();
+      authListener.subscription.unsubscribe();
     };
-  }, []); // Re-run if users loaded? No, users is state.
+  }, []);
 
   const t = (key: string) => translations[language][key] || key;
 

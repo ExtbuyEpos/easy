@@ -6,58 +6,56 @@ import { getMessaging, Messaging, isSupported as isMessagingSupported } from 'fi
 import { getAnalytics, Analytics, isSupported as isAnalyticsSupported } from 'firebase/analytics';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBfVt6vqEK4Ett-suudk-AWVgfF0CgZFfQ",
-  authDomain: "easyposlogin.firebaseapp.com",
-  projectId: "easyposlogin",
-  storageBucket: "easyposlogin.firebasestorage.app",
-  messagingSenderId: "767239854610",
-  appId: "1:767239854610:web:c0d1d9b6984a3f33b4d6cb",
-  measurementId: "G-59VY3VC09L"
+  apiKey: "AIzaSyCL8ue8SMmLdDVaj-dofxm_nYmJznaV4yI",
+  authDomain: "extbuy-flutter-ai.firebaseapp.com",
+  projectId: "extbuy-flutter-ai",
+  storageBucket: "extbuy-flutter-ai.firebasestorage.app",
+  messagingSenderId: "856022079884",
+  appId: "1:856022079884:web:bfb08ce547b42a50f31ea9"
 };
 
-// Singleton instances
+// Singleton storage
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 let messaging: Messaging | null = null;
 let analytics: Analytics | null = null;
+const googleProvider = new GoogleAuthProvider();
 
-// Initialize Core Services
-// We do not wrap this in try-catch to ensure the app fails loudly if config/versions are wrong
-app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-auth = getAuth(app);
-db = getFirestore(app);
+try {
+  // 1. Initialize core App
+  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+  
+  // 2. Initialize core services immediately to trigger internal component registration
+  auth = getAuth(app);
+  db = getFirestore(app);
 
-// Initialize Optional Services & Persistence
-const setupOptional = async () => {
-  try {
-    if (await isMessagingSupported()) {
-      messaging = getMessaging(app);
+  // 3. Setup optional services and persistence in background
+  const setupOptional = async () => {
+    try {
+      if (await isMessagingSupported()) messaging = getMessaging(app);
+      if (await isAnalyticsSupported()) analytics = getAnalytics(app);
+      
+      // Attempt to enable offline persistence for better POS performance
+      await enableIndexedDbPersistence(db).catch((err) => {
+        if (err.code === 'failed-precondition') {
+          console.warn("Firebase: Persistence failed due to multiple tabs.");
+        } else if (err.code === 'unimplemented') {
+          console.warn("Firebase: Persistence not supported by browser.");
+        }
+      });
+    } catch (e) {
+      console.warn("Firebase: Optional services skipped.", e);
     }
-    
-    if (await isAnalyticsSupported()) {
-      analytics = getAnalytics(app);
-    }
-    
-    // Attempt to enable offline persistence for better POS performance
-    await enableIndexedDbPersistence(db).catch((err) => {
-      if (err.code === 'failed-precondition') {
-        console.warn("Firebase: Persistence failed due to multiple tabs.");
-      } else if (err.code === 'unimplemented') {
-        console.warn("Firebase: Persistence not supported by browser.");
-      }
-    });
-  } catch (e) {
-    console.warn("Firebase: Optional services skipped.", e);
-  }
-};
-
-setupOptional();
-
-export const googleProvider = new GoogleAuthProvider();
+  };
+  
+  setupOptional();
+} catch (error) {
+  console.error("Firebase: Initialization sequence failed critical check.", error);
+}
 
 // Ensure exports are available
-export { db, app, auth, messaging, analytics };
+export { db, app, auth, messaging, analytics, googleProvider };
 
 export const saveFirebaseConfig = (configStr: string) => {
   try {

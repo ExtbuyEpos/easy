@@ -49,12 +49,12 @@ export const Login: React.FC<LoginProps> = ({
   useEffect(() => {
     const colors = ['#0ea5e9', '#10b981', '#f43f5e', '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6'];
     const iconPool = [
-        <ShoppingCart size={24} />, <CreditCard size={24} />, <Tag size={24} />, 
-        <Package size={24} />, <Zap size={24} />, <Boxes size={24} />, 
-        <LayoutGrid size={24} />, <Wallet size={24} />
+        <ShoppingCart size={32} />, <CreditCard size={32} />, <Tag size={32} />, 
+        <Package size={32} />, <Zap size={32} />, <Boxes size={32} />, 
+        <LayoutGrid size={32} />, <Wallet size={32} />
     ];
 
-    const initialItems: PhysicsItem[] = Array.from({ length: 32 }).map((_, i) => ({
+    const initialItems: PhysicsItem[] = Array.from({ length: 24 }).map((_, i) => ({
       id: i,
       x: 10 + Math.random() * 80,
       y: 80 + Math.random() * 20,
@@ -62,7 +62,7 @@ export const Login: React.FC<LoginProps> = ({
       vy: (Math.random() - 0.5) * 2,
       rotation: Math.random() * 360,
       rv: (Math.random() - 0.5) * 10,
-      size: 44 + Math.random() * 12,
+      size: 60 + Math.random() * 40, // Increased size for better visuals
       color: colors[i % colors.length],
       icon: iconPool[i % iconPool.length]
     }));
@@ -131,7 +131,6 @@ export const Login: React.FC<LoginProps> = ({
       const result = await signInWithPopup(auth, googleProvider);
       const firebaseUser = result.user;
       
-      // Determine if admin (simple hardcoded check for demo purposes)
       const isAdmin = firebaseUser.email === 'nabeelkhan1007@gmail.com';
 
       const user: User = {
@@ -152,14 +151,14 @@ export const Login: React.FC<LoginProps> = ({
   };
 
   return (
-    <div className="h-[100svh] w-full bg-[#020617] flex flex-col items-center justify-start relative overflow-y-auto overflow-x-hidden font-sans custom-scrollbar">
+    <div className="fixed inset-0 w-full h-full bg-[#020617] overflow-y-auto font-sans custom-scrollbar">
       
       {/* FIXED GRAVITY ICON PIT */}
-      <div className="fixed inset-x-0 bottom-0 h-[40vh] pointer-events-none z-0">
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
           {items.map(item => (
               <div 
                 key={item.id}
-                className="absolute flex items-center justify-center rounded-2xl shadow-2xl border border-white/10 transition-transform duration-75 ease-out"
+                className="absolute flex items-center justify-center rounded-3xl shadow-2xl border border-white/10 transition-transform duration-75 ease-out"
                 style={{
                     left: `${item.x}%`,
                     top: `${item.y}%`,
@@ -167,84 +166,84 @@ export const Login: React.FC<LoginProps> = ({
                     height: `${item.size}px`,
                     backgroundColor: item.color,
                     transform: `translate(-50%, -50%) rotate(${item.rotation}deg)`,
-                    boxShadow: `0 0 40px ${item.color}66`,
-                    opacity: 0.9
+                    boxShadow: `0 0 60px ${item.color}66`,
+                    opacity: 0.8
                 }}
               >
-                  <div className="text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]">{item.icon}</div>
+                  <div className="text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)] scale-150">{item.icon}</div>
               </div>
           ))}
       </div>
 
       {/* Scrollable Content Container */}
-      <div className="w-full max-w-lg flex flex-col items-center z-10 px-4 py-12 md:p-12 shrink-0 min-h-[100svh] justify-center">
+      <div className="w-full min-h-full flex flex-col items-center justify-center py-16 px-4 z-10 relative">
           
           {/* HERO LOGO */}
-          <div className="flex items-center gap-4 md:gap-6 mb-8 md:mb-12 animate-fade-in shrink-0 origin-center scale-90 md:scale-100">
+          <div className="flex items-center gap-6 md:gap-8 mb-10 md:mb-16 animate-fade-in shrink-0 origin-center scale-90 md:scale-100">
               <div 
-                className="w-20 h-20 md:w-24 md:h-24 bg-[#0ea5e9] rounded-[2rem] md:rounded-[2.5rem] flex items-center justify-center text-white shadow-[0_0_80px_rgba(14,165,233,0.6)]"
+                className="w-24 h-24 md:w-32 md:h-32 bg-[#0ea5e9] rounded-[2.5rem] md:rounded-[3rem] flex items-center justify-center text-white shadow-[0_0_100px_rgba(14,165,233,0.6)]"
                 style={{
                   transform: `perspective(1000px) rotateY(${gravityRef.current.x * 20}deg) rotateX(${-gravityRef.current.y * 20}deg)`
                 }}
               >
-                  <LayoutGrid size={40} strokeWidth={2.5} className="animate-pulse md:hidden" />
-                  <LayoutGrid size={56} strokeWidth={2.5} className="animate-pulse hidden md:block" />
+                  <LayoutGrid size={48} strokeWidth={2.5} className="animate-pulse md:hidden" />
+                  <LayoutGrid size={72} strokeWidth={2.5} className="animate-pulse hidden md:block" />
               </div>
               <div className="text-left">
-                  <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none">EASYPOS</h1>
-                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.5em] mt-2 opacity-80 italic">Multi-Vendor Terminal</p>
+                  <h1 className="text-5xl md:text-7xl font-black text-white italic tracking-tighter uppercase leading-none">EASYPOS</h1>
+                  <p className="text-[10px] md:text-[12px] font-black text-slate-500 uppercase tracking-[0.5em] mt-3 opacity-80 italic">Multi-Vendor Terminal</p>
               </div>
           </div>
 
           <div className="space-y-0 mb-10 md:mb-16 text-center animate-fade-in shrink-0">
-              <h2 className="text-5xl sm:text-7xl md:text-9xl font-black text-white italic uppercase tracking-tighter leading-[0.75] opacity-95">SMART</h2>
-              <h2 className="text-5xl sm:text-7xl md:text-9xl font-black text-slate-600 italic uppercase tracking-tighter leading-[0.75] opacity-40">RETAIL</h2>
-              <p className="text-[10px] md:text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] pt-6 md:pt-8 italic opacity-60">Professional Physical Inventory Logic.</p>
+              <h2 className="text-6xl sm:text-8xl md:text-9xl font-black text-white italic uppercase tracking-tighter leading-[0.75] opacity-95">SMART</h2>
+              <h2 className="text-6xl sm:text-8xl md:text-9xl font-black text-slate-600 italic uppercase tracking-tighter leading-[0.75] opacity-40">RETAIL</h2>
+              <p className="text-[12px] md:text-[14px] font-black text-slate-400 uppercase tracking-[0.4em] pt-8 md:pt-10 italic opacity-60">Professional Physical Inventory Logic.</p>
           </div>
 
           {/* ENTRY TERMINAL */}
-          <div className="w-full max-w-sm mb-12 bg-white/5 backdrop-blur-3xl rounded-[2.5rem] md:rounded-[3.5rem] border border-white/10 p-6 md:p-8 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)] animate-fade-in-up">
-              <div className="flex bg-black/40 p-1.5 rounded-[2.2rem] mb-8 border border-white/5 shadow-inner">
-                  <button onClick={() => setMethod('CREDENTIALS')} className={`flex-1 py-3.5 rounded-[1.8rem] text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all ${method === 'CREDENTIALS' ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-500 hover:text-white'}`}>Staff Access</button>
-                  <button onClick={() => setMethod('VISITOR_CODE')} className={`flex-1 py-3.5 rounded-[1.8rem] text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all ${method === 'VISITOR_CODE' ? 'bg-brand-600 text-white shadow-xl' : 'text-slate-500 hover:text-white'}`}>Shop Visitor</button>
+          <div className="w-full max-w-lg mb-12 bg-white/5 backdrop-blur-3xl rounded-[3rem] md:rounded-[4rem] border border-white/10 p-8 md:p-12 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)] animate-fade-in-up">
+              <div className="flex bg-black/40 p-2 rounded-[2.5rem] mb-10 border border-white/5 shadow-inner">
+                  <button onClick={() => setMethod('CREDENTIALS')} className={`flex-1 py-4 rounded-[2rem] text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${method === 'CREDENTIALS' ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-500 hover:text-white'}`}>Staff Access</button>
+                  <button onClick={() => setMethod('VISITOR_CODE')} className={`flex-1 py-4 rounded-[2rem] text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${method === 'VISITOR_CODE' ? 'bg-brand-600 text-white shadow-xl' : 'text-slate-500 hover:text-white'}`}>Shop Visitor</button>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-6">
                   {method === 'CREDENTIALS' ? (
                       <>
                           <div className="relative group">
-                              <UserIcon className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-brand-500 transition-colors" size={20} />
-                              <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full pl-16 pr-6 py-5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:border-brand-500 font-bold text-white transition-all shadow-inner text-sm md:text-base" placeholder="Operator ID" required />
+                              <UserIcon className="absolute left-8 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-brand-500 transition-colors" size={24} />
+                              <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full pl-20 pr-8 py-6 bg-black/40 border border-white/10 rounded-[2rem] outline-none focus:border-brand-500 font-bold text-white transition-all shadow-inner text-base md:text-lg" placeholder="Operator ID" required />
                           </div>
                           <div className="relative group">
-                              <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-brand-500 transition-colors" size={20} />
-                              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-16 pr-6 py-5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:border-brand-500 font-bold text-white transition-all shadow-inner text-sm md:text-base" placeholder="••••••••" required />
+                              <Lock className="absolute left-8 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-brand-500 transition-colors" size={24} />
+                              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-20 pr-8 py-6 bg-black/40 border border-white/10 rounded-[2rem] outline-none focus:border-brand-500 font-bold text-white transition-all shadow-inner text-base md:text-lg" placeholder="••••••••" required />
                           </div>
                       </>
                   ) : (
                       <>
                           <div className="relative group">
-                              <Store className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
-                              <input type="text" value={vendorCodeInput} onChange={e => setVendorCodeInput(e.target.value)} className="w-full pl-16 pr-6 py-5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:border-brand-500 font-black uppercase text-white tracking-widest shadow-inner text-sm md:text-base" placeholder="VND-XXXXX" required />
+                              <Store className="absolute left-8 top-1/2 -translate-y-1/2 text-slate-500" size={24} />
+                              <input type="text" value={vendorCodeInput} onChange={e => setVendorCodeInput(e.target.value)} className="w-full pl-20 pr-8 py-6 bg-black/40 border border-white/10 rounded-[2rem] outline-none focus:border-brand-500 font-black uppercase text-white tracking-widest shadow-inner text-base md:text-lg" placeholder="VND-XXXXX" required />
                           </div>
                           <div className="relative group">
-                              <Key className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
-                              <input type="password" value={visitorCode} onChange={e => setVisitorCode(e.target.value)} className="w-full pl-6 pr-6 py-5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:border-brand-500 font-black text-center text-3xl md:text-4xl text-white tracking-[0.5em] shadow-inner" placeholder="••••" required maxLength={4} />
+                              <Key className="absolute left-8 top-1/2 -translate-y-1/2 text-slate-500" size={24} />
+                              <input type="password" value={visitorCode} onChange={e => setVisitorCode(e.target.value)} className="w-full pl-8 pr-8 py-6 bg-black/40 border border-white/10 rounded-[2rem] outline-none focus:border-brand-500 font-black text-center text-4xl md:text-5xl text-white tracking-[0.5em] shadow-inner" placeholder="••••" required maxLength={4} />
                           </div>
                       </>
                   )}
                   
-                  <button type="submit" disabled={loading} className="w-full py-5 md:py-6 bg-slate-900 hover:bg-black text-white rounded-[2.5rem] font-black uppercase tracking-[0.2em] text-[10px] md:text-xs shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-4 group border border-white/5 mt-4">
-                      {loading ? <Loader2 className="animate-spin" size={20} /> : <><ShieldCheck size={22} className="group-hover:scale-110 transition-transform"/> {method === 'CREDENTIALS' ? 'Login Node' : 'Enter Shop'}</>}
+                  <button type="submit" disabled={loading} className="w-full py-6 md:py-7 bg-slate-900 hover:bg-black text-white rounded-[3rem] font-black uppercase tracking-[0.2em] text-xs md:text-sm shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-4 group border border-white/5 mt-6">
+                      {loading ? <Loader2 className="animate-spin" size={24} /> : <><ShieldCheck size={26} className="group-hover:scale-110 transition-transform"/> {method === 'CREDENTIALS' ? 'Login Node' : 'Enter Shop'}</>}
                   </button>
               </form>
 
-              {error && <div className="mt-6 text-center text-[10px] font-black text-rose-500 uppercase tracking-widest animate-shake p-3 bg-rose-500/10 rounded-xl border border-rose-500/20">{error}</div>}
+              {error && <div className="mt-8 text-center text-xs font-black text-rose-500 uppercase tracking-widest animate-shake p-4 bg-rose-500/10 rounded-2xl border border-rose-500/20">{error}</div>}
               
-              <div className="mt-10 pt-8 border-t border-white/5 flex items-center justify-between gap-4">
-                  <button onClick={toggleLanguage} className="p-4 bg-white/5 hover:bg-white/10 rounded-2xl text-emerald-400 transition-all active:scale-90 shadow-xl border border-white/5"><Globe size={22}/></button>
-                  <button onClick={handleGoogleLogin} className="flex-1 py-4 bg-white text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all hover:bg-slate-100">
-                      <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-5 h-5" alt="G" /> 
+              <div className="mt-12 pt-10 border-t border-white/5 flex items-center justify-between gap-4">
+                  <button onClick={toggleLanguage} className="p-5 bg-white/5 hover:bg-white/10 rounded-3xl text-emerald-400 transition-all active:scale-90 shadow-xl border border-white/5"><Globe size={26}/></button>
+                  <button onClick={handleGoogleLogin} className="flex-1 py-5 bg-white text-slate-900 rounded-3xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-4 shadow-2xl active:scale-95 transition-all hover:bg-slate-100">
+                      <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-6 h-6" alt="G" /> 
                       Sign in with Google
                   </button>
               </div>
@@ -252,8 +251,8 @@ export const Login: React.FC<LoginProps> = ({
 
           {/* FOOTER SYSTEM META */}
           <div className="mt-auto pb-4 flex flex-col items-center gap-2 opacity-30 pointer-events-none">
-              <p className="text-[9px] font-black uppercase tracking-[0.7em] text-white italic tracking-widest">ZAHRAT AL SAWSEN CORE v6.5</p>
-              <div className="h-0.5 w-12 bg-brand-500 rounded-full"></div>
+              <p className="text-[10px] md:text-xs font-black uppercase tracking-[0.7em] text-white italic tracking-widest">ZAHRAT AL SAWSEN CORE v6.5</p>
+              <div className="h-1 w-16 bg-brand-500 rounded-full"></div>
           </div>
       </div>
 
