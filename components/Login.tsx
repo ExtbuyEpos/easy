@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Language, StoreSettings } from '../types';
-import { Lock, User as UserIcon, Loader2, Key, Store, Globe, LayoutDashboard, Sun, Moon, Zap, ShieldCheck, ShoppingCart, CreditCard, Wallet, Tag, Package, Smartphone, Layers, Boxes, LayoutGrid, LogIn } from 'lucide-react';
+import { Lock, User as UserIcon, Loader2, Key, Store, Globe, LayoutDashboard, Sun, Moon, Zap, ShieldCheck, ShoppingCart, CreditCard, Wallet, Tag, Package, Smartphone, Layers, Boxes, LayoutGrid, LogIn, AlertCircle } from 'lucide-react';
 import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
 
@@ -128,10 +128,13 @@ export const Login: React.FC<LoginProps> = ({
     setLoading(true);
     setError('');
     try {
+      if (!auth) {
+        throw new Error("System authentication services are unavailable. Please refresh or check connection.");
+      }
       const result = await signInWithPopup(auth, googleProvider);
       const firebaseUser = result.user;
       
-      const isAdmin = firebaseUser.email === 'nabeelkhan1007@gmail.com';
+      const isAdmin = firebaseUser.email === 'nabeelkhan1007@gmail.com' || firebaseUser.email === 'zahratalsawsen1@gmail.com';
 
       const user: User = {
         id: firebaseUser.uid,
@@ -145,7 +148,9 @@ export const Login: React.FC<LoginProps> = ({
       onLogin(user);
     } catch (err: any) {
       console.error("Google Login Error:", err);
-      setError(err.message || 'Login failed');
+      let msg = err.message || 'Login failed';
+      if (msg.includes('auth/popup-closed-by-user')) msg = 'Sign-in cancelled.';
+      setError(msg);
       setLoading(false);
     }
   };
@@ -238,7 +243,7 @@ export const Login: React.FC<LoginProps> = ({
                   </button>
               </form>
 
-              {error && <div className="mt-8 text-center text-xs font-black text-rose-500 uppercase tracking-widest animate-shake p-4 bg-rose-500/10 rounded-2xl border border-rose-500/20">{error}</div>}
+              {error && <div className="mt-8 text-center text-xs font-black text-rose-500 uppercase tracking-widest animate-shake p-4 bg-rose-500/10 rounded-2xl border border-rose-500/20 flex items-center justify-center gap-2"><AlertCircle size={16}/> {error}</div>}
               
               <div className="mt-12 pt-10 border-t border-white/5 flex items-center justify-between gap-4">
                   <button onClick={toggleLanguage} className="p-5 bg-white/5 hover:bg-white/10 rounded-3xl text-emerald-400 transition-all active:scale-90 shadow-xl border border-white/5"><Globe size={26}/></button>
