@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { POS } from './components/POS';
 import { Inventory } from './components/Inventory';
@@ -17,9 +17,9 @@ import { VendorPanel } from './components/VendorPanel';
 import { AppView, Product, Sale, User, StoreSettings, Language } from './types';
 import { translations } from './translations';
 import { Loader2, Menu, Globe, ChevronLeft, LogOut } from 'lucide-react';
-import { auth, db } from './firebase';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { supabase } from './supabase';
+import { auth } from './firebase';
+import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -64,29 +64,35 @@ const App: React.FC = () => {
   }, [navigationHistory, user]);
 
   const handleLogout = async () => {
-    await signOut(auth);
+    await firebaseSignOut(auth);
+    await supabase.auth.signOut();
     setUser(null);
     setCurrentView(AppView.LOGIN);
     setNavigationHistory([]);
   };
 
-  // --- USER PERSISTENCE HANDLERS (Firebase Firestore) ---
+  // --- USER PERSISTENCE HANDLERS (Supabase Ready) ---
   const handleAddUser = async (newUser: User) => {
     setIsSyncing(true);
     try {
+        // Optimistic Update
         setUsers(prev => [...prev, newUser]);
         
-        await setDoc(doc(db, 'users', newUser.id), {
-            id: newUser.id,
-            name: newUser.name,
-            username: newUser.username,
-            password: newUser.password, 
-            role: newUser.role,
-            vendorId: newUser.vendorId || null,
-            vendorSettings: newUser.vendorSettings || null,
-            vendorStaffLimit: newUser.vendorStaffLimit || null,
-            email: newUser.email || null
-        });
+        // Supabase DB Sync
+        const { error } = await supabase
+            .from('profiles')
+            .insert([{
+                id: newUser.id,
+                name: newUser.name,
+                username: newUser.username,
+                password: newUser.password, // In real apps, don't store plain passwords
+                role: newUser.role,
+                vendor_id: newUser.vendorId,
+                vendor_settings: newUser.vendorSettings,
+                vendor_staff_limit: newUser.vendorStaffLimit
+            }]);
+            
+        if (error) throw error;
     } catch (err) {
         console.error("User provisioning failed", err);
     } finally {
@@ -99,19 +105,25 @@ const App: React.FC = () => {
     try {
         setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
         
+        // Update currently logged in user if they updated themselves (e.g. Vendor updating store profile)
         if (user?.id === updatedUser.id) {
             setUser(updatedUser);
         }
 
-        await updateDoc(doc(db, 'users', updatedUser.id), {
-            name: updatedUser.name,
-            username: updatedUser.username,
-            password: updatedUser.password,
-            role: updatedUser.role,
-            vendorId: updatedUser.vendorId || null,
-            vendorSettings: updatedUser.vendorSettings || null,
-            vendorStaffLimit: updatedUser.vendorStaffLimit || null
-        });
+        const { error } = await supabase
+            .from('profiles')
+            .update({
+                name: updatedUser.name,
+                username: updatedUser.username,
+                password: updatedUser.password,
+                role: updatedUser.role,
+                vendor_id: updatedUser.vendorId,
+                vendor_settings: updatedUser.vendorSettings,
+                vendor_staff_limit: updatedUser.vendorStaffLimit
+            })
+            .eq('id', updatedUser.id);
+            
+        if (error) throw error;
     } catch (err) {
         console.error("User sync failed", err);
     } finally {
@@ -124,7 +136,8 @@ const App: React.FC = () => {
     setIsSyncing(true);
     try {
         setUsers(prev => prev.filter(u => u.id !== id));
-        await deleteDoc(doc(db, 'users', id));
+        const { error } = await supabase.from('profiles').delete().eq('id', id);
+        if (error) throw error;
     } catch (err) {
         console.error("Identity severance failed", err);
     } finally {
@@ -143,44 +156,40 @@ const App: React.FC = () => {
     document.documentElement.dir = (language === 'ar') ? 'rtl' : 'ltr';
   }, [language]);
 
-  // Auth & Data Sync via Firebase
+  // Auth & Data Sync (Dual Strategy: Firebase for Session, Supabase for Data)
   useEffect(() => {
-    const fetchUsers = async () => {
-        try {
-            const querySnapshot = await getDocs(collection(db, 'users'));
-            const fetchedUsers: User[] = [];
-            querySnapshot.forEach((doc) => {
-                const d = doc.data();
-                fetchedUsers.push({
-                    id: d.id,
-                    name: d.name,
-                    username: d.username,
-                    password: d.password,
-                    role: d.role,
-                    vendorId: d.vendorId,
-                    vendorSettings: d.vendorSettings,
-                    vendorStaffLimit: d.vendorStaffLimit,
-                    email: d.email
-                });
-            });
-            setUsers(fetchedUsers);
-            return fetchedUsers;
-        } catch (e) {
-            console.error("Error fetching users:", e);
-            return [];
+    const fetchSessionAndUsers = async () => {
+        // Fetch all profiles from Supabase
+        const { data: profiles, error } = await supabase.from('profiles').select('*');
+        if (!error && profiles) {
+            const mappedUsers: User[] = profiles.map(p => ({
+                id: p.id,
+                name: p.name,
+                username: p.username,
+                password: p.password,
+                role: p.role,
+                vendorId: p.vendor_id,
+                vendorSettings: p.vendor_settings,
+                vendorStaffLimit: p.vendor_staff_limit,
+                email: p.email
+            }));
+            setUsers(mappedUsers);
         }
     };
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    fetchSessionAndUsers();
+
+    // Listen to Firebase Auth (Primary for this update)
+    const unsubscribeFirebase = onAuthStateChanged(auth, (firebaseUser) => {
         if (firebaseUser) {
-            const allUsers = await fetchUsers();
             const email = firebaseUser.email?.toLowerCase() || '';
+            // Basic admin check for demo purposes
             const isAdmin = email === 'nabeelkhan1007@gmail.com' || email === 'zahratalsawsen1@gmail.com';
             
-            // Find existing profile or create basic one
-            let profile = allUsers.find(p => p.email === email || p.id === firebaseUser.uid);
+            // Try to find extended profile in loaded users
+            const profile = users.find(u => u.email === email);
 
-            const activeUser: User = {
+            setUser({
                 id: firebaseUser.uid,
                 name: profile?.name || firebaseUser.displayName || (isAdmin ? 'System Master' : 'User'),
                 username: profile?.username || email.split('@')[0],
@@ -188,27 +197,43 @@ const App: React.FC = () => {
                 email: email,
                 vendorId: profile?.vendorId,
                 vendorSettings: profile?.vendorSettings,
-                vendorStaffLimit: profile?.vendorStaffLimit
-            };
-            
-            setUser(activeUser);
-            
-            // Sync user back to DB if missing
-            if (!profile) {
-                handleAddUser(activeUser);
-            }
+                vendorStaffLimit: profile?.vendorStaffLimit,
+                avatar: firebaseUser.photoURL || undefined
+            });
 
-            if (activeUser.role === 'ADMIN') setCurrentView(AppView.POS);
-            else if (activeUser.role === 'VENDOR' || activeUser.role === 'VENDOR_STAFF') setCurrentView(AppView.VENDOR_PANEL);
-            else setCurrentView(AppView.CUSTOMER_PORTAL);
+            if (isAdmin) setCurrentView(AppView.POS);
+            else if (profile?.role === 'VENDOR' || profile?.role === 'VENDOR_STAFF') setCurrentView(AppView.VENDOR_PANEL);
+            else if (!user) setCurrentView(AppView.CUSTOMER_PORTAL); // Only switch if not already set
         } else {
-            setUser(null);
+            // Fallback to checking Supabase session if Firebase is null
+            supabase.auth.getSession().then(({ data: { session } }) => {
+                if (session?.user) {
+                     const email = session.user.email?.toLowerCase() || '';
+                     const isAdmin = email === 'nabeelkhan1007@gmail.com';
+                     const profile = users.find(u => u.id === session.user.id);
+                     
+                     setUser({
+                        id: session.user.id,
+                        name: profile?.name || session.user.user_metadata.full_name || 'User',
+                        username: profile?.username || email.split('@')[0],
+                        role: profile?.role || (isAdmin ? 'ADMIN' : 'CUSTOMER'),
+                        email: email,
+                        vendorId: profile?.vendorId,
+                        vendorSettings: profile?.vendorSettings,
+                        vendorStaffLimit: profile?.vendorStaffLimit
+                     });
+                } else {
+                    setUser(null);
+                }
+            });
         }
         setIsAuthChecking(false);
     });
 
-    return () => unsubscribe();
-  }, []);
+    return () => {
+        unsubscribeFirebase();
+    };
+  }, []); // Re-run if users loaded? No, users is state.
 
   const t = (key: string) => translations[language][key] || key;
 

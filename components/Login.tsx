@@ -1,7 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Language, StoreSettings } from '../types';
-import { Lock, User as UserIcon, Loader2, Key, Store, Globe, LayoutDashboard, Sun, Moon, Zap, ShieldCheck, ShoppingCart, CreditCard, Wallet, Tag, Package, Smartphone, Layers, Boxes, LayoutGrid } from 'lucide-react';
+import { Lock, User as UserIcon, Loader2, Key, Store, Globe, LayoutDashboard, Sun, Moon, Zap, ShieldCheck, ShoppingCart, CreditCard, Wallet, Tag, Package, Smartphone, Layers, Boxes, LayoutGrid, LogIn } from 'lucide-react';
+import { signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider } from '../firebase';
 
 type LoginMethod = 'VISITOR_CODE' | 'CUSTOMER_GOOGLE' | 'CREDENTIALS';
 
@@ -122,8 +124,35 @@ export const Login: React.FC<LoginProps> = ({
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const firebaseUser = result.user;
+      
+      // Determine if admin (simple hardcoded check for demo purposes)
+      const isAdmin = firebaseUser.email === 'nabeelkhan1007@gmail.com';
+
+      const user: User = {
+        id: firebaseUser.uid,
+        name: firebaseUser.displayName || 'Google User',
+        username: firebaseUser.email?.split('@')[0] || 'user',
+        email: firebaseUser.email || '',
+        role: isAdmin ? 'ADMIN' : 'CUSTOMER',
+        avatar: firebaseUser.photoURL || undefined
+      };
+      
+      onLogin(user);
+    } catch (err: any) {
+      console.error("Google Login Error:", err);
+      setError(err.message || 'Login failed');
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-[100svh] bg-[#020617] flex flex-col items-center justify-start relative overflow-y-auto overflow-x-hidden font-sans custom-scrollbar">
+    <div className="h-[100svh] w-full bg-[#020617] flex flex-col items-center justify-start relative overflow-y-auto overflow-x-hidden font-sans custom-scrollbar">
       
       {/* FIXED GRAVITY ICON PIT */}
       <div className="fixed inset-x-0 bottom-0 h-[40vh] pointer-events-none z-0">
@@ -148,35 +177,36 @@ export const Login: React.FC<LoginProps> = ({
       </div>
 
       {/* Scrollable Content Container */}
-      <div className="w-full max-w-lg flex flex-col items-center z-10 px-6 py-12 min-h-[100svh]">
+      <div className="w-full max-w-lg flex flex-col items-center z-10 px-4 py-12 md:p-12 shrink-0 min-h-[100svh] justify-center">
           
           {/* HERO LOGO */}
-          <div className="flex items-center gap-6 mb-12 animate-fade-in shrink-0">
+          <div className="flex items-center gap-4 md:gap-6 mb-8 md:mb-12 animate-fade-in shrink-0 origin-center scale-90 md:scale-100">
               <div 
-                className="w-24 h-24 bg-[#0ea5e9] rounded-[2.5rem] flex items-center justify-center text-white shadow-[0_0_80px_rgba(14,165,233,0.6)]"
+                className="w-20 h-20 md:w-24 md:h-24 bg-[#0ea5e9] rounded-[2rem] md:rounded-[2.5rem] flex items-center justify-center text-white shadow-[0_0_80px_rgba(14,165,233,0.6)]"
                 style={{
                   transform: `perspective(1000px) rotateY(${gravityRef.current.x * 20}deg) rotateX(${-gravityRef.current.y * 20}deg)`
                 }}
               >
-                  <LayoutGrid size={56} strokeWidth={2.5} className="animate-pulse" />
+                  <LayoutGrid size={40} strokeWidth={2.5} className="animate-pulse md:hidden" />
+                  <LayoutGrid size={56} strokeWidth={2.5} className="animate-pulse hidden md:block" />
               </div>
               <div className="text-left">
-                  <h1 className="text-5xl font-black text-white italic tracking-tighter uppercase leading-none">EASYPOS</h1>
+                  <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none">EASYPOS</h1>
                   <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.5em] mt-2 opacity-80 italic">Multi-Vendor Terminal</p>
               </div>
           </div>
 
-          <div className="space-y-0 mb-16 text-center animate-fade-in shrink-0">
-              <h2 className="text-7xl md:text-9xl font-black text-white italic uppercase tracking-tighter leading-[0.75] opacity-95">SMART</h2>
-              <h2 className="text-7xl md:text-9xl font-black text-slate-600 italic uppercase tracking-tighter leading-[0.75] opacity-40">RETAIL</h2>
-              <p className="text-[10px] md:text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] pt-8 italic opacity-60">Professional Physical Inventory Logic.</p>
+          <div className="space-y-0 mb-10 md:mb-16 text-center animate-fade-in shrink-0">
+              <h2 className="text-5xl sm:text-7xl md:text-9xl font-black text-white italic uppercase tracking-tighter leading-[0.75] opacity-95">SMART</h2>
+              <h2 className="text-5xl sm:text-7xl md:text-9xl font-black text-slate-600 italic uppercase tracking-tighter leading-[0.75] opacity-40">RETAIL</h2>
+              <p className="text-[10px] md:text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] pt-6 md:pt-8 italic opacity-60">Professional Physical Inventory Logic.</p>
           </div>
 
           {/* ENTRY TERMINAL */}
-          <div className="w-full max-w-sm mb-12 bg-white/5 backdrop-blur-3xl rounded-[3.5rem] border border-white/10 p-8 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)] animate-fade-in-up">
+          <div className="w-full max-w-sm mb-12 bg-white/5 backdrop-blur-3xl rounded-[2.5rem] md:rounded-[3.5rem] border border-white/10 p-6 md:p-8 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)] animate-fade-in-up">
               <div className="flex bg-black/40 p-1.5 rounded-[2.2rem] mb-8 border border-white/5 shadow-inner">
-                  <button onClick={() => setMethod('CREDENTIALS')} className={`flex-1 py-3.5 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all ${method === 'CREDENTIALS' ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-500 hover:text-white'}`}>Staff Access</button>
-                  <button onClick={() => setMethod('VISITOR_CODE')} className={`flex-1 py-3.5 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all ${method === 'VISITOR_CODE' ? 'bg-brand-600 text-white shadow-xl' : 'text-slate-500 hover:text-white'}`}>Shop Visitor</button>
+                  <button onClick={() => setMethod('CREDENTIALS')} className={`flex-1 py-3.5 rounded-[1.8rem] text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all ${method === 'CREDENTIALS' ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-500 hover:text-white'}`}>Staff Access</button>
+                  <button onClick={() => setMethod('VISITOR_CODE')} className={`flex-1 py-3.5 rounded-[1.8rem] text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all ${method === 'VISITOR_CODE' ? 'bg-brand-600 text-white shadow-xl' : 'text-slate-500 hover:text-white'}`}>Shop Visitor</button>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
@@ -184,27 +214,27 @@ export const Login: React.FC<LoginProps> = ({
                       <>
                           <div className="relative group">
                               <UserIcon className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-brand-500 transition-colors" size={20} />
-                              <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full pl-16 pr-6 py-5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:border-brand-500 font-bold text-white transition-all shadow-inner" placeholder="Operator ID" required />
+                              <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full pl-16 pr-6 py-5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:border-brand-500 font-bold text-white transition-all shadow-inner text-sm md:text-base" placeholder="Operator ID" required />
                           </div>
                           <div className="relative group">
                               <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-brand-500 transition-colors" size={20} />
-                              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-16 pr-6 py-5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:border-brand-500 font-bold text-white transition-all shadow-inner" placeholder="••••••••" required />
+                              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-16 pr-6 py-5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:border-brand-500 font-bold text-white transition-all shadow-inner text-sm md:text-base" placeholder="••••••••" required />
                           </div>
                       </>
                   ) : (
                       <>
                           <div className="relative group">
                               <Store className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
-                              <input type="text" value={vendorCodeInput} onChange={e => setVendorCodeInput(e.target.value)} className="w-full pl-16 pr-6 py-5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:border-brand-500 font-black uppercase text-white tracking-widest shadow-inner" placeholder="VND-XXXXX" required />
+                              <input type="text" value={vendorCodeInput} onChange={e => setVendorCodeInput(e.target.value)} className="w-full pl-16 pr-6 py-5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:border-brand-500 font-black uppercase text-white tracking-widest shadow-inner text-sm md:text-base" placeholder="VND-XXXXX" required />
                           </div>
                           <div className="relative group">
                               <Key className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
-                              <input type="password" value={visitorCode} onChange={e => setVisitorCode(e.target.value)} className="w-full pl-6 pr-6 py-5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:border-brand-500 font-black text-center text-4xl text-white tracking-[0.5em] shadow-inner" placeholder="••••" required maxLength={4} />
+                              <input type="password" value={visitorCode} onChange={e => setVisitorCode(e.target.value)} className="w-full pl-6 pr-6 py-5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:border-brand-500 font-black text-center text-3xl md:text-4xl text-white tracking-[0.5em] shadow-inner" placeholder="••••" required maxLength={4} />
                           </div>
                       </>
                   )}
                   
-                  <button type="submit" disabled={loading} className="w-full py-6 bg-slate-900 hover:bg-black text-white rounded-[2.5rem] font-black uppercase tracking-[0.2em] text-xs shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-4 group border border-white/5 mt-4">
+                  <button type="submit" disabled={loading} className="w-full py-5 md:py-6 bg-slate-900 hover:bg-black text-white rounded-[2.5rem] font-black uppercase tracking-[0.2em] text-[10px] md:text-xs shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-4 group border border-white/5 mt-4">
                       {loading ? <Loader2 className="animate-spin" size={20} /> : <><ShieldCheck size={22} className="group-hover:scale-110 transition-transform"/> {method === 'CREDENTIALS' ? 'Login Node' : 'Enter Shop'}</>}
                   </button>
               </form>
@@ -213,15 +243,15 @@ export const Login: React.FC<LoginProps> = ({
               
               <div className="mt-10 pt-8 border-t border-white/5 flex items-center justify-between gap-4">
                   <button onClick={toggleLanguage} className="p-4 bg-white/5 hover:bg-white/10 rounded-2xl text-emerald-400 transition-all active:scale-90 shadow-xl border border-white/5"><Globe size={22}/></button>
-                  <button onClick={() => alert('Connect with Supabase instead')} className="flex-1 py-4 bg-white text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all hover:bg-slate-100">
+                  <button onClick={handleGoogleLogin} className="flex-1 py-4 bg-white text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all hover:bg-slate-100">
                       <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-5 h-5" alt="G" /> 
-                      Connect Secure
+                      Sign in with Google
                   </button>
               </div>
           </div>
 
           {/* FOOTER SYSTEM META */}
-          <div className="mt-auto py-8 flex flex-col items-center gap-2 opacity-30 pointer-events-none">
+          <div className="mt-auto pb-4 flex flex-col items-center gap-2 opacity-30 pointer-events-none">
               <p className="text-[9px] font-black uppercase tracking-[0.7em] text-white italic tracking-widest">ZAHRAT AL SAWSEN CORE v6.5</p>
               <div className="h-0.5 w-12 bg-brand-500 rounded-full"></div>
           </div>

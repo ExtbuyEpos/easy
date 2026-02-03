@@ -1,8 +1,7 @@
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore, enableIndexedDbPersistence } from 'firebase/firestore';
-import { getAuth, Auth } from 'firebase/auth';
-import { getStorage, FirebaseStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getAuth, Auth, GoogleAuthProvider } from 'firebase/auth';
 import { getMessaging, Messaging, isSupported as isMessagingSupported } from 'firebase/messaging';
 import { getAnalytics, Analytics, isSupported as isAnalyticsSupported } from 'firebase/analytics';
 
@@ -16,63 +15,49 @@ const firebaseConfig = {
   measurementId: "G-59VY3VC09L"
 };
 
-// Singleton storage
+// Singleton instances
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
-let storage: FirebaseStorage;
 let messaging: Messaging | null = null;
 let analytics: Analytics | null = null;
 
-try {
-  // 1. Initialize core App
-  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-  
-  // 2. Initialize core services immediately
-  auth = getAuth(app);
-  db = getFirestore(app);
-  storage = getStorage(app);
+// Initialize Core Services
+// We do not wrap this in try-catch to ensure the app fails loudly if config/versions are wrong
+app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+auth = getAuth(app);
+db = getFirestore(app);
 
-  // 3. Setup optional services and persistence in background
-  const setupOptional = async () => {
-    try {
-      if (await isMessagingSupported()) messaging = getMessaging(app);
-      if (await isAnalyticsSupported()) analytics = getAnalytics(app);
-      
-      // Attempt to enable offline persistence for better POS performance
-      await enableIndexedDbPersistence(db).catch((err) => {
-        if (err.code === 'failed-precondition') {
-          console.warn("Firebase: Persistence failed due to multiple tabs.");
-        } else if (err.code === 'unimplemented') {
-          console.warn("Firebase: Persistence not supported by browser.");
-        }
-      });
-    } catch (e) {
-      console.warn("Firebase: Optional services skipped.", e);
+// Initialize Optional Services & Persistence
+const setupOptional = async () => {
+  try {
+    if (await isMessagingSupported()) {
+      messaging = getMessaging(app);
     }
-  };
-  
-  setupOptional();
-} catch (error) {
-  console.error("Firebase: Initialization sequence failed critical check.", error);
-}
-
-/**
- * Uploads a file to Firebase Storage and returns the public download URL.
- */
-export const uploadImage = async (file: File, folder: string = 'uploads'): Promise<string> => {
-  if (!storage) throw new Error("Firebase Storage not initialized");
-  
-  const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-  const storageRef = ref(storage, `${folder}/${fileName}`);
-  
-  const snapshot = await uploadBytes(storageRef, file);
-  const downloadURL = await getDownloadURL(snapshot.ref);
-  return downloadURL;
+    
+    if (await isAnalyticsSupported()) {
+      analytics = getAnalytics(app);
+    }
+    
+    // Attempt to enable offline persistence for better POS performance
+    await enableIndexedDbPersistence(db).catch((err) => {
+      if (err.code === 'failed-precondition') {
+        console.warn("Firebase: Persistence failed due to multiple tabs.");
+      } else if (err.code === 'unimplemented') {
+        console.warn("Firebase: Persistence not supported by browser.");
+      }
+    });
+  } catch (e) {
+    console.warn("Firebase: Optional services skipped.", e);
+  }
 };
 
+setupOptional();
+
+export const googleProvider = new GoogleAuthProvider();
+
 // Ensure exports are available
-export { db, app, auth, storage, messaging, analytics };
+export { db, app, auth, messaging, analytics };
 
 export const saveFirebaseConfig = (configStr: string) => {
   try {
