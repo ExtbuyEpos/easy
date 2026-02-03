@@ -101,5 +101,41 @@ export const INITIAL_USERS: User[] = [
     password: '97986666',
     role: 'ADMIN',
     email: 'zahratalsawsen1@gmail.com'
+  },
+  {
+    id: 'demo_sys_admin',
+    name: 'Test Administrator',
+    username: 'testadmin',
+    password: '123',
+    role: 'ADMIN'
+  },
+  {
+    id: 'demo_vendor',
+    name: 'Demo Vendor',
+    username: 'vendor',
+    password: '123',
+    role: 'VENDOR',
+    vendorId: 'VND-DEMO',
+    vendorSettings: {
+        storeName: 'Demo Vendor Shop',
+        storeAddress: '123 Demo St',
+        shopPasscode: '2026',
+        customUrlSlug: 'vnd-demo'
+    },
+    vendorStaffLimit: 5
+  },
+  {
+    id: 'demo_customer',
+    name: 'Demo Customer',
+    username: 'customer',
+    password: '123',
+    role: 'CUSTOMER'
+  },
+  {
+    id: 'demo_staff',
+    name: 'Demo Staff',
+    username: 'staff',
+    password: '123',
+    role: 'STAFF'
   }
 ];

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Language, StoreSettings } from '../types';
-import { Lock, User as UserIcon, Loader2, Key, Store, Globe, LayoutDashboard, Sun, Moon, Zap, ShieldCheck, ShoppingCart, CreditCard, Wallet, Tag, Package, Smartphone, Layers, Boxes, LayoutGrid, LogIn, AlertCircle } from 'lucide-react';
+import { Lock, User as UserIcon, Loader2, Key, Store, Globe, LayoutDashboard, Sun, Moon, Zap, ShieldCheck, ShoppingCart, CreditCard, Wallet, Tag, Package, Smartphone, Layers, Boxes, LayoutGrid, LogIn, AlertCircle, Fingerprint } from 'lucide-react';
 import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
 
@@ -155,6 +155,20 @@ export const Login: React.FC<LoginProps> = ({
     }
   };
 
+  const applyDemoCredentials = (role: 'ADMIN' | 'VENDOR' | 'STAFF' | 'CUSTOMER') => {
+    if (role === 'CUSTOMER') {
+      setMethod('VISITOR_CODE');
+      setVendorCodeInput('VND-DEMO');
+      setVisitorCode('2026');
+    } else {
+      setMethod('CREDENTIALS');
+      setPassword('123');
+      if (role === 'ADMIN') setUsername('testadmin');
+      if (role === 'VENDOR') setUsername('vendor');
+      if (role === 'STAFF') setUsername('staff');
+    }
+  };
+
   return (
     <div className="fixed inset-0 w-full h-full bg-[#020617] overflow-y-auto font-sans custom-scrollbar">
       
@@ -245,12 +259,36 @@ export const Login: React.FC<LoginProps> = ({
 
               {error && <div className="mt-8 text-center text-xs font-black text-rose-500 uppercase tracking-widest animate-shake p-4 bg-rose-500/10 rounded-2xl border border-rose-500/20 flex items-center justify-center gap-2"><AlertCircle size={16}/> {error}</div>}
               
-              <div className="mt-12 pt-10 border-t border-white/5 flex items-center justify-between gap-4">
-                  <button onClick={toggleLanguage} className="p-5 bg-white/5 hover:bg-white/10 rounded-3xl text-emerald-400 transition-all active:scale-90 shadow-xl border border-white/5"><Globe size={26}/></button>
-                  <button onClick={handleGoogleLogin} className="flex-1 py-5 bg-white text-slate-900 rounded-3xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-4 shadow-2xl active:scale-95 transition-all hover:bg-slate-100">
-                      <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-6 h-6" alt="G" /> 
-                      Sign in with Google
-                  </button>
+              <div className="mt-12 pt-10 border-t border-white/5">
+                  <div className="flex items-center justify-between gap-4 mb-8">
+                      <button onClick={toggleLanguage} className="p-5 bg-white/5 hover:bg-white/10 rounded-3xl text-emerald-400 transition-all active:scale-90 shadow-xl border border-white/5"><Globe size={26}/></button>
+                      <button onClick={handleGoogleLogin} className="flex-1 py-5 bg-white text-slate-900 rounded-3xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-4 shadow-2xl active:scale-95 transition-all hover:bg-slate-100">
+                          <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-6 h-6" alt="G" /> 
+                          Sign in with Google
+                      </button>
+                  </div>
+
+                  {/* QUICK DEMO SECTION */}
+                  <div className="bg-black/40 p-6 rounded-[2.5rem] border border-white/5">
+                      <div className="flex items-center gap-3 mb-4 opacity-70">
+                          <Fingerprint size={16} className="text-brand-500" />
+                          <span className="text-[9px] font-black text-white uppercase tracking-[0.2em]">Quick Demo Access</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                          <button onClick={() => applyDemoCredentials('ADMIN')} className="py-3 px-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all text-left">
+                              <span className="block text-brand-500 mb-0.5">01</span> Admin
+                          </button>
+                          <button onClick={() => applyDemoCredentials('VENDOR')} className="py-3 px-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all text-left">
+                              <span className="block text-blue-500 mb-0.5">02</span> Vendor
+                          </button>
+                          <button onClick={() => applyDemoCredentials('STAFF')} className="py-3 px-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all text-left">
+                              <span className="block text-purple-500 mb-0.5">03</span> Staff
+                          </button>
+                          <button onClick={() => applyDemoCredentials('CUSTOMER')} className="py-3 px-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all text-left">
+                              <span className="block text-emerald-500 mb-0.5">04</span> Visitor
+                          </button>
+                      </div>
+                  </div>
               </div>
           </div>
 
